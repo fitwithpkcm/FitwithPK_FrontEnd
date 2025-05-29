@@ -25,10 +25,10 @@ import { UserProfile } from "@shared/schema";
 import { ThemeSettings } from "@/components/theme-settings";
 import { useToast } from "@/hooks/use-toast";
 import { getLoggedUserDetails, getMyCoachDetails } from "@/services/ProfileService";
-import { ICoach } from "@/models/Coach";
+import { ICoach } from "@/interface/models/Coach";
 import { BASE_URL, UNITS } from "@/common/Constant";
 import { setBaseUrl } from "../services/HttpService"
-import { IUser } from "@/models/User";
+import { IUser } from "@/interface/models/User";
 
 export default function ProfilePage() {
   const { user, logoutMutation } = useAuth();

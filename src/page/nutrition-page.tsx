@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React,{ useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -36,6 +36,7 @@ import { BASE_URL } from "@/common/Constant";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { IFoodCatergory } from "@/interface/IFoodAlternative";
 import { getFoodBasedOnCatergoryApi, getSwappedNutriProducts } from "@/services/FoodService";
+
 
 
 // Food nutrition data with comparisons
