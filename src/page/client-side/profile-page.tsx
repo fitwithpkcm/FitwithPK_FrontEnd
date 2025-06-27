@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getLoggedUserDetails, getMyCoachDetails } from "@/services/ProfileService";
 import { ICoach } from "@/interface/models/Coach";
 import { BASE_URL, UNITS } from "@/common/Constant";
-import { setBaseUrl } from "../services/HttpService"
+import { setBaseUrl } from "../../services/HttpService"
 import { IUser } from "@/interface/models/User";
 
 export default function ProfilePage() {

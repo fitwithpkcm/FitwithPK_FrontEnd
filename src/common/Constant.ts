@@ -56,4 +56,39 @@ export const USER_TARGET = Object.freeze({
 });
 
 
+export const ACCESS_STATUS = Object.freeze({
+  ACTIVE: {
+    NAME: 'ACTIVE',
+    KEY: 'A',
+    NUMBER: 1,
+  },
+  DE_ACTIVE: {
+    NAME: 'DE_ACTIVE',
+    KEY: 'D',
+    NUMBER: 2,
+  },
+  PENDING: {
+    NAME: 'PENDING',
+    KEY: 'P',
+    NUMBER: 3,
+  },
+  DELETE: {
+    NAME: 'DELETE',
+    KEY: 'X',
+    NUMBER: 4,
+  },
+  PAUSE: {
+    NAME: 'PAUSE',
+    KEY: 'S',
+    NUMBER: 5,
+  },
+  PAYMENT_FAILED: {
+    NAME: 'PAYMENT_FAILED',
+    KEY: 'F',
+    NUMBER: 6,
+  },
+});
+
+export type AccessStatusType = typeof ACCESS_STATUS[keyof typeof ACCESS_STATUS];
+
 

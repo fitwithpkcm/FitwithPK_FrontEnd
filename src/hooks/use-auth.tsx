@@ -56,6 +56,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initialData: null
   });
 
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedUser = localStorage.getItem("userData");
+      refetch(); // This will update the user data
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [refetch]);
 
   function handleLogin(credentials: LoginData) {
     return login(credentials)

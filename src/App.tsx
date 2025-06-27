@@ -2,18 +2,23 @@ import { useEffect, useState } from 'react'
 import { Switch, Route } from "wouter";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
-import AuthPage from './page/auth-page';
+import AuthPage from './page/client-side/auth-page';
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from './hooks/use-auth';
 import { setBaseUrl } from "../src/Services/HttpService"
 import { BASE_URL } from './common/Constant';
 import { RENDER_URL } from './common/Urls';
-import HomePage from './page/home-page'
-import UpdatesPage from './page/updates-page';
-import NutritionPage from './page/nutrition-page';
-import OnBoardPage from './page/intake-form-page';
-import ProfilePage from './page/profile-page';
+import HomePage from './page/client-side/home-page'
+import UpdatesPage from './page/client-side/updates-page';
+import NutritionPage from './page/client-side/nutrition-page';
+import OnBoardPage from './page/client-side/intake-form-page';
+import ProfilePage from './page/client-side/profile-page';
+import AdminDashboard from './page/admin-side/admin-dashboard';
+import SimpleTrackingView from './page/admin-side/simple-tracking-view';
+import Analytics from './page/admin-side/analytics';
+import ClientMetricsChart from './page/admin-side/client-metrics-chart';
+import ClientManagementScreen from './page/admin-side/ClientManagementScreen';
 
 function Router() {
   console.log("Router rendering");
@@ -25,6 +30,17 @@ function Router() {
       <Route path={RENDER_URL.STUDENT_UPDATES} component={UpdatesPage} />
       <Route path={RENDER_URL.STUDENT_NUTRI_SWAP} component={NutritionPage} />
       <Route path={RENDER_URL.STUDENT_PROFILE} component={ProfilePage} />
+
+
+      {/* admin pages */}
+      {/* admin pages */}
+      <Route path={RENDER_URL.ADMIN_DASHBOARD} component={AdminDashboard} />
+      <Route path={RENDER_URL.ADMIN_UPDATES} component={SimpleTrackingView} />
+      <Route path={RENDER_URL.ADMIN_ANALYTICS} component={ClientMetricsChart} />
+      <Route path={RENDER_URL.ADMIN_CLIENT_MANAGEMENT} component={ClientManagementScreen} />
+
+
+
     </Switch>
   );
 }
@@ -35,6 +51,7 @@ function App() {
     console.log("App rendering");
     setBaseUrl(BASE_URL)
   }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem>

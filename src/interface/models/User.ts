@@ -68,6 +68,6 @@ export interface IUser extends IprofileInfo {
   DeleteStatus?: 0 | 1;
   LoginType?: string;
   ApproveStatus: "Y" | "N";
-
+  ActiveStatus?:number
 }
 

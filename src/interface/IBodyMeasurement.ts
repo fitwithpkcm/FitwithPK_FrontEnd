@@ -8,8 +8,8 @@ export interface IBodyMeasurement {
     Chest?: number,
     UpperArm?: number,
     Quadriceps?: number,
-    FileName?: string,
-    WeeklyFile?:any,
+    FileName?: string[],
+    WeeklyFile?:string[],
     DateRange?: string,
     IdUser?: number
 }

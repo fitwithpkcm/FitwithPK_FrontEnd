@@ -18,14 +18,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 /* import { DailyUpdate, BodyMeasurement } from "@shared/schema"; */
-import { dailyUpdate, getDailyUpdate, getDailyUpdateForAWeek, getProgressGallery, getSingleDayUpdate, getWeeklyUpdate, weeklyUpdate } from "../services/UpdateServices";
-import { setBaseUrl } from "../services/HttpService"
-import { BASE_URL, UNITS, USER_TARGET } from "../common/Constant";
+import { dailyUpdate, getDailyUpdate, getDailyUpdateForAWeek, getProgressGallery, getSingleDayUpdate, getWeeklyUpdate, weeklyUpdate } from "../../services/UpdateServices";
+import { setBaseUrl } from "../../services/HttpService"
+import { BASE_URL, UNITS, USER_TARGET } from "../../common/Constant";
 import GraphDataChart from "./progressWeeklyChart";
 import PhotoGallery from "./gallery-updates";
-import { IBodyMeasurement } from '../interface/IBodyMeasurement'
+import { IBodyMeasurement } from '../../interface/IBodyMeasurement'
 import moment from 'moment';
-import { ManageLocalStorage } from "../services/Localstorage"
+import { ManageLocalStorage } from "../../services/Localstorage"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { IDailyStats } from "@/interface/IDailyUpdates";
 import RatingSmiley from "@/components/ui/rating-smiley";
@@ -406,8 +406,8 @@ export default function UpdatesPage() {
 
   // Sort updates by date (newest first)
   const sortedUpdates = [...dailyUpdates].sort((a, b) => {
-    const dateA = a.Day ? new Date(a.Day) : new Date();
-    const dateB = b.Day ? new Date(b.Day) : new Date();
+    const dateA = a.DayDate ? new Date(a.DayDate) : new Date();
+    const dateB = b.DayDate ? new Date(b.DayDate) : new Date();
     return dateB.getTime() - dateA.getTime();
   });
 
@@ -568,7 +568,7 @@ export default function UpdatesPage() {
           {sortedUpdates.map((update, index) => {
             const dayNumber = sortedUpdates.length - index;
             // Format the date properly
-            const formattedDate = moment(update.Day, "DD-MM-YYYY").format("ddd, MMM D");
+            const formattedDate = moment(update.DayDate, "DD-MM-YYYY").format("ddd, MMM D");
             return (
               <Card key={index} className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
                 <CardContent className="p-5">

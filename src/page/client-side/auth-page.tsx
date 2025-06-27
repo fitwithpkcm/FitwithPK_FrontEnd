@@ -4,6 +4,10 @@ import { useLocation, Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { RENDER_URL } from "@/common/Urls";
+import { validateToken } from "@/services/LoginServices";
+import { useQuery } from "@tanstack/react-query";
+import { BASE_URL } from "@/common/Constant";
+import { setBaseUrl } from "../../services/HttpService"
 
 export default function AuthPage() {
   const [, setLocation] = useLocation();
@@ -20,23 +24,64 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+
+  //constructor basil
   useEffect(() => {
-    const stored = localStorage.getItem("userData"); // Changed to userData
-    if (stored) {
-      setLocation(RENDER_URL.STUDENT_DASHBOARD);
-    }
+    setBaseUrl(BASE_URL);
   }, []);
+
+
+
+  const { data: userType, refetch } = useQuery({
+    queryKey: ['validateToken'],
+    queryFn: async () => {
+      const stored = localStorage.getItem("userData");
+      if (!stored) throw new Error("No user data");
+
+      const userData = JSON.parse(stored);
+      if (!userData?.token) throw new Error("No token found");
+
+      const response = await validateToken(0);
+      return response.data.data;
+    },
+    enabled: false // Disable automatic fetching
+  });
+
+  useEffect(() => {
+    const stored = localStorage.getItem("userData");
+    if (stored) {
+      refetch(); // Manually trigger the query
+    }
+  }, [refetch]);
+
+  useEffect(() => {
+    if (userType) {
+      console.log("User type from token response", userType);
+      if (userType.IsAdmin === 1) {
+        setLocation(RENDER_URL.ADMIN_DASHBOARD);
+      }
+      else if (userType.IsUser === 1) {
+        setLocation(RENDER_URL.STUDENT_DASHBOARD);
+      }
+      //todo coach
+    }
+  }, [userType]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    
+
     loginMutation.mutate(
       { EmailID: loginEmail, Password: loginPassword, LoginType: "normal" },
       {
         onSuccess: (userData) => {
           console.log("Login successful page:", userData);
-          window.location.href = RENDER_URL.STUDENT_DASHBOARD;
+          if (userData.IsAdmin === 1) {
+             setLocation(RENDER_URL.ADMIN_DASHBOARD);
+          } else {
+             setLocation(RENDER_URL.STUDENT_DASHBOARD);
+          }
         },
         onError: (error) => {
           console.error("Login error:", error);

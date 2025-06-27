@@ -1,7 +1,7 @@
-import React,{ useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Award, Droplet, MessageSquare, Sun, Moon, Trophy, Check, Dumbbell, Flame, Plus, ChevronRight, FileText } from "lucide-react";
-import { formatDate, calculatePercentage } from "@/lib/utils";
+import { formatDate, calculatePercentage, isEmpty } from "@/lib/utils";
 import { Link } from "wouter";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Progress } from "@/components/ui/progress";
@@ -19,8 +19,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { z } from "zod";
 import { dailyUpdate, getDailyUpdate, getDailyUpdateForAWeek, getDietPlan, getSingleDayUpdate } from "@/services/UpdateServices";
-import { setBaseUrl } from "../services/HttpService"
-import { BASE_URL, USER_TARGET } from "../common/Constant";
+import { setBaseUrl } from "../../services/HttpService"
+import { BASE_URL, USER_TARGET } from "../../common/Constant";
 import { IDailyStats } from "@/interface/IDailyUpdates";
 import moment from 'moment';
 import { RENDER_URL } from "@/common/Urls";
@@ -146,7 +146,7 @@ export default function HomePage() {
         FileName: JSON.parse(element.FileName)
       }));
 
-        return data.length > 0 ? data[0] : null
+      return data.length > 0 ? data[0] : null
     }
   });
 
@@ -182,15 +182,17 @@ export default function HomePage() {
     { WeekDay: "Sun" },
   ];
 
-  weeklyData = dailyUpdatesForWeek.map((element: IDailyStats, index: number) => {
-    return {
-      ...weeklyData[index],
-      ...element,
-      Steps_Percent: calculatePercentage(element.Steps, USER_TARGET.DAILY_TARGET.STEPS),
-      Sleep_Percent: calculatePercentage(element.Sleep, USER_TARGET.DAILY_TARGET.SLEEP),
-      Water_Percent: calculatePercentage(element.Water, USER_TARGET.DAILY_TARGET.WATER)
-    };
-  });
+  if (!isEmpty(dailyUpdatesForWeek)) {
+    weeklyData = dailyUpdatesForWeek?.map((element: IDailyStats, index: number) => {
+      return {
+        ...weeklyData[index],
+        ...element,
+        Steps_Percent: calculatePercentage(element.Steps, USER_TARGET.DAILY_TARGET.STEPS),
+        Sleep_Percent: calculatePercentage(element.Sleep, USER_TARGET.DAILY_TARGET.SLEEP),
+        Water_Percent: calculatePercentage(element.Water, USER_TARGET.DAILY_TARGET.WATER)
+      };
+    });
+  }
 
 
 

@@ -11,6 +11,17 @@ export const login = params => {
     });
 };
 
+export const validateToken = params => {
+    return httpCall({
+        url: API_URL.VALIDATE_TOKEN_USERTYPE,
+        method: "post",
+        data: params
+    }).then(response => {
+        return response;
+    });
+};
+
+
 export const registerUser = params => {
     return httpCall({
         url: API_URL.REGISTRATION,

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { setBaseUrl } from "../services/HttpService"
+import { setBaseUrl } from "../../services/HttpService"
 import {
   ArrowRight,
   CalendarClock,
