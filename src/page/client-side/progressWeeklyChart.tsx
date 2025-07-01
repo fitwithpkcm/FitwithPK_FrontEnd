@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { getProgressGraph } from '@/services/UpdateServices'
-import moment from 'moment';
+
 
 interface GRAPH_PROPS {
     selectedDate: Date
