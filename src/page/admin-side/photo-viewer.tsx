@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React,{ useState } from 'react';
 import { X, ChevronLeft, ChevronRight, ArrowLeftRight, Maximize } from 'lucide-react';
 import { format, parse, parseISO } from 'date-fns';
 

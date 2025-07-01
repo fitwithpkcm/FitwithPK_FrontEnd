@@ -4,7 +4,7 @@ import { Check, X, AlertTriangle, Calendar, Bell } from "lucide-react";
 import WeeklyTrackingView from "./weekly-track-view";
 import { BASE_URL } from "@/common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
-import { getUserListForACoach, getUserListWithUpdates_ForCoach, getUserListWithWeeklyUpdates_ForCoach } from "@/services/AdminServices";
+import {  getUserListWithUpdates_ForCoach, getUserListWithWeeklyUpdates_ForCoach } from "@/services/AdminServices";
 import { IUser } from "@/interface/models/User";
 import { useQuery } from "@tanstack/react-query";
 import moment from 'moment';
