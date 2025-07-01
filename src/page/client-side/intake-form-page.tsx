@@ -1,4 +1,4 @@
-import React,{ useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -133,7 +133,7 @@ export default function IntakeFormPage() {
   // Fetch existing profile data
   const { data: profileData, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: ["onboarduser-attributes"],
-    queryFn: () => fetchOnBoardUserAttributes().then(res => res.data.data)
+    queryFn: () => fetchOnBoardUserAttributes(null).then(res => res.data.data)
   });
 
   // Form setup
@@ -305,7 +305,7 @@ export default function IntakeFormPage() {
     if (!files || files.length === 0) return;
 
     // Convert FileList to array and add to existing files
-    const newFiles = Array.from(files);
+    const newFiles: File[] = Array.from(files);
     setUploadedFiles(prev => [...prev, ...newFiles]);
   };
 
@@ -314,23 +314,18 @@ export default function IntakeFormPage() {
   };
 
   // Create mutation for file upload
-  const uploadMutation = useMutation({
+  const uploadMutation = useMutation<{ data: { data: string[] } }, Error, FormData>({
     mutationFn: (files: FormData) => {
-      return onBoardFileUpload(files).then(res => res);
+      return onBoardFileUpload(files);
     },
-    onSuccess: (response: unknown) => {
-      if (response.data) {
-
-        setUploadedFileNames(response.data.data.join(","));
-        // Update only the uploadFileNames field in the form
-        form.setValue('uploadFileNames', response.data.data.join(","));
-      }
+    onSuccess: (response) => {
+      setUploadedFileNames(response.data.data.join(","));
+      form.setValue('uploadFileNames', response.data.data.join(","));
       setUploadedFiles([]);
       setShowUploadDialog(false);
     },
     onError: (error) => {
       console.error('Upload error:', error);
-      // Optionally show error toast/message
     }
   });
 
@@ -1202,7 +1197,7 @@ export default function IntakeFormPage() {
                 </TabsContent>
               </Tabs>
 
-             {/* // Update your navigation buttons */}
+              {/* // Update your navigation buttons */}
               <div className="flex justify-between pt-4">
                 <Button type="button" variant="outline" onClick={prevTab}>
                   <ChevronLeft className="h-4 w-4 mr-2" />

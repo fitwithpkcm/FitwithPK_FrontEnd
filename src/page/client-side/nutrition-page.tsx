@@ -1,4 +1,4 @@
-import React,{ useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -61,7 +61,7 @@ export default function NutritionPage() {
   const { toast } = useToast();
   const [activeNutrient, setActiveNutrient] = useState<"Carbs" | "Protein" | "Fat">("Protein");
   const [nutritionGoal, setNutritionGoal] = useState<"fat-loss" | "muscle-gain" | "maintenance">("maintenance");
-  
+
   const [foodItem, setFoodItem] = useState<FoodAlternative>();
   const [quantity, setQuantity] = useState("");
   const [selectedAlternative, setSelectedAlternative] = useState<FoodAlternative | null>(null);
@@ -71,7 +71,7 @@ export default function NutritionPage() {
     alternatives: FoodAlternative[]
   } | null>(null);
   const [showResults, setShowResults] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<FoodAlternative[]>([]);
 
   //constructor basil
   useEffect(() => {
@@ -85,7 +85,7 @@ export default function NutritionPage() {
 */
   const { data: foodListBasedOnCatergory = [] } = useQuery<IFoodCatergory[]>({
     queryKey: ["foodcatergory_list"],
-    queryFn: () => getFoodBasedOnCatergoryApi().then(res => res.data.data)
+    queryFn: () => getFoodBasedOnCatergoryApi(null).then(res => res.data.data)
   });
 
   const getSwapProductsMutation = useMutation({
@@ -264,11 +264,11 @@ export default function NutritionPage() {
                 />
               </div>
 
-                 {/* Nutrition Goal selection */}
+              {/* Nutrition Goal selection */}
               <div className="space-y-2">
                 <Label htmlFor="nutritionGoal">Your Fitness Goal</Label>
                 <div className="grid grid-cols-3 gap-2">
-                  <Button 
+                  <Button
                     type="button"
                     variant={nutritionGoal === "fat-loss" ? "default" : "outline"}
                     className={`flex flex-col items-center justify-center h-[70px] ${nutritionGoal === "fat-loss" ? "bg-rose-500 hover:bg-rose-600 border-rose-500" : "border-gray-200 dark:border-gray-700"}`}
@@ -277,7 +277,7 @@ export default function NutritionPage() {
                     <Flame className="h-4 w-4 mb-1.5" />
                     <span className="text-xs font-medium">Fat Loss</span>
                   </Button>
-                  <Button 
+                  <Button
                     type="button"
                     variant={nutritionGoal === "muscle-gain" ? "default" : "outline"}
                     className={`flex flex-col items-center justify-center h-[70px] ${nutritionGoal === "muscle-gain" ? "bg-blue-500 hover:bg-blue-600 border-blue-500" : "border-gray-200 dark:border-gray-700"}`}
@@ -286,7 +286,7 @@ export default function NutritionPage() {
                     <div className="text-[18px] mb-1">💪</div>
                     <span className="text-xs font-medium">Muscle Gain</span>
                   </Button>
-                  <Button 
+                  <Button
                     type="button"
                     variant={nutritionGoal === "maintenance" ? "default" : "outline"}
                     className={`flex flex-col items-center justify-center h-[70px] ${nutritionGoal === "maintenance" ? "bg-green-500 hover:bg-green-600 border-green-500" : "border-gray-200 dark:border-gray-700"}`}

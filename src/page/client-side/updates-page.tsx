@@ -22,7 +22,6 @@ import { dailyUpdate, getDailyUpdate, getDailyUpdateForAWeek, getProgressGallery
 import { setBaseUrl } from "../../services/HttpService"
 import { BASE_URL, UNITS, USER_TARGET } from "../../common/Constant";
 import GraphDataChart from "./progressWeeklyChart";
-import PhotoGallery from "./gallery-updates";
 import { IBodyMeasurement } from '../../interface/IBodyMeasurement'
 import moment from 'moment';
 import { ManageLocalStorage } from "../../services/Localstorage"
@@ -129,21 +128,22 @@ export default function UpdatesPage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
-    setFiles(files);
-    // Process multiple files
+
+    const fileArray = Array.from(files);
+    setFiles(fileArray);
+
     const newImages: string[] = [];
     let filesProcessed = 0;
 
-    Array.from(files).forEach(file => {
+    fileArray.forEach((file: File) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageDataUrl = e.target?.result as string;
         newImages.push(imageDataUrl);
         filesProcessed++;
 
-        // If all files are processed, update state
-        if (filesProcessed === files.length) {
-          setUploadedImages([...uploadedImages, ...newImages]);
+        if (filesProcessed === fileArray.length) {
+          setUploadedImages(prev => [...prev, ...newImages]);
         }
       };
       reader.readAsDataURL(file);
@@ -160,8 +160,8 @@ export default function UpdatesPage() {
    */
   const handleSaveImages = () => {
     if (uploadedImages.length > 0) {
-      const today = new Date();
-      const dateString = `${today.toLocaleString('default', { month: 'short' })} ${today.getDate()}`;
+      //const today = new Date();
+      // const dateString = `${today.toLocaleString('default', { month: 'short' })} ${today.getDate()}`;
       //api calling for saving photos to gallery
       if (uploadedImages?.length) {
         const formdata = new FormData()
@@ -169,7 +169,7 @@ export default function UpdatesPage() {
           formdata.append("WeeklyFile", files[x]);
         }
         const id = measurements[0]?.IdWeeklyStats;
-        formdata.append("IdWeeklyStats", id);
+        formdata.append("IdWeeklyStats", "" + id);
         updateMeasurements(formdata)
       }
       // Reset state
@@ -188,7 +188,7 @@ export default function UpdatesPage() {
 
   const { data: galleryDetails } = useQuery<IBodyMeasurement[]>({
     queryKey: ["gallery-updates"],
-    queryFn: () => getProgressGallery().then(res => res.data.data),
+    queryFn: () => getProgressGallery(null).then(res => res.data.data),
   });
 
   /**

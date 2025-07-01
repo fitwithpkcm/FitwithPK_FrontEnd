@@ -21,7 +21,6 @@ import {
 import { Settings, PencilIcon, Award, HeartPulse, Terminal, Mail, Phone, ArrowLeft } from "lucide-react";
 import { Facebook, Instagram, Twitter, Linkedin, Youtube, Globe } from 'lucide-react';
 import { format } from "date-fns";
-import { UserProfile } from "@shared/schema";
 import { ThemeSettings } from "@/components/theme-settings";
 import { useToast } from "@/hooks/use-toast";
 import { getLoggedUserDetails, getMyCoachDetails } from "@/services/ProfileService";
@@ -77,29 +76,10 @@ export default function ProfilePage() {
 
   console.log("logged user details", loggedUserDetails);
 
-  // Fetch user profile
-  const { data: profile } = useQuery<UserProfile>({
-    queryKey: ["/api/user-profile"],
-  });
-
   const handleLogout = () => {
     logoutMutation.mutate();
   };
 
-  // Format member since date
-  const memberSinceFormatted = user?.memberSince
-    ? format(new Date(user.memberSince), "MMM yyyy")
-    : "N/A";
-
-  // Helper function to get a display name for goal type
-  const getGoalTypeDisplay = (type: string) => {
-    switch (type) {
-      case "weight-loss": return "Weight Loss";
-      case "muscle-gain": return "Muscle Gain";
-      case "maintenance": return "Maintenance";
-      default: return type;
-    }
-  };
 
 
   const RenderCertifications = () => {
