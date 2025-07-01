@@ -10,14 +10,12 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { DailyUpdate } from "@shared/schema";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { z } from "zod";
 import { dailyUpdate, getDailyUpdate, getDailyUpdateForAWeek, getDietPlan, getSingleDayUpdate } from "@/services/UpdateServices";
 import { setBaseUrl } from "../../services/HttpService"
 import { BASE_URL, USER_TARGET } from "../../common/Constant";
@@ -51,9 +49,9 @@ export default function HomePage() {
   const [waterInputOpen, setWaterInputOpen] = useState(false);
   const [stepsInputOpen, setStepsInputOpen] = useState(false);
   const [sleepInputOpen, setSleepInputOpen] = useState(false);
-  const [waterAmount, setWaterAmount] = useState(0);
-  const [stepsAmount, setStepsAmount] = useState(0);
-  const [sleepAmount, setSleepAmount] = useState(0);
+  const [waterAmount, setWaterAmount] = useState<string | number>("");
+  const [stepsAmount, setStepsAmount] = useState<string | number>("");
+  const [sleepAmount, setSleepAmount] = useState<string | number>("");
   const [viewFeedback, setViewFeedback] = useState(false);
 
   const [workoutCompleted, setWorkoutCompleted] = useState(false);
@@ -135,10 +133,10 @@ export default function HomePage() {
   });
 
 
-  const { dietPlanFiles } = useQuery({
+  const { data: dietPlanFiles = [] } = useQuery({
     queryKey: ['dietPlan'],
     queryFn: async () => {
-      const res = await getDietPlan();
+      const res = await getDietPlan(null);
       if (res.status !== 200) {
         throw new Error('Failed to fetch diet plan');
       }
@@ -337,7 +335,7 @@ export default function HomePage() {
   });
 
   const handleWaterSubmit = () => {
-    const amount = parseFloat(waterAmount);
+    const amount = parseFloat("" + waterAmount);
     if (isNaN(amount) || amount <= 0) {
       toast({
         title: "Invalid input",
@@ -352,7 +350,7 @@ export default function HomePage() {
   };
 
   const handleStepsSubmit = () => {
-    const steps = parseInt(stepsAmount);
+    const steps = parseInt("" + stepsAmount);
     if (isNaN(steps) || steps <= 0) {
       toast({
         title: "Invalid input",
@@ -368,7 +366,7 @@ export default function HomePage() {
   };
 
   const handleSleepSubmit = () => {
-    const hours = parseFloat(sleepAmount);
+    const hours = parseFloat("" + sleepAmount);
     if (isNaN(hours) || hours <= 0 || hours > 24) {
       toast({
         title: "Invalid input",
@@ -481,7 +479,7 @@ export default function HomePage() {
                     e.stopPropagation();
                     // Add 250ml (0.25L) to current water intake
                     let currentWater = latestUpdate?.Water || 0;
-                    currentWater = parseFloat(currentWater)
+                    currentWater = parseFloat("" + currentWater)
                     const newAmount = currentWater + 0.25;
                     setWaterAmount(newAmount.toString());
                     updateWaterMutation.mutate(newAmount);
@@ -931,7 +929,7 @@ export default function HomePage() {
                   size="sm"
                   className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
                   onClick={() => {
-                    const currentAmount = parseFloat(waterAmount) || 0;
+                    const currentAmount = parseFloat("" + waterAmount) || 0;
                     const newAmount = currentAmount + 0.25;
                     setWaterAmount(newAmount.toString());
                   }}
