@@ -12,6 +12,7 @@
       ]
     },
     "esModuleInterop": true,
+     "moduleResolution": "nodenext",
     "allowSyntheticDefaultImports": true
   }
 }
