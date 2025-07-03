@@ -490,14 +490,14 @@ export default function UpdatesPage() {
   //todo
   const renderMeasurementBar = () => {
     // Get first (oldest) and last (newest) measurements
-    const firstMeasurement = measurements[measurements.length - 1];
-    const lastMeasurement = measurements[0];
+    const firstMeasurement = measurements![measurements!.length - 1];
+    const lastMeasurement = measurements![0];
 
     console.log(firstMeasurement);
     console.log(lastMeasurement);
 
     // Helper function to calculate change and progress percentage
-    const getChangeDetails = (firstVal, lastVal) => {
+    const getChangeDetails = (firstVal: number, lastVal: number) => {
       const change = lastVal - firstVal;
       const progressPercent = ((firstVal - lastVal) / firstVal) * 100; // % change (positive = improvement)
       return { change, progressPercent };
@@ -507,45 +507,45 @@ export default function UpdatesPage() {
       <>
         <MeasurementItem
           title="Weight"
-          startValue={firstMeasurement.Weight}
-          currentValue={lastMeasurement.Weight}
-          {...getChangeDetails(firstMeasurement.Weight, lastMeasurement.Weight)}
+          startValue={firstMeasurement.Weight!}
+          currentValue={lastMeasurement.Weight!}
+          {...getChangeDetails(firstMeasurement.Weight!, lastMeasurement.Weight!)}
         />
         <MeasurementItem
           title="Waist"
-          startValue={firstMeasurement.Waist}
-          currentValue={lastMeasurement.Waist}
-          {...getChangeDetails(firstMeasurement.Waist, lastMeasurement.Waist)}
+          startValue={firstMeasurement.Waist!}
+          currentValue={lastMeasurement.Waist!}
+          {...getChangeDetails(firstMeasurement.Waist!, lastMeasurement.Waist!)}
         />
         <MeasurementItem
           title="Body Fat %"
-          startValue={firstMeasurement.BodyFat}
-          currentValue={lastMeasurement.BodyFat}
-          {...getChangeDetails(firstMeasurement.BodyFat, lastMeasurement.BodyFat)}
+          startValue={firstMeasurement.BodyFat!}
+          currentValue={lastMeasurement.BodyFat!}
+          {...getChangeDetails(firstMeasurement.BodyFat!, lastMeasurement.BodyFat!)}
         />
         <MeasurementItem
           title="Neck"
-          startValue={firstMeasurement.Neck}
-          currentValue={lastMeasurement.Neck}
-          {...getChangeDetails(firstMeasurement.Neck, lastMeasurement.Neck)}
+          startValue={firstMeasurement.Neck!}
+          currentValue={lastMeasurement.Neck!}
+          {...getChangeDetails(firstMeasurement.Neck!, lastMeasurement.Neck!)}
         />
         <MeasurementItem
           title="Chest"
-          startValue={firstMeasurement.Chest}
-          currentValue={lastMeasurement.Chest}
-          {...getChangeDetails(firstMeasurement.Chest, lastMeasurement.Chest)}
+          startValue={firstMeasurement.Chest!}
+          currentValue={lastMeasurement.Chest!}
+          {...getChangeDetails(firstMeasurement.Chest!, lastMeasurement.Chest!)}
         />
         <MeasurementItem
           title="Upper Arm"
-          startValue={firstMeasurement.UpperArm}
-          currentValue={lastMeasurement.UpperArm}
-          {...getChangeDetails(firstMeasurement.UpperArm, lastMeasurement.UpperArm)}
+          startValue={firstMeasurement.UpperArm!}
+          currentValue={lastMeasurement.UpperArm!}
+          {...getChangeDetails(firstMeasurement.UpperArm!, lastMeasurement.UpperArm!)}
         />
         <MeasurementItem
           title="Quadriceps"
-          startValue={firstMeasurement.Quadriceps}
-          currentValue={lastMeasurement.Quadriceps}
-          {...getChangeDetails(firstMeasurement.Quadriceps, lastMeasurement.Quadriceps)}
+          startValue={firstMeasurement.Quadriceps!}
+          currentValue={lastMeasurement.Quadriceps!}
+          {...getChangeDetails(firstMeasurement.Quadriceps!, lastMeasurement.Quadriceps!)}
         />
       </>
     );
