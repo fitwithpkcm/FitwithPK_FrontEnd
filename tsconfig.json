@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2015", 
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "jsx": "react",
     "baseUrl": ".",
     "paths": {
@@ -12,7 +14,6 @@
       ]
     },
     "esModuleInterop": true,
-     "moduleResolution": "nodenext",
     "allowSyntheticDefaultImports": true
   }
 }
