@@ -90,7 +90,7 @@ export default function UpdatesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [files, setFiles] = useState(null)
+  const [files, setFiles] = useState([])
 
   const currentDate = new Date();
 
@@ -165,10 +165,10 @@ export default function UpdatesPage() {
       //api calling for saving photos to gallery
       if (uploadedImages?.length) {
         const formdata = new FormData()
-        for (let x = 0; x < files.length; x++) {
-          formdata.append("WeeklyFile", files[x]);
+        for (let x = 0; x < files?.length; x++) {
+          formdata.append("WeeklyFile", files![x]);
         }
-        const id = measurements[0]?.IdWeeklyStats;
+        const id = measurements![0]?.IdWeeklyStats;
         formdata.append("IdWeeklyStats", "" + id);
         updateMeasurements(formdata)
       }
@@ -183,12 +183,12 @@ export default function UpdatesPage() {
   // Fetch user's body measurements
   const { data: measurements } = useQuery<IBodyMeasurement[]>({
     queryKey: ["weekly-updates"],
-    queryFn: () => getWeeklyUpdate({ 'limited': true }).then(res => res.data.data)
+    queryFn: () => getWeeklyUpdate({ 'limited': true }).then((res: ApiResponse<IBodyMeasurement[]>) => res.data.data)
   });
 
   const { data: galleryDetails } = useQuery<IBodyMeasurement[]>({
     queryKey: ["gallery-updates"],
-    queryFn: () => getProgressGallery(null).then(res => res.data.data),
+    queryFn: () => getProgressGallery(null).then((res: ApiResponse<IBodyMeasurement[]>) => res.data.data),
   });
 
   /**
