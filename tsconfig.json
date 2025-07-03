@@ -1,19 +1,19 @@
 {
   "compilerOptions": {
-    "target": "ES2015", 
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "target": "ES2015",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "jsx": "react",
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@shared/*": [
-        "./shared/*"
-      ]
+      "@/*": ["./src/*"],
+      "@shared/*": ["./shared/*"]
     },
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
-  }
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"]
 }
