@@ -29,6 +29,8 @@ import { BASE_URL, UNITS } from "@/common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
 import { IUser } from "@/interface/models/User";
 
+type GoalType = "weight-loss" | "muscle-gain" | "maintenance";
+
 export default function ProfilePage() {
   const { user, logoutMutation } = useAuth();
   const queryClient = useQueryClient();
@@ -57,17 +59,19 @@ export default function ProfilePage() {
   // Fetch user's body measurements
   const { data: myCoachDetails } = useQuery<ICoach>({
     queryKey: ["get_coach"],
-    queryFn: () => getMyCoachDetails(0).then(res => res.data.data)
+    queryFn: () => getMyCoachDetails(0).then((res: ApiResponse<ICoach[]>) => res.data.data)
   });
 
   const { data: loggedUserDetails } = useQuery<Partial<IUser>>({
     queryKey: ["get_mydetails"],
-    queryFn: () => getLoggedUserDetails(0).then(res => {
-      if (res.data.data.length > 0) {
+    queryFn: () => getLoggedUserDetails(0).then((res: ApiResponse<Partial<IUser>>) => {
+      if (Array.isArray(res.data.data)) {
         return res.data.data[0]
       } else {
         return null;
       }
+    }).catch((error: unknown) => {
+      console.log("error handling", error);
     })
   });
 
@@ -85,7 +89,7 @@ export default function ProfilePage() {
   const RenderCertifications = () => {
     return (
       <div className="space-y-6">
-        {myCoachDetails.ProfessionalDetails.certifications.map((certification, index) => (
+        {myCoachDetails?.ProfessionalDetails.certifications.map((certification, index) => (
           <div key={index} className="flex items-start">
             <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex-shrink-0 flex items-center justify-center">
               <Award className="h-4 w-4 text-primary-600 dark:text-primary-400" />
@@ -149,7 +153,7 @@ export default function ProfilePage() {
 
     return (
       <div className="flex flex-wrap gap-2">
-        {myCoachDetails.ProfessionalDetails.specializations.map((specialization, index) => {
+        {myCoachDetails?.ProfessionalDetails.specializations.map((specialization, index) => {
           const colorIndex = index % colorClasses.length;
           const colors = colorClasses[colorIndex];
           return (
@@ -192,7 +196,7 @@ export default function ProfilePage() {
           <TabsContent value="profile" className="mt-0 space-y-6">
             {/* Profile Info */}
             <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
-              <CardContent className="p-5">
+              {loggedUserDetails && <CardContent className="p-5">
                 <div className="flex items-center">
                   <div className="relative">
                     <div
@@ -239,7 +243,11 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div className="ml-5">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{`${loggedUserDetails?.FirstName} ${loggedUserDetails?.LastName}` || "----"}</h2>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100"><h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      {loggedUserDetails?.FirstName && loggedUserDetails?.LastName
+                        ? `${loggedUserDetails.FirstName} ${loggedUserDetails.LastName}`
+                        : "----"}
+                    </h2></h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{loggedUserDetails?.EmailID}</p>
                     <div className="flex items-center mt-1 text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 py-1 px-2 rounded inline-block">
                       <Award className="h-3 w-3 mr-1 text-amber-500" />
@@ -251,11 +259,11 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-3 gap-4 mt-6">
                   <div className="text-center">
                     <p className="text-sm text-gray-500 dark:text-gray-400">Weight</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{loggedUserDetails?.MainBodyAttributes.weight} {UNITS.WEIGHT.KILO}</p>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{loggedUserDetails?.MainBodyAttributes?.weight} {UNITS.WEIGHT.KILO}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-500 dark:text-gray-400">Height</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{loggedUserDetails?.MainBodyAttributes.height} {UNITS.HEIGHT.CENTI} </p>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{loggedUserDetails?.MainBodyAttributes?.height} {UNITS.HEIGHT.CENTI} </p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-500 dark:text-gray-400">Body Fat</p>
@@ -263,6 +271,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </CardContent>
+              }
             </Card>
 
             {/* Fitness Goal */}
@@ -275,7 +284,7 @@ export default function ProfilePage() {
                     className="text-primary-600 text-sm p-0 h-auto"
                     onClick={() => {
                       // Pre-populate with existing data
-                      setGoalWeight(profile?.goalWeight?.toString() || "70");
+                      setGoalWeight("70");
                       setGoalType(goalType);
                       // Open the dialog
                       setShowGoalDialog(true);
@@ -296,9 +305,9 @@ export default function ProfilePage() {
                     </div>
                     <div className="ml-3">
                       <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                        {loggedUserDetails?.OnBoardUserAttributes.fitnessGoals}
+                        {loggedUserDetails?.OnBoardUserAttributes?.fitnessGoals}
                       </h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Target: {loggedUserDetails?.OnBoardUserAttributes.fitnessGoals}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Target: {loggedUserDetails?.OnBoardUserAttributes?.fitnessGoals}</p>
                     </div>
                   </div>
 
@@ -306,7 +315,7 @@ export default function ProfilePage() {
                   <div className="flex justify-between mt-1">
                     <span className="text-xs text-gray-500 dark:text-gray-400">Start: 77.5kg</span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">Current: 72.5kg</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Goal: {profile?.goalWeight || "72"}kg</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Goal: {"72"}kg</span>
                   </div>
                 </div>
               </CardContent>
@@ -941,12 +950,12 @@ function SettingsLink({ icon, label }: SettingsLinkProps) {
 
 // Add fitness goal dialog at the end of the component
 export function FitnessGoalDialog({ open, onOpenChange, goalWeight, setGoalWeight, goalType, setGoalType }: {
-  open: boolean;
+   open: boolean;
   onOpenChange: (open: boolean) => void;
   goalWeight: string;
   setGoalWeight: (weight: string) => void;
-  goalType: string;
-  setGoalType: (type: string) => void;
+  goalType: GoalType;  
+  setGoalType: (type: GoalType) => void;  
 }) {
   const { toast } = useToast();
   // Create local state to track changes before saving
