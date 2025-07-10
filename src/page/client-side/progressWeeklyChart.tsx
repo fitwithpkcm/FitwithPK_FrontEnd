@@ -3,9 +3,23 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { getProgressGraph } from '@/services/UpdateServices'
 
-
 interface GRAPH_PROPS {
     selectedDate: Date
+}
+
+type Point = {
+    x: number
+    y: number
+    v: number
+    tick: string
+}
+
+// Add type for your metric items
+type Metric = {
+    label: string
+    data: number[]
+    labels: string[]
+    untis: string
 }
 
 export default function GraphDataChart(props: GRAPH_PROPS) {
@@ -20,17 +34,13 @@ export default function GraphDataChart(props: GRAPH_PROPS) {
         }
     }, [props]);
 
-    // payload for fetching
-    
     const payload = { CurrentDate: selectedDate, Label: range }
 
-    // fetch metrics using v5 object syntax
-    const { data: metrics = [], isLoading, error } = useQuery({
+    const { data: metrics = [], isLoading, error } = useQuery<Metric[]>({
         queryKey: ['daily-updates', payload],
-        queryFn: () => getProgressGraph(payload).then(res => res.data.data)
+        queryFn: () => getProgressGraph(payload).then((res: ApiResponse<unknown[]>) => res.data.data)
     })
 
-    // mutation to manually refresh
     const refreshMutation = useMutation({
         mutationFn: () => getProgressGraph(payload),
         onSuccess: () => {
@@ -75,20 +85,20 @@ export default function GraphDataChart(props: GRAPH_PROPS) {
     const SVG_W = 400
     const SVG_H = 150
     const PAD = { top: 10, bottom: 20, left: 30, right: 10 }
-    
+
     const maxVal = Math.max(...data)
     const minVal = Math.min(...data)
     const xStep = (SVG_W - PAD.left - PAD.right) / (data.length - 1)
     const yScale = (SVG_H - PAD.top - PAD.bottom) / (maxVal - minVal || 1)
 
-    const points = data.map((v, i) => ({
+    const points: Point[] = data.map((v: number, i: number) => ({
         x: PAD.left + i * xStep,
         y: PAD.top + (maxVal - v) * yScale,
         v,
         tick: labels[i],
     }))
 
-    const lineD = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
+    const lineD = points.map((p: Point, i: number) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
 
     return (
         <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 mb-6">
@@ -97,7 +107,7 @@ export default function GraphDataChart(props: GRAPH_PROPS) {
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-medium text-gray-800 dark:text-gray-200">{label} Progress</h3>
                     <div className="flex items-center space-x-2 text-xs">
-                        {['1W', '1M', '3M', '1Y'].map(btn => (
+                        {['1W', '1M', '3M', '1Y'].map((btn: string) => (
                             <button
                                 key={btn}
                                 className={`py-1 px-2 ${btn === range ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
@@ -122,7 +132,7 @@ export default function GraphDataChart(props: GRAPH_PROPS) {
                         </defs>
                         <path d={lineD} fill="none" stroke="#3B82F6" strokeWidth="3" />
                         <path d={`${lineD} L${points[points.length - 1].x},${SVG_H - PAD.bottom} L${points[0].x},${SVG_H - PAD.bottom} Z`} fill="url(#grad)" />
-                        {points.map((p, i) => (
+                        {points.map((p: Point, i: number) => (
                             <circle key={i} cx={p.x} cy={p.y} r={5} fill="#3B82F6" stroke="#fff" strokeWidth={2} className="cursor-pointer hover:r-6" onClick={() => { }} />
                         ))}
                     </svg>
@@ -133,14 +143,14 @@ export default function GraphDataChart(props: GRAPH_PROPS) {
                     </div>
                 </div>
                 <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 ml-3 mt-3">
-                    {points.map((p, i) => (
+                    {points.map((p: Point, i: number) => (
                         <span key={i} className="cursor-pointer hover:text-primary-600" onClick={() => { }}>{p.tick}</span>
                     ))}
                 </div>
 
                 {/* metric tabs */}
                 <div className="flex flex-wrap gap-2 mt-3">
-                    {metrics.map((m, idx) => (
+                    {metrics.map((m: Metric, idx: number) => (
                         <button key={m.label} className={`px-3 py-1 rounded-full text-sm ${idx === selectedIdx ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`} onClick={() => setSelectedIdx(idx)}>{m.label}</button>
                     ))}
                 </div>

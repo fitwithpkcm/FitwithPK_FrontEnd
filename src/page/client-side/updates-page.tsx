@@ -19,16 +19,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 /* import { DailyUpdate, BodyMeasurement } from "@shared/schema"; */
 import { dailyUpdate, getDailyUpdate, getDailyUpdateForAWeek, getProgressGallery, getSingleDayUpdate, getWeeklyUpdate, weeklyUpdate } from "../../services/UpdateServices";
-import { setBaseUrl } from "../../services/HttpService"
+
 import { BASE_URL, UNITS, USER_TARGET } from "../../common/Constant";
 import GraphDataChart from "./progressWeeklyChart";
 import { IBodyMeasurement } from '../../interface/IBodyMeasurement'
 import moment from 'moment';
-import { ManageLocalStorage } from "../../services/Localstorage"
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { IDailyStats } from "@/interface/IDailyUpdates";
 import RatingSmiley from "@/components/ui/rating-smiley";
 import { calculatePercentage } from "@/lib/utils";
+
+import { setBaseUrl } from "../../services/HttpService"
+import { ManageLocalStorage } from "../../services/Localstorage"
 
 
 
@@ -90,7 +93,7 @@ export default function UpdatesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [files, setFiles] = useState([])
+  const [files, setFiles] = useState<File[]>([])
 
   const currentDate = new Date();
 
@@ -129,7 +132,7 @@ export default function UpdatesPage() {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    const fileArray = Array.from(files);
+    const fileArray: File[] = Array.from(files);
     setFiles(fileArray);
 
     const newImages: string[] = [];
@@ -197,7 +200,7 @@ export default function UpdatesPage() {
  */
   const { data: dailyUpdatesForWeek = [] } = useQuery<IDailyStats[]>({
     queryKey: ["daily-updates-forweek"],
-    queryFn: () => getDailyUpdateForAWeek({ Day: moment(currentDate).format("DD-MM-YYYY") }).then(res => res.data.data)
+    queryFn: () => getDailyUpdateForAWeek({ Day: moment(currentDate).format("DD-MM-YYYY") }).then((res: ApiResponse<IDailyStats[]>) => res.data.data)
   });
 
 
@@ -397,7 +400,7 @@ export default function UpdatesPage() {
 
   const { data: fetchedUpdates = [] } = useQuery({
     queryKey: ["daily-updates"],
-    queryFn: () => getDailyUpdate().then(res => res.data.data)
+    queryFn: () => getDailyUpdate().then((res: ApiResponse<unknown[]>) => res.data.data)
   });
 
 
