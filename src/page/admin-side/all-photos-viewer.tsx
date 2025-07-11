@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import  React,{ useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { format, parse, parseISO } from 'date-fns';
 import PhotoViewer from './photo-viewer';
+import { ProgressPhoto } from './weekly-track-view';
+
 
 interface Photo {
   id: number;
@@ -11,7 +13,7 @@ interface Photo {
 
 interface AllPhotosViewProps {
   userId: number;
-  allPhotos: Photo[],
+  allPhotos: ProgressPhoto[],
   onBack: () => void;
 }
 

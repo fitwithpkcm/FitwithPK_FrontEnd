@@ -30,7 +30,7 @@ export interface x_metric {
 export default function ClientMetricsChart({ onBack }: ClientMetricsChartProps) {
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [selectedClient, setSelectedClient] = useState(0);
+  const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedMetric, setSelectedMetric] = useState("Sleep_Percent");
 
   const currentDate = new Date();
@@ -125,19 +125,22 @@ export default function ClientMetricsChart({ onBack }: ClientMetricsChartProps) 
     };
   });
 
-  const weekTotals: IDailyStats = {
+  const weekTotals: WeeklyDay = {
     WeekDay: "Total",
     Steps: dailyUpdatesForWeek.reduce((sum, day) => sum + Number(day.Steps || 0), 0),
     Water: dailyUpdatesForWeek.reduce((sum, day) => sum + Number(day.Water || 0), 0),
     Sleep: dailyUpdatesForWeek.reduce((sum, day) => sum + Number(day.Sleep || 0), 0),
+    Steps_Percent: 0,
+    Water_Percent: 0,
+    Sleep_Percent: 0,
   };
 
   // Now TypeScript knows weeklyData is an array of IWeeklyData
   weeklyData.push(weekTotals);
 
   const renderBarChart = (
-    weeklyData: IDailyStats[],
-    metricKey: MetricKey,
+    weeklyData: WeeklyDay[],
+    metricKey: string,
     color: string = '#4f46e5',
     label: string = 'Value'
   ) => {
