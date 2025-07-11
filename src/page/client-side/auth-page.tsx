@@ -82,7 +82,7 @@ export default function AuthPage() {
       {
         onSuccess: (userData) => {
           console.log("Login successful page:", userData);
-          if (userData.IsAdmin === 1) {
+          if (userData.info.IsAdmin === 1) {
             setLocation(RENDER_URL.ADMIN_DASHBOARD);
           } else {
             setLocation(RENDER_URL.STUDENT_DASHBOARD);
