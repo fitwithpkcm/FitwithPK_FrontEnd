@@ -15,7 +15,7 @@ type Point = {
 }
 
 // Add type for your metric items
-type Metric = {
+export type Metric = {
     label: string
     data: number[]
     labels: string[]
@@ -38,7 +38,7 @@ export default function GraphDataChart(props: GRAPH_PROPS) {
 
     const { data: metrics = [], isLoading, error } = useQuery<Metric[]>({
         queryKey: ['daily-updates', payload],
-        queryFn: () => getProgressGraph(payload).then((res: ApiResponse<unknown[]>) => res.data.data)
+        queryFn: () => getProgressGraph(payload).then((res: ApiResponse<Metric[]>) => res.data.data)
     })
 
     const refreshMutation = useMutation({
@@ -79,7 +79,7 @@ export default function GraphDataChart(props: GRAPH_PROPS) {
     }
 
     // current metric
-    let { label = '', data = [], labels = [], untis = '' } = metrics[selectedIdx] || {}
+    const { label = '', data = [], labels = [], untis = '' } = metrics[selectedIdx] || {}
 
     // SVG setup
     const SVG_W = 400

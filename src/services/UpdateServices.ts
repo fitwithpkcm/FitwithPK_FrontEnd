@@ -2,6 +2,9 @@
 import { httpCall, httpUpload } from "./HttpService";
 import { API_URL } from "../common/Urls";
 import { IDailyStats } from "@/interface/IDailyUpdates";
+import { Metric } from "@/page/client-side/progressWeeklyChart";
+import { IBodyMeasurement } from "@/interface/IBodyMeasurement";
+import { IStudentGallery } from "@/interface/IStudentGallery";
 
 export const getDailyUpdate = (params: unknown = null) => {
     return httpCall({
@@ -59,7 +62,7 @@ export const getWeeklyUpdate = (params: unknown) => {
         url: API_URL.GET_WEEKLY_UPDATES,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<IBodyMeasurement[]>) => {
         return response;
     });
 };
@@ -69,7 +72,7 @@ export const getProgressGraph = (params: unknown) => {
         url: API_URL.GET_SIMPLE_GRAPH,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<Metric[]>) => {
         return response;
     });
 };
@@ -79,7 +82,7 @@ export const getProgressGallery = (params: unknown) => {
         url: API_URL.GET_WEEKLY_GALLERY,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<IStudentGallery[]>) => {
         return response;
     });
 };

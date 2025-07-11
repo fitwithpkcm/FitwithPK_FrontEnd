@@ -59,11 +59,11 @@ type FoodAlternative = {
 
 export default function NutritionPage() {
   const { toast } = useToast();
-  const [activeNutrient, setActiveNutrient] = useState<"Carbs" | "Protein" | "Fat">("Protein");
+  const [activeNutrient, setActiveNutrient] = useState<keyof IFoodCatergory>("Protein");
   const [nutritionGoal, setNutritionGoal] = useState<"fat-loss" | "muscle-gain" | "maintenance">("maintenance");
 
-  const [foodItem, setFoodItem] = useState<FoodAlternative>();
-  const [quantity, setQuantity] = useState("");
+  const [foodItem, setFoodItem] = useState<FoodAlternative | null>();
+  const [quantity, setQuantity] = useState<string | null>("");
   const [selectedAlternative, setSelectedAlternative] = useState<FoodAlternative | null>(null);
   const [showBenefitsDialog, setShowBenefitsDialog] = useState(false);
   const [selectedFoodInfo, setSelectedFoodInfo] = useState<{
@@ -83,13 +83,16 @@ export default function NutritionPage() {
 * author : basil1112
 * Fetch daily updates
 */
-  const { data: foodListBasedOnCatergory = [] } = useQuery<IFoodCatergory[]>({
+  const { data: foodListBasedOnCatergory } = useQuery<IFoodCatergory>({
     queryKey: ["foodcatergory_list"],
-    queryFn: () => getFoodBasedOnCatergoryApi(null).then(res => res.data.data)
+    queryFn: () => getFoodBasedOnCatergoryApi(null).then((res: unknown) => {
+      const resposne = res as ApiResponse<IFoodCatergory>;
+      return resposne.data.data
+    })
   });
 
   const getSwapProductsMutation = useMutation({
-    mutationFn: async ({ food, weight }: { food: string; weight: string }) => {
+    mutationFn: async ({ food, weight }: { food: string; weight: string | null }) => {
       const currentFoodItem = {
         Food: food,
         Quantity: weight
@@ -97,9 +100,10 @@ export default function NutritionPage() {
 
       try {
         const res = await getSwappedNutriProducts(currentFoodItem);
-        if (res.data.success) {
+        const response = res as ApiResponse<FoodAlternative[]>;
+        if (response.data.success) {
           return {
-            swappedData: res.data.data,
+            swappedData: response.data.data,
             originalFood: foodItem  // Pass original food for use in onSuccess
           };
         }
@@ -111,7 +115,7 @@ export default function NutritionPage() {
     onSuccess: (data) => {
 
       setSelectedFoodInfo({
-        baseInfo: data.originalFood,
+        baseInfo: data.originalFood!,
         alternatives: data.swappedData
       });
 
@@ -145,11 +149,9 @@ export default function NutritionPage() {
     // Show suggestions based on input
     if (value.length > 0) {
 
-      const filtered = foodListBasedOnCatergory[activeNutrient].filter(item => {
-        item.name.toLowerCase().includes(value.toLowerCase());
-        return item;
-      }
-      );
+      const filtered = foodListBasedOnCatergory?.[activeNutrient]?.filter(item =>
+        item.name.toLowerCase().includes(value.toLowerCase())
+      ) || [];
       setSuggestions(filtered);
     } else {
       setSuggestions([]);
@@ -169,7 +171,7 @@ export default function NutritionPage() {
    * fetch daily updates for this weeek 
    */
 
-    getSwapProductsMutation.mutate({ food: foodItem.name, weight: quantity })
+    getSwapProductsMutation.mutate({ food: foodItem!.name, weight: quantity })
 
 
     /* 
@@ -258,7 +260,7 @@ export default function NutritionPage() {
                   id="quantity"
                   type="number"
                   placeholder="e.g., 100"
-                  value={quantity}
+                  value={quantity ? quantity : ""}
                   onChange={(e) => setQuantity(e.target.value)}
                   className="w-full"
                 />
@@ -318,7 +320,7 @@ export default function NutritionPage() {
                       <div className="w-full h-48 relative">
                         <img
                           src={selectedFoodInfo.baseInfo.imageUrl}
-                          alt={foodItem}
+                          alt={foodItem?.name}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
@@ -327,7 +329,7 @@ export default function NutritionPage() {
                     <div className={`p-5 ${selectedFoodInfo.baseInfo.imageUrl ? '-mt-16 relative z-10' : ''}`}>
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="text-xl font-bold text-white dark:text-white">{foodItem.name}</h3>
+                          <h3 className="text-xl font-bold text-white dark:text-white">{foodItem?.name}</h3>
                           <p className="text-gray-200 dark:text-gray-300">{quantity || "100"}g serving</p>
                         </div>
                         <Badge className="bg-primary-500 hover:bg-primary-600">{activeNutrient}</Badge>

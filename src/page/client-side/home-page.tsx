@@ -160,8 +160,8 @@ export default function HomePage() {
 
   useEffect(() => {
     if (dietPlanFiles != null) {
-      setWorkOutPdfUrl(`${BASE_URL}/uploads/weekly/${dietPlanFiles.FileName.workout_plan}`);
-      setDietPdfUrl(`${BASE_URL}/uploads/weekly/${dietPlanFiles.FileName.diet_plan}`);
+      setWorkOutPdfUrl(`${BASE_URL}/uploads/weekly/${dietPlanFiles.FileName?.workout_plan}`);
+      setDietPdfUrl(`${BASE_URL}/uploads/weekly/${dietPlanFiles.FileName?.diet_plan}`);
     }
   }, []);
 

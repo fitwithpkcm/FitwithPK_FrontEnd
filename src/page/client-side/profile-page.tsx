@@ -59,7 +59,7 @@ export default function ProfilePage() {
   // Fetch user's body measurements
   const { data: myCoachDetails } = useQuery<ICoach>({
     queryKey: ["get_coach"],
-    queryFn: () => getMyCoachDetails(0).then((res: ApiResponse<ICoach[]>) => res.data.data)
+    queryFn: () => getMyCoachDetails(0).then((res: ApiResponse<ICoach>) => res.data.data)
   });
 
   const { data: loggedUserDetails } = useQuery<Partial<IUser>>({

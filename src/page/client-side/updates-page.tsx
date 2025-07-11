@@ -33,6 +33,7 @@ import { calculatePercentage } from "@/lib/utils";
 import { setBaseUrl } from "../../services/HttpService"
 import { ManageLocalStorage } from "../../services/Localstorage"
 import { ILoginUserData } from "@/interface/ILoginUserData";
+import { IStudentGallery } from "@/interface/IStudentGallery";
 
 
 
@@ -190,9 +191,9 @@ export default function UpdatesPage() {
     queryFn: () => getWeeklyUpdate({ 'limited': true }).then((res: ApiResponse<IBodyMeasurement[]>) => res.data.data)
   });
 
-  const { data: galleryDetails } = useQuery<IBodyMeasurement[]>({
+  const { data: galleryDetails } = useQuery<IStudentGallery[]>({
     queryKey: ["gallery-updates"],
-    queryFn: () => getProgressGallery(null).then((res: ApiResponse<IBodyMeasurement[]>) => res.data.data),
+    queryFn: () => getProgressGallery(null).then((res: ApiResponse<IStudentGallery[]>) => res.data.data),
   });
 
   /**
@@ -243,7 +244,7 @@ export default function UpdatesPage() {
 
     if (galleryDetails) {
 
-      const allPhotos = galleryDetails.reduce((photos, item) => {
+      const allPhotos: Photo[] = galleryDetails?.reduce((photos: Photo[], item: IStudentGallery) => {
         if (!item.FileName) return photos;
 
         const files = item.FileName
@@ -261,13 +262,13 @@ export default function UpdatesPage() {
 
         return [
           ...photos,
-          ...files.map(file => ({
-            url: `${BASE_URL}/uploads/weekly/${file}`,
+          ...files.map((file, index) => ({
+            id: date.getTime() + index, // Using timestamp + index for unique ID
             date: dateLabel,
-            id: `${file}-${date.getTime()}` // Unique ID for keys
+            url: `${BASE_URL}/uploads/weekly/${file}`
           }))
         ];
-      }, []);
+      }, [] as Photo[]) || [];
 
       setAllPhotos(allPhotos);
 
