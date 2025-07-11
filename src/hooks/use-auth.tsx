@@ -1,4 +1,4 @@
-import React,{ createContext, ReactNode, useContext, useEffect } from "react";
+import React, { createContext, ReactNode, useContext, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -25,7 +25,7 @@ type AuthContextType = {
   user: IUserData | null;
   isLoading: boolean;
   error: Error | null;
-  loginMutation: UseMutationResult<IUserData, Error, LoginData>;
+  loginMutation: UseMutationResult<ILoginUserData, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<IUserData, Error, RegisterData>;
 };
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [refetch]);
 
-  function handleLogin(credentials: LoginData) {
+  function handleLogin(credentials: LoginData): Promise<ILoginUserData> {
     return login(credentials)
       .then((res: ApiResponse<ILoginUserData>) => {
         if (!res.data.success) {
@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
   }
   // Use the named async function in the mutation
-  const loginMutation = useMutation({
+  const loginMutation = useMutation<ILoginUserData, Error, LoginData>({
     mutationFn: handleLogin,
     onSuccess: (userData: unknown) => {
       queryClient.setQueryData(["userData"], userData);
