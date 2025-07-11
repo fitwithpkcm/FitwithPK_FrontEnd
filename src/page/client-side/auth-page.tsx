@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useLocation, Redirect } from "wouter";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/use-auth";
-import { RENDER_URL } from "@/common/Urls";
-import { validateToken } from "@/services/LoginServices";
+import { Button } from "../../components/ui/button";
+import { useAuth } from "../../hooks/use-auth";
+import { RENDER_URL } from "../../common/Urls";
+import { validateToken } from "../..//services/LoginServices";
 import { useQuery } from "@tanstack/react-query";
-import { BASE_URL } from "@/common/Constant";
+import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
 
 interface UserType {
