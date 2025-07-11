@@ -31,17 +31,17 @@ const clients: Client[] = [
 ];
 
 interface ClientManagementScreenProps {
-  onViewProfile?: (clientId: number) => void;
+  onViewProfile?: (clientId: number | undefined) => void;
 }
 
 export default function ClientManagementScreen({ onViewProfile }: ClientManagementScreenProps) {
   const [clientList, setClientList] = useState<IUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const handleStatusChange = (clientId: number, newStatus: "active" | "paused" | "inactive") => {
+  const handleStatusChange = (clientId: number | undefined, newStatus: "active" | "paused" | "inactive") => {
     setClientList(prev =>
       prev.map(client =>
-        client.id === clientId ? { ...client, status: newStatus } : client
+        client.IdUser === clientId ? { ...client, status: newStatus } : client
       )
     );
   };
@@ -64,11 +64,11 @@ export default function ClientManagementScreen({ onViewProfile }: ClientManageme
 
 
   const filteredClients = coach_client_list?.filter(client =>
-    client.FirstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.EmailID.toLowerCase().includes(searchTerm.toLowerCase())
+    client.FirstName!.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.EmailID!.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getStatusColor = (status: number) => {
+  const getStatusColor = (status: number | undefined) => {
     switch (status) {
       case ACCESS_STATUS.ACTIVE.NUMBER: return "bg-green-100 text-green-800";
       case ACCESS_STATUS.PAUSE.NUMBER: return "bg-yellow-100 text-yellow-800";
@@ -77,7 +77,7 @@ export default function ClientManagementScreen({ onViewProfile }: ClientManageme
     }
   };
 
-  const getStatusIcon = (status: number) => {
+  const getStatusIcon = (status: number | undefined) => {
     switch (status) {
       case ACCESS_STATUS.ACTIVE.NUMBER: return "🟢";
       case ACCESS_STATUS.PAUSE.NUMBER: return "⏸️";

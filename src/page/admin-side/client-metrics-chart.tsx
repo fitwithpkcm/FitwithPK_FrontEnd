@@ -12,6 +12,7 @@ import { calculatePercentage } from "@/lib/utils";
 import { WeeklySummary } from "./weekly-summary";
 import { MobileAdminNav } from "@/components/layout/mobile-admin-nav";
 import { getUserListWithUpdates_ForCoach } from "@/services/AdminServices";
+import { WeeklyDay } from "../client-side/home-page";
 
 
 interface ClientMetricsChartProps {
@@ -69,14 +70,49 @@ export default function ClientMetricsChart({ onBack }: ClientMetricsChartProps) 
   });
 
 
-  let weeklyData: IDailyStats[] = [
-    { WeekDay: "Mon" },
-    { WeekDay: "Tue" },
-    { WeekDay: "Wed" },
-    { WeekDay: "Thu" },
-    { WeekDay: "Fri" },
-    { WeekDay: "Sat" },
-    { WeekDay: "Sun" },
+  let weeklyData: WeeklyDay[] = [
+    {
+      WeekDay: "Mon",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
+    {
+      WeekDay: "Tue",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
+    {
+      WeekDay: "Wed",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
+    {
+      WeekDay: "Thu",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
+    {
+      WeekDay: "Fri",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
+    {
+      WeekDay: "Sat",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
+    {
+      WeekDay: "Sun",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
   ];
 
   weeklyData = dailyUpdatesForWeek?.map((element: IDailyStats, index: number) => {

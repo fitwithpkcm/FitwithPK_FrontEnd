@@ -1,4 +1,4 @@
-import React,{ useState } from 'react';
+import React, { useState } from 'react';
 import { X, ChevronLeft, ChevronRight, ArrowLeftRight, Maximize } from 'lucide-react';
 import { format, parse, parseISO } from 'date-fns';
 import { ProgressPhoto } from './weekly-track-view';
@@ -18,11 +18,11 @@ interface PhotoViewerProps {
 export default function PhotoViewer({ photos, initialIndex = 0, onClose }: PhotoViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [compareMode, setCompareMode] = useState(false);
-  const [compareWithIndex, setCompareWithIndex] = useState<number | null>(null);
+  const [compareWithIndex, setCompareWithIndex] = useState<number>(0);
 
   // Sort photos by date (most recent first) to make comparison easier
   const sortedPhotos = [...photos].sort((a, b) =>
-    parseISO(b.date).getTime() - parseISO(a.date).getTime()
+    parseISO(b.date!).getTime() - parseISO(a.date!).getTime()
   );
 
   const currentPhoto = sortedPhotos[currentIndex];
@@ -54,11 +54,11 @@ export default function PhotoViewer({ photos, initialIndex = 0, onClose }: Photo
   const toggleCompareMode = () => {
     if (compareMode) {
       setCompareMode(false);
-      setCompareWithIndex(null);
+      setCompareWithIndex(0);
     } else {
       setCompareMode(true);
       // Default to comparing with the next most recent photo
-      const nextIndex = currentIndex < sortedPhotos.length - 1 ? currentIndex + 1 : null;
+      const nextIndex = currentIndex < sortedPhotos.length - 1 ? currentIndex + 1 : 0;
       setCompareWithIndex(nextIndex);
     }
   };
@@ -80,8 +80,8 @@ export default function PhotoViewer({ photos, initialIndex = 0, onClose }: Photo
           </h3>
           <p className="text-sm text-gray-300">
             {compareMode && compareWithIndex !== null
-              ? `Comparing ${formatPhotoDate(currentPhoto.date)} with ${formatPhotoDate(sortedPhotos[compareWithIndex].date)}`
-              : formatPhotoDate(currentPhoto.date)
+              ? `Comparing ${formatPhotoDate(currentPhoto.date ? currentPhoto.date : "03-03-1993")} with ${formatPhotoDate(sortedPhotos[compareWithIndex].date ? sortedPhotos[compareWithIndex].date : "03-03-1993")}`
+              : formatPhotoDate(currentPhoto.date ? currentPhoto.date : "")
             }
           </p>
         </div>
@@ -140,21 +140,21 @@ export default function PhotoViewer({ photos, initialIndex = 0, onClose }: Photo
             <>
               <div className="flex-1 h-1/2 sm:h-full flex items-center justify-center p-2 relative">
                 <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded-md">
-                  Current: {formatPhotoDate(currentPhoto.date)}
+                  Current: {formatPhotoDate(currentPhoto.date ? currentPhoto.date : "03-03-1993")}
                 </div>
                 <img
                   src={currentPhoto.imageUrl}
-                  alt={`Current: ${formatPhotoDate(currentPhoto.date)}`}
+                  alt={`Current: ${formatPhotoDate(currentPhoto.date ? currentPhoto.date : "03-03-1993")}`}
                   className="max-h-full max-w-full object-contain"
                 />
               </div>
               <div className="flex-1 h-1/2 sm:h-full flex items-center justify-center p-2 relative">
                 <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded-md">
-                  Compared: {formatPhotoDate(sortedPhotos[compareWithIndex].date)}
+                  Compared: {formatPhotoDate(sortedPhotos[compareWithIndex].date ? sortedPhotos[compareWithIndex].date : "03-03-1993")}
                 </div>
                 <img
                   src={sortedPhotos[compareWithIndex].imageUrl}
-                  alt={`Compared: ${formatPhotoDate(sortedPhotos[compareWithIndex].date)}`}
+                  alt={`Compared: ${formatPhotoDate(sortedPhotos[compareWithIndex].date ? sortedPhotos[compareWithIndex].date : "03-03-1993")}`}
                   className="max-h-full max-w-full object-contain"
                 />
               </div>
@@ -174,8 +174,8 @@ export default function PhotoViewer({ photos, initialIndex = 0, onClose }: Photo
                 : setCurrentIndex(index)
               }
               className={`w-16 h-16 flex-shrink-0 rounded overflow-hidden ${compareMode
-                  ? (compareWithIndex === index ? 'ring-2 ring-yellow-500' : index === currentIndex ? 'ring-2 ring-blue-500' : '')
-                  : (index === currentIndex ? 'ring-2 ring-blue-500' : '')
+                ? (compareWithIndex === index ? 'ring-2 ring-yellow-500' : index === currentIndex ? 'ring-2 ring-blue-500' : '')
+                : (index === currentIndex ? 'ring-2 ring-blue-500' : '')
                 }`}
             >
               <img
@@ -185,8 +185,7 @@ export default function PhotoViewer({ photos, initialIndex = 0, onClose }: Photo
               />
               <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-[10px] py-1 px-1 text-center truncate">
                 {
-                  formatPhotoDate(photo.date)
-
+                  formatPhotoDate(photo.date ? photo.date : "03-03-1993")
                 }
               </div>
             </button>

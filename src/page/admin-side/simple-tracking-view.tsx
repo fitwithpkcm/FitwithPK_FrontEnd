@@ -121,11 +121,11 @@ export default function SimpleTrackingView() {
 
   // Count updated and missed users
   const updatedCount = UserListWithUpdates?.filter(user => user.IdStats != null).length;
-  const missedCount = UserListWithUpdates?.length - updatedCount;
+
+  const missedCount = UserListWithUpdates!.length - updatedCount!;
 
   // Handle user selection
   const handleSelectUser = (userId: number) => {
-    console.log("casdlkjasldasd", userId);
     setSelectedUserId(userId);
   };
 

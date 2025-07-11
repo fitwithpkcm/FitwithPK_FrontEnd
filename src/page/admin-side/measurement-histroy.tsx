@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import { UNITS } from '@/common/Constant';
 import { IBodyMeasurement } from '@/interface/IBodyMeasurement';
 import { format, subDays } from 'date-fns';
@@ -22,7 +23,7 @@ interface MeasurementHistoryProps {
 
 export default function MeasurementHistory({ measurements }: MeasurementHistoryProps) {
 
-  const formatDateToDayMonth = (inputDate: string) => {
+  const formatDateToDayMonth = (inputDate: string|undefined) => {
     const date = moment(inputDate, 'DD-MM-YYYY');
     if (!date.isValid()) {
       throw new Error('Invalid date format. Expected DD-MM-YYYY');
