@@ -1,5 +1,6 @@
 import { httpCall, httpUpload } from "./HttpService";
 import { API_URL } from "../common/Urls";
+import { ILoginUserData } from "@/interface/ILoginUserData";
 
 /* export const login = params => {
     return httpCall({
@@ -17,7 +18,7 @@ export const login = (params: unknown = null) => {
         url: API_URL.LOGIN,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<ILoginUserData>) => {
         return response;
     });
 };

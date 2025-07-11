@@ -1,8 +1,9 @@
 
-import { httpCall,httpUpload } from "./HttpService";
+import { httpCall, httpUpload } from "./HttpService";
 import { API_URL } from "../common/Urls";
+import { IDailyStats } from "@/interface/IDailyUpdates";
 
-export const getDailyUpdate = (params: unknown) => {
+export const getDailyUpdate = (params: unknown = null) => {
     return httpCall({
         url: API_URL.GET_DAILY_UPDATES,
         method: "post",
@@ -17,7 +18,7 @@ export const getSingleDayUpdate = (params: unknown) => {
         url: API_URL.GET_SINGLE_DAY,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<IDailyStats[]>) => {
         return response;
     });
 };

@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { RENDER_URL } from "../common/Urls"; // Make sure this path is correct
 import { login } from "../services/LoginServices";
 import { queryClient } from "@/lib/queryClient"; // adjust the import path as needed
+import { ILoginUserData, Info } from "@/interface/ILoginUserData";
 
 
 type IUserData = {
@@ -68,17 +69,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function handleLogin(credentials: LoginData) {
     return login(credentials)
-      .then((res) => {
-        if (!res?.data?.success) {
-          throw new Error(res?.data?.message || "Login failed");
+      .then((res: ApiResponse<ILoginUserData>) => {
+        if (!res.data.success) {
+          throw new Error(res.data.message || "Login failed");
         }
 
-        const { info } = res.data.data || {};
-        const userData = {
+        const userData: ILoginUserData = {
           token: res.data.data?.token || '',
-          ...info
+          info: res.data.data?.info || undefined
         };
-
         localStorage.setItem("userData", JSON.stringify(userData));
         return userData;
       })
@@ -90,10 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Use the named async function in the mutation
   const loginMutation = useMutation({
     mutationFn: handleLogin,
-    onSuccess: (userData: any) => {
+    onSuccess: (userData: unknown) => {
       queryClient.setQueryData(["userData"], userData);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      console.log("error", error)
     },
   });
 

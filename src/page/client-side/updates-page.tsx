@@ -32,6 +32,7 @@ import { calculatePercentage } from "@/lib/utils";
 
 import { setBaseUrl } from "../../services/HttpService"
 import { ManageLocalStorage } from "../../services/Localstorage"
+import { ILoginUserData } from "@/interface/ILoginUserData";
 
 
 
@@ -279,45 +280,45 @@ export default function UpdatesPage() {
 
   const { data: currentDayUpdates = [] } = useQuery<IDailyStats[]>({
     queryKey: ["currentday-updates"],
-    queryFn: () => {
-      return getSingleDayUpdate({ Day: moment(currentDate).format("DD-MM-YYYY") })
-        .then(res => {
-          if (res && res.data.data.length > 0) {
-            const updates = res.data.data[0];
-            //adding today values to the form 
-            //pre-filling the form for updates from values of steps and other details 
-            //author basil
-            form.reset({
-              Steps: updates.Steps ?? undefined,
-              Water: updates.Water ?? undefined,
-              Weight: updates.Weight ?? undefined,
-              Sleep: updates.Sleep ?? undefined,
-              Diet_Follow: updates.Diet_Follow ?? undefined,
-              WorkOut: updates.WorkOut ?? undefined,
-            });
-          }
-          else {
-            return null;
-          }
-        })
+    queryFn: async () => {
+      try {
+        const res = await getSingleDayUpdate({ Day: moment(currentDate).format("DD-MM-YYYY") });
+        if (res?.data?.data?.length > 0) {
+          const updates = res.data.data[0];
+          form.reset({
+            Steps: updates.Steps ?? undefined,
+            Water: updates.Water ?? undefined,
+            Weight: updates.Weight ?? undefined,
+            Sleep: updates.Sleep ?? undefined,
+            Diet_Follow: updates.Diet_Follow ?? undefined,
+            WorkOut: updates.WorkOut ?? undefined,
+          });
+          return [updates]; // Wrap in array to match IDailyStats[]
+        }
+        return []; // Return empty array instead of null
+      } catch (error) {
+        console.error(error);
+        return []; // Return empty array on error
+      }
     },
   });
 
 
-  const { mutate: updateMeasurements, isLoading: isUpdating } = useMutation({
+  const { mutate: updateMeasurements } = useMutation({
     mutationFn: (formData: FormData) => weeklyUpdate(formData),
     onSuccess: () => {
-      queryClient.invalidateQueries(["weekly-updates"]);
+      queryClient.invalidateQueries({ queryKey: ["weekly-updates"] });
       setShowMeasurementForm(false);
     }
   });
 
+
   const addUpdateBodyMeasurementWeekly = () => {
     const formdata = new FormData()
 
-    let userData = ManageLocalStorage.get("userData")
-    userData = userData ? JSON.parse(userData) : {};
-    const userHeight = JSON.parse(userData.Attributes).height;
+    const userData: string = ManageLocalStorage.get("userData") || "{}";
+    const _userData: ILoginUserData = userData ? JSON.parse(userData) : {};
+    const userHeight = JSON.parse(_userData?.info.Attributes).height;
     //todo need to check female or male 
     if (userHeight != undefined) {
       const waistMinusNeck = parseFloat(measurementForm.Waist) - parseFloat(measurementForm.Neck);
@@ -391,16 +392,17 @@ export default function UpdatesPage() {
     if (waterAmount) form.setValue('Water', parseFloat(waterAmount));
     if (stepsAmount) form.setValue('Steps', parseInt(stepsAmount));
     if (sleepAmount) form.setValue('Sleep', parseFloat(sleepAmount));
-    if (workoutCompleted === 'true') form.setValue('WorkOut', 'yes');
+    if (workoutCompleted === 'true') form.setValue('WorkOut', 0);
 
     return () => {
       window.removeEventListener('open-update-form', handleOpenForm);
     };
   }, [form]);
 
-  const { data: fetchedUpdates = [] } = useQuery({
+
+  const { data: fetchedUpdates = [] } = useQuery<IDailyStats[]>({
     queryKey: ["daily-updates"],
-    queryFn: () => getDailyUpdate().then((res: ApiResponse<unknown[]>) => res.data.data)
+    queryFn: () => getDailyUpdate().then(res => (res as ApiResponse<IDailyStats[]>).data.data)
   });
 
 
@@ -431,9 +433,9 @@ export default function UpdatesPage() {
       console.log("Submitting data:", transformedData);
 
       return dailyUpdate(transformedData).then((res) => {
-        if (res.data.success) {
-          return res;
-        }
+
+        return res;
+
       }).catch((error) => {
         return error
       })
@@ -451,7 +453,7 @@ export default function UpdatesPage() {
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to log your updates. Please try again.",
+        description: "Failed to log your updates. Please try again." + error,
         variant: "destructive",
       });
     },
@@ -463,7 +465,7 @@ export default function UpdatesPage() {
     // Determine which photos to show based on mode
     const photosToShow = showAll ? allPhotos : allPhotos.slice(0, 3);
 
-    return photosToShow.map((photo, idx) => (
+    return photosToShow.map((photo) => (
       <div
         key={photo.id}
         className={`aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 relative cursor-pointer ${showAll ? 'transform transition-transform hover:scale-105' : ''
@@ -475,7 +477,7 @@ export default function UpdatesPage() {
         }}
       >
         <img
-          src={photo.url}
+          src={photo.url ? photo.url : ""}
           alt={`Progress photo ${photo.date}`}
           className="w-full h-full object-cover"
           loading="lazy"
@@ -1842,7 +1844,6 @@ export default function UpdatesPage() {
                     </Button>
                     <Button
                       type="button"
-                      disabled={isUpdating}
                       onClick={() => {
                         console.log("Your body measurement", measurementForm)
                         addUpdateBodyMeasurementWeekly();
