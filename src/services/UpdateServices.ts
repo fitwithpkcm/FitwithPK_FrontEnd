@@ -31,7 +31,7 @@ export const getDailyUpdateForAWeek = (params: unknown) => {
         url: API_URL.GET_DAILY_UPDATES_FORWEEK,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<IDailyStats[]>) => {
         return response;
     });
 };
@@ -41,7 +41,7 @@ export const dailyUpdate = (params: unknown) => {
         url: API_URL.DAILY_UPADTE,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<unknown>) => {
         return response;
     });
 };
@@ -92,7 +92,7 @@ export const getDietPlan = (params: unknown) => {
         url: API_URL.GET_DIET_PLAN,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<{ FileName: string }[]>) => {
         return response;
     });
 };

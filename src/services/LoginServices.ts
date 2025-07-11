@@ -1,6 +1,7 @@
 import { httpCall, httpUpload } from "./HttpService";
 import { API_URL } from "../common/Urls";
 import { ILoginUserData } from "@/interface/ILoginUserData";
+import { UserProfile } from "@/page/client-side/intake-form-page";
 
 /* export const login = params => {
     return httpCall({
@@ -28,7 +29,7 @@ export const validateToken = (params: unknown) => {
         url: API_URL.VALIDATE_TOKEN_USERTYPE,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<unknown>) => {
         return response;
     });
 };
@@ -48,7 +49,7 @@ export const onBoardProfileAttributeUpdates = (params: unknown) => {
         url: API_URL.ONBOARD_PROFILE_ATTRIBUTE_UPDATE,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<unknown>) => {
         return response;
     });
 };
@@ -59,7 +60,7 @@ export const onBoardFileUpload = (params: FormData) => {
         url: API_URL.ONBOARD_FILE_UPLOAD,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<unknown>) => {
         return response;
     });
 };
@@ -70,7 +71,7 @@ export const fetchOnBoardUserAttributes = (params: unknown = null) => {
         url: API_URL.ONBOARD_PROFILE_ATTRIBUTE_UPDATE,
         method: "get",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<UserProfile>) => {
         return response;
     });
 };

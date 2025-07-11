@@ -13,8 +13,13 @@ export function formatDate(date: string | Date): string {
   return format(date, 'EEEE, MMMM d');
 }
 
-export function calculatePercentage(value: number|string, max: number): number {
-  return Math.min(Math.max((value / max) * 100, 0), 100);
+export function calculatePercentage(value: number|undefined , max: number): number {
+  if (value) {
+    return Math.min(Math.max((value / max) * 100, 0), 100);
+  }
+  else {
+    return 0;
+  }
 }
 
 export function calculateChange(current: number, previous: number): number {
@@ -42,35 +47,35 @@ export function isEmpty(data: any | any[] | string | null | undefined): boolean 
 }
 
 
- export function getRandomColor(str: string): string {
-    if (!str) return "bg-gray-500"; // fallback for empty/null
-    
-    const colors = [
-        "bg-red-500",
-        "bg-pink-500",
-        "bg-purple-500",
-        "bg-blue-500",
-        "bg-teal-500",
-        "bg-green-500",
-        "bg-yellow-500",
-        "bg-orange-500",
-        "bg-indigo-500",
-        "bg-cyan-500",
-        "bg-lime-500",
-        "bg-amber-500",
-        "bg-emerald-500",
-        "bg-violet-500",
-        "bg-fuchsia-500",
-        "bg-rose-500"
-    ];
+export function getRandomColor(str: string): string {
+  if (!str) return "bg-gray-500"; // fallback for empty/null
 
-    // Better hash function (djb2 algorithm)
-    let hash = 5381;
-    for (let i = 0; i < str.length; i++) {
-        hash = (hash << 5) + hash + str.charCodeAt(i);
-    }
+  const colors = [
+    "bg-red-500",
+    "bg-pink-500",
+    "bg-purple-500",
+    "bg-blue-500",
+    "bg-teal-500",
+    "bg-green-500",
+    "bg-yellow-500",
+    "bg-orange-500",
+    "bg-indigo-500",
+    "bg-cyan-500",
+    "bg-lime-500",
+    "bg-amber-500",
+    "bg-emerald-500",
+    "bg-violet-500",
+    "bg-fuchsia-500",
+    "bg-rose-500"
+  ];
 
-    const index = Math.abs(hash) % colors.length;
-    
-    return colors[index];
+  // Better hash function (djb2 algorithm)
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) + hash + str.charCodeAt(i);
+  }
+
+  const index = Math.abs(hash) % colors.length;
+
+  return colors[index];
 }

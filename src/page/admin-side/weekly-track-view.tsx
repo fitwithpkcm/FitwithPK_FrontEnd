@@ -39,9 +39,9 @@ interface BodyMeasurement {
 
 // Interface for progress photos
 interface ProgressPhoto {
-  id: number;
-  date: string;
-  imageUrl: string;
+  id: number|undefined|string;
+  date: string | undefined;
+  imageUrl: string |undefined;
 }
 
 // Interface for the component props
@@ -157,7 +157,7 @@ const generateSampleProgressPhotos = (userId: number): ProgressPhoto[] => {
 };
 
 export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingViewProps) {
-  const [user, setUser] = useState<IWeeklyUpdatesForUser>(null);
+  const [user, setUser] = useState<IWeeklyUpdatesForUser>();
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [progressPhotos, setProgressPhotos] = useState<ProgressPhoto[]>([]);
 
@@ -193,7 +193,7 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
   //fetch weekly 
   const { data: UserListWithWeeklyUpdates } = useQuery<IWeeklyUpdatesForUser[]>({
     queryKey: ["coach-userlist-weekly"],
-    queryFn: () => getUserListWithWeeklyUpdates_ForCoach(0).then(res => res.data.data)
+    queryFn: () => getUserListWithWeeklyUpdates_ForCoach(0).then((res) => res.data.data)
   });
 
   // Fetch user's body measurements
@@ -221,7 +221,7 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
   useEffect(() => {
     if (!galleryProgressDetails?.length) return;
 
-    const newData = galleryProgressDetails.flatMap((gallery: IBodyMeasurement, index: number) => {
+    const newData: ProgressPhoto[] = galleryProgressDetails.flatMap((gallery: IBodyMeasurement, index: number) => {
       return gallery.FileName?.map(file => ({
         id: `${file}_${new Date().getUTCMilliseconds()}`,
         date: gallery.DateRange,
@@ -304,8 +304,7 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
 
   useEffect(() => {
     // Find user
-    const foundUser = UserListWithWeeklyUpdates.find(u => u.IdUser === userId);
-    console.log("REACHED HERE");
+    const foundUser = UserListWithWeeklyUpdates?.find(u => u.IdUser === userId);
     if (foundUser) {
       setUser(foundUser);
     }

@@ -42,7 +42,7 @@ export default function AuthPage() {
       if (!userData?.token) throw new Error("No token found");
 
       const response = await validateToken(0);
-      return response.data.data;
+      return response.data?.data;
     },
     enabled: false // Disable automatic fetching
   });

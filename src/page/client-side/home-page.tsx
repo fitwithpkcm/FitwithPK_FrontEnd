@@ -37,6 +37,18 @@ type ActivityItem = {
   time: string;
 };
 
+interface WeeklyDay {
+  WeekDay: string;
+  Day?: string;
+  Steps?: number;
+  Sleep?: number;
+  Water?: number;
+  Steps_Percent: number;
+  Water_Percent: number;
+  Sleep_Percent: number;
+  [key: string]: unknown; // Still allow other dynamic properties
+}
+
 
 // function starts
 
@@ -49,9 +61,9 @@ export default function HomePage() {
   const [waterInputOpen, setWaterInputOpen] = useState(false);
   const [stepsInputOpen, setStepsInputOpen] = useState(false);
   const [sleepInputOpen, setSleepInputOpen] = useState(false);
-  const [waterAmount, setWaterAmount] = useState<string | number>("");
-  const [stepsAmount, setStepsAmount] = useState<string | number>("");
-  const [sleepAmount, setSleepAmount] = useState<string | number>("");
+  const [waterAmount, setWaterAmount] = useState<string | number | undefined>("");
+  const [stepsAmount, setStepsAmount] = useState<string | number | undefined>("");
+  const [sleepAmount, setSleepAmount] = useState<string | number | undefined>("");
   const [viewFeedback, setViewFeedback] = useState(false);
 
   const [workoutCompleted, setWorkoutCompleted] = useState(false);
@@ -117,7 +129,7 @@ export default function HomePage() {
    * author : basil1112
    * Get latest daily stats
    */
-  const latestUpdate: IDailyStats = singleDayUpdates && singleDayUpdates.length > 0
+  const latestUpdate: IDailyStats | null = singleDayUpdates && singleDayUpdates.length > 0
     ? singleDayUpdates[singleDayUpdates.length - 1]
     : null;
 
@@ -133,14 +145,11 @@ export default function HomePage() {
   });
 
 
-  const { data: dietPlanFiles = [] } = useQuery({
+  const { data: dietPlanFiles = { FileName: '' } } = useQuery({
     queryKey: ['dietPlan'],
     queryFn: async () => {
       const res = await getDietPlan(null);
-      if (res.status !== 200) {
-        throw new Error('Failed to fetch diet plan');
-      }
-      const data = res.data.data.map(element => ({
+      const data = res.data?.data?.map(element => ({
         FileName: JSON.parse(element.FileName)
       }));
 
@@ -152,16 +161,16 @@ export default function HomePage() {
   //useEffect
   useEffect(() => {
     if (latestUpdate != null) {
-      setWaterAmount(latestUpdate.Water);
-      setStepsAmount(latestUpdate.Steps);
-      setSleepAmount(latestUpdate.Sleep);
+      setWaterAmount(latestUpdate?.Water);
+      setStepsAmount(latestUpdate?.Steps);
+      setSleepAmount(latestUpdate?.Sleep);
     }
   }, [latestUpdate])
 
   useEffect(() => {
     if (dietPlanFiles != null) {
-      setWorkOutPdfUrl(`${BASE_URL}/uploads/weekly/${dietPlanFiles.FileName?.workout_plan}`);
-      setDietPdfUrl(`${BASE_URL}/uploads/weekly/${dietPlanFiles.FileName?.diet_plan}`);
+      setWorkOutPdfUrl(`${BASE_URL}/uploads/weekly/${dietPlanFiles?.FileName?.workout_plan}`);
+      setDietPdfUrl(`${BASE_URL}/uploads/weekly/${dietPlanFiles?.FileName?.diet_plan}`);
     }
   }, []);
 
@@ -170,14 +179,49 @@ export default function HomePage() {
    * author : basil1112
    * setting up daily status for one week from monday - sunday
    */
-  let weeklyData: unknown = [
-    { WeekDay: "Mon" },
-    { WeekDay: "Tue" },
-    { WeekDay: "Wed" },
-    { WeekDay: "Thu" },
-    { WeekDay: "Fri" },
-    { WeekDay: "Sat" },
-    { WeekDay: "Sun" },
+  let weeklyData: WeeklyDay[] = [
+    {
+      WeekDay: "Mon",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
+    {
+      WeekDay: "Tue",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
+    {
+      WeekDay: "Wed",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
+    {
+      WeekDay: "Thu",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
+    {
+      WeekDay: "Fri",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
+    {
+      WeekDay: "Sat",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
+    {
+      WeekDay: "Sun",
+      Steps_Percent: 0,
+      Water_Percent: 0,
+      Sleep_Percent: 0
+    },
   ];
 
   if (!isEmpty(dailyUpdatesForWeek)) {

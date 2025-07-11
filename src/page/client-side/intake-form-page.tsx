@@ -30,7 +30,7 @@ import { RENDER_URL } from "@/common/Urls";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // Define the interface for the user profile
-interface UserProfile {
+export interface UserProfile {
   age?: number;
   gender?: string;
   profession?: string;
@@ -133,7 +133,7 @@ export default function IntakeFormPage() {
   // Fetch existing profile data
   const { data: profileData, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: ["onboarduser-attributes"],
-    queryFn: () => fetchOnBoardUserAttributes(null).then(res => res.data.data)
+    queryFn: () => fetchOnBoardUserAttributes(null).then((res: ApiResponse<UserProfile>) => res.data.data)
   });
 
   // Form setup
@@ -314,15 +314,17 @@ export default function IntakeFormPage() {
   };
 
   // Create mutation for file upload
-  const uploadMutation = useMutation<{ data: { data: string[] } }, Error, FormData>({
+  const uploadMutation = useMutation<ApiResponse<unknown>, Error, FormData>({
     mutationFn: (files: FormData) => {
       return onBoardFileUpload(files);
     },
-    onSuccess: (response) => {
-      setUploadedFileNames(response.data.data.join(","));
-      form.setValue('uploadFileNames', response.data.data.join(","));
-      setUploadedFiles([]);
-      setShowUploadDialog(false);
+    onSuccess: (response: ApiResponse<unknown>) => {
+      if (response?.data?.data && Array.isArray(response.data.data)) {
+        setUploadedFileNames(response.data!.data.join(","));
+        form.setValue('uploadFileNames', response.data.data.join(","));
+        setUploadedFiles([]);
+        setShowUploadDialog(false);
+      }
     },
     onError: (error) => {
       console.error('Upload error:', error);

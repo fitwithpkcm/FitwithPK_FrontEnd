@@ -1,5 +1,6 @@
 import { httpCall } from "./HttpService";
 import { API_URL } from "../common/Urls";
+import { IWeeklyUpdatesForUser } from "@/interface/IWeeklyUpdates";
 
 export const getUserListForACoach = (params: unknown) => {
     return httpCall({
@@ -36,7 +37,7 @@ export const getUserListWithWeeklyUpdates_ForCoach = (params: unknown) => {
         url: API_URL.USER_LIST_WUPDATES_FOR_COACH,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<IWeeklyUpdatesForUser[]>) => {
         return response;
     });
 };
