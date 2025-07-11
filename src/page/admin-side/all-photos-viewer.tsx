@@ -47,7 +47,7 @@ const USERS = [
 ];
 
 // Generate a larger set of sample photos for the view
-const generateSamplePhotos = (userId: number): Photo[] => {
+const generateSamplePhotos = (userId: number): ProgressPhoto[] => {
   const photos: Photo[] = [];
 
   // Generate sample photos for the past 12 months (1 per month)
@@ -75,12 +75,12 @@ const generateSamplePhotos = (userId: number): Photo[] => {
 };
 
 // Group photos by month
-const groupPhotosByMonth = (photos: Photo[]) => {
-  const grouped: { [key: string]: Photo[] } = {};
+const groupPhotosByMonth = (photos: ProgressPhoto[]) => {
+  const grouped: { [key: string]: ProgressPhoto[] } = {};
 
   photos.forEach(photo => {
     // Parse the date from dd-MM-yyyy format
-    const date = parse(photo.date, 'dd-MM-yyyy', new Date());
+    const date = parse((photo.date ? photo.date : "03-03-1993"), 'dd-MM-yyyy', new Date());
     const monthYear = format(date, 'MMMM yyyy');
 
     if (!grouped[monthYear]) {
