@@ -1,10 +1,10 @@
 // Create a new file at src/page/admin-side/admin-dashboard.tsx
 import React, { useState } from "react";
 import { useLocation, Link } from "wouter";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/use-auth";
-import { RENDER_URL } from "@/common/Urls";
-import { MobileAdminNav } from "@/components/layout/mobile-admin-nav";
+import { Button } from "../../components/ui/button";
+import { useAuth } from "../../hooks/use-auth";
+import { RENDER_URL } from "../../common/Urls";
+import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
 import { ArrowRightLeft, BarChart2, ClipboardCheck, Plus, Target, Trash2, UserCheck, Users } from "lucide-react";
 
 export default function AdminDashboard() {

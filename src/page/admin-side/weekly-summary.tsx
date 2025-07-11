@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { USER_TARGET } from "@/common/Constant";
+import { USER_TARGET } from "../../common/Constant";
 import moment from 'moment';
 import { unknown } from "zod";
 import { WeeklyDay } from "../client-side/home-page";
@@ -73,7 +73,7 @@ export function WeeklySummary({ selectedMetric, weeklyData, currentMetric }: Wee
   const goalAchievement = getGoalAchievement();
   const consistentDays = getConsistentDays();
 
-  const formatValue = (value:number, metric:string) => {
+  const formatValue = (value:number, metric) => {
     if (metric === 'Water_Percent') return `${(value / 10).toFixed(1)}L`;
     if (metric === 'Steps_Percent') return `${(value / 1000).toFixed(1)}k`;
     return `${value.toFixed(1)}h`;

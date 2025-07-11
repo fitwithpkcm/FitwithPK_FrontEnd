@@ -2,15 +2,15 @@ import React, { useState, useEffect } from "react";
 import { format, subDays } from "date-fns";
 import { ActivityIcon, ArrowLeft, Check, Clock, Droplet, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { IDailyStats, IUpdatesForUser } from "@/interface/IDailyUpdates";
-import { getUserListWithUpdates_ForCoach } from "@/services/AdminServices";
-import { BASE_URL } from "@/common/Constant";
+import { IDailyStats, IUpdatesForUser } from "../../interface/IDailyUpdates";
+import { getUserListWithUpdates_ForCoach } from "../../services/AdminServices";
+import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
 import moment from 'moment';
-import { getDailyUpdate } from "@/services/UpdateServices";
-import RatingSmiley from "@/components/ui/rating-smiley";
-import { Card, CardContent } from "@/components/ui/card";
-import { isEmpty } from "@/lib/utils";
+import { getDailyUpdate } from "../../services/UpdateServices";
+import RatingSmiley from "../../components/ui/rating-smiley";
+import { Card, CardContent } from "../../components/ui/card";
+import { isEmpty } from "../../lib/utils";
 
 
 // Interface for the component props

@@ -3,15 +3,15 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Calendar, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
-import { IDailyStats, IUpdatesForUser } from "@/interface/IDailyUpdates";
-import { getDailyUpdateForAWeek } from "@/services/UpdateServices";
+import { IDailyStats, IUpdatesForUser } from "../../interface/IDailyUpdates";
+import { getDailyUpdateForAWeek } from "../../services/UpdateServices";
 import moment from 'moment';
-import { BASE_URL, USER_TARGET } from "@/common/Constant";
+import { BASE_URL, USER_TARGET } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
-import { calculatePercentage } from "@/lib/utils";
+import { calculatePercentage } from "../../lib/utils";
 import { WeeklySummary } from "./weekly-summary";
-import { MobileAdminNav } from "@/components/layout/mobile-admin-nav";
-import { getUserListWithUpdates_ForCoach } from "@/services/AdminServices";
+import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
+import { getUserListWithUpdates_ForCoach } from "../../services/AdminServices";
 import { WeeklyDay } from "../client-side/home-page";
 
 

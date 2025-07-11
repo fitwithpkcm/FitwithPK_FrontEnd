@@ -1,8 +1,8 @@
 import { httpCall } from "./HttpService";
 import { API_URL } from "../common/Urls";
-import { IWeeklyUpdatesForUser } from "@/interface/IWeeklyUpdates";
-import { IUser } from "@/interface/models/User";
-import { IUpdatesForUser } from "@/interface/IDailyUpdates";
+import { IWeeklyUpdatesForUser } from "../interface/IWeeklyUpdates";
+import { IUser } from "../interface/models/User";
+import { IUpdatesForUser } from "../interface/IDailyUpdates";
 
 export const getUserListForACoach = (params: unknown) => {
     return httpCall({

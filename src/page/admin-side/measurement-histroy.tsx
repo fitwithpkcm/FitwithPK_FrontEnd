@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { UNITS } from '@/common/Constant';
-import { IBodyMeasurement } from '@/interface/IBodyMeasurement';
+import { UNITS } from '../../common/Constant';
+import { IBodyMeasurement } from '../../interface/IBodyMeasurement';
 import { format, subDays } from 'date-fns';
 import moment from 'moment';
 

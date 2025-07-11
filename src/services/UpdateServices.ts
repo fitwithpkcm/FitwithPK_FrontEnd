@@ -1,10 +1,10 @@
 
 import { httpCall, httpUpload } from "./HttpService";
 import { API_URL } from "../common/Urls";
-import { IDailyStats } from "@/interface/IDailyUpdates";
-import { Metric } from "@/page/client-side/progressWeeklyChart";
-import { IBodyMeasurement } from "@/interface/IBodyMeasurement";
-import { IStudentGallery } from "@/interface/IStudentGallery";
+import { IDailyStats } from "../interface/IDailyUpdates";
+import { Metric } from "../page/client-side/progressWeeklyChart";
+import { IBodyMeasurement } from "../interface/IBodyMeasurement";
+import { IStudentGallery } from "../interface/IStudentGallery";
 
 export const getDailyUpdate = (params: unknown = null) => {
     return httpCall({

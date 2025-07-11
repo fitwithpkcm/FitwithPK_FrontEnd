@@ -1,7 +1,7 @@
-import { httpCall, httpUpload } from "./HttpService";
+import { httpCall } from "./HttpService";
 import { API_URL } from "../common/Urls";
-import { ICoach } from "@/interface/models/Coach";
-import { IUser } from "@/interface/models/User";
+import { ICoach } from "../interface/models/Coach";
+import { IUser } from "../interface/models/User";
 
 export const getMyCoachDetails = (params: unknown) => {
     return httpCall({

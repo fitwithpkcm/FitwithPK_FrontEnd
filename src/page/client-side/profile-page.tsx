@@ -1,14 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { MobileNav } from "@/components/layout/mobile-nav";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { apiRequest } from "@/lib/queryClient";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "../../hooks/use-auth";
+import { MobileNav } from "../../components/layout/mobile-nav";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Progress } from "../../components/ui/progress";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { apiRequest } from "../../lib/queryClient";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -17,17 +17,17 @@ import {
   DialogDescription,
   DialogFooter,
   DialogClose
-} from "@/components/ui/dialog";
+} from "../../components/ui/dialog";
 import { Settings, PencilIcon, Award, HeartPulse, Terminal, Mail, Phone, ArrowLeft } from "lucide-react";
 import { Facebook, Instagram, Twitter, Linkedin, Youtube, Globe } from 'lucide-react';
 import { format } from "date-fns";
-import { ThemeSettings } from "@/components/theme-settings";
-import { useToast } from "@/hooks/use-toast";
-import { getLoggedUserDetails, getMyCoachDetails } from "@/services/ProfileService";
-import { ICoach } from "@/interface/models/Coach";
-import { BASE_URL, UNITS } from "@/common/Constant";
+import { ThemeSettings } from "../../components/theme-settings";
+import { useToast } from "../../hooks/use-toast";
+import { getLoggedUserDetails, getMyCoachDetails } from "../../services/ProfileService";
+import { ICoach } from "../../interface/models/Coach";
+import { BASE_URL, UNITS } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
-import { IUser } from "@/interface/models/User";
+import { IUser } from "../../interface/models/User";
 
 type GoalType = "weight-loss" | "muscle-gain" | "maintenance";
 

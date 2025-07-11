@@ -1,7 +1,7 @@
 import { httpCall, httpUpload } from "./HttpService";
 import { API_URL } from "../common/Urls";
-import { ILoginUserData } from "@/interface/ILoginUserData";
-import { UserProfile } from "@/page/client-side/intake-form-page";
+import { ILoginUserData } from "../interface/ILoginUserData";
+import { UserProfile } from "../page/client-side/intake-form-page";
 
 /* export const login = params => {
     return httpCall({

@@ -9,7 +9,7 @@ import {
   Tooltip,
 } from 'recharts'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { getProgressGraph } from '@/services/UpdateServices'
+import { getProgressGraph } from '../../services/UpdateServices'
 import { format } from 'date-fns'
 
 interface GRAPH_PROPS {

@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link, useLocation } from "wouter";
-import { MobileNav } from "@/components/layout/mobile-nav";
+import { MobileNav } from "../../components/layout/mobile-nav";
 import {
   Form,
   FormControl,
@@ -13,21 +13,21 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
+} from "../../components/ui/form";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { Button } from "../../components/ui/button";
+import { useToast } from "../../hooks/use-toast";
+import { apiRequest, queryClient, getQueryFn } from "../../lib/queryClient";
 import { ChevronLeft, ChevronRight, Save, ImageIcon, Upload, FileText, X, Plus } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { fetchOnBoardUserAttributes, onBoardFileUpload, onBoardProfileAttributeUpdates } from "@/services/LoginServices";
-import { RENDER_URL } from "@/common/Urls";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Switch } from "../../components/ui/switch";
+import { Label } from "../../components/ui/label";
+import { fetchOnBoardUserAttributes, onBoardFileUpload, onBoardProfileAttributeUpdates } from "../../services/LoginServices";
+import { RENDER_URL } from "../../common/Urls";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../../components/ui/dialog";
 
 // Define the interface for the user profile
 export interface UserProfile {

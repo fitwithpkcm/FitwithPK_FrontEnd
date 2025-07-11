@@ -13,16 +13,16 @@ import {
 import PhotoViewer from "./photo-viewer";
 import AllPhotosView from "./all-photos-viewer";
 import MeasurementHistory from "./measurement-histroy";
-import { BASE_URL } from "@/common/Constant";
+import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
-import { IDailyStats } from "@/interface/IDailyUpdates";
-import { IWeeklyStatsExtended, IWeeklyUpdatesForUser } from "@/interface/IWeeklyUpdates";
-import { getUserListWithWeeklyUpdates_ForCoach } from "@/services/AdminServices";
+import { IDailyStats } from "../../interface/IDailyUpdates";
+import { IWeeklyStatsExtended, IWeeklyUpdatesForUser } from "../../interface/IWeeklyUpdates";
+import { getUserListWithWeeklyUpdates_ForCoach } from "../../services/AdminServices";
 import { useQuery } from "@tanstack/react-query";
-import { MobileAdminNav } from "@/components/layout/mobile-admin-nav";
+import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
 import GraphDataChart from "./AdminProgressWeeklyChart";
-import { IBodyMeasurement } from "@/interface/IBodyMeasurement";
-import { getProgressGallery, getWeeklyUpdate } from "@/services/UpdateServices";
+import { IBodyMeasurement } from "../../interface/IBodyMeasurement";
+import { getProgressGallery, getWeeklyUpdate } from "../../services/UpdateServices";
 
 // Interface for body measurements
 interface BodyMeasurement {

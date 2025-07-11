@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Users, Play, Pause, X, Search } from "lucide-react";
-import { MobileAdminNav } from "@/components/layout/mobile-admin-nav";
-import { IUpdatesForUser } from "@/interface/IDailyUpdates";
-import { IUser } from "@/interface/models/User";
+import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
+import { IUpdatesForUser } from "../../interface/IDailyUpdates";
+import { IUser } from "../../interface/models/User";
 import { useQuery } from "@tanstack/react-query";
-import { getUserListForACoach } from "@/services/AdminServices";
-import { ACCESS_STATUS } from "@/common/Constant";
+import { getUserListForACoach } from "../../services/AdminServices";
+import { ACCESS_STATUS } from "../../common/Constant";
 
-import { BASE_URL } from "@/common/Constant";
+import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
 
 export default function ClientManagementScreen() {
