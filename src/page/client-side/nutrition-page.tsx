@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { MobileNav } from "@/components/layout/mobile-nav";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "../../hooks/use-auth";
+import { MobileNav } from "../../components/layout/mobile-nav";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { Badge } from "../../components/ui/badge";
+import { useToast } from "../../hooks/use-toast";
 import { setBaseUrl } from "../../services/HttpService"
 import {
   ArrowRight,
@@ -31,11 +31,11 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { BASE_URL } from "@/common/Constant";
+} from "../../components/ui/dialog";
+import { BASE_URL } from "../../common/Constant";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { IFoodCatergory } from "@/interface/IFoodAlternative";
-import { getFoodBasedOnCatergoryApi, getSwappedNutriProducts } from "@/services/FoodService";
+import { IFoodCatergory } from "../../interface/IFoodAlternative";
+import { getFoodBasedOnCatergoryApi, getSwappedNutriProducts } from "../../services/FoodService";
 
 
 
