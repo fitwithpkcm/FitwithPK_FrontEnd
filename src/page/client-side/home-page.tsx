@@ -37,7 +37,7 @@ type ActivityItem = {
   time: string;
 };
 
-interface WeeklyDay {
+export interface WeeklyDay {
   WeekDay: string;
   Day?: string;
   Steps?: number;

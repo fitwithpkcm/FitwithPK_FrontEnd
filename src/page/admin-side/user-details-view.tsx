@@ -40,12 +40,12 @@ export default function UserDailyDetailView({ userId, onBack }: UserDetailViewPr
 
   const { data: dailyUpdates = [] } = useQuery<IDailyStats[]>({
     queryKey: [`daily_updates_for_${userId}`],
-    queryFn: () => getDailyUpdate({ IdUser: userId, showEmpty: true }).then(res => res.data.data)
+    queryFn: () => getDailyUpdate({ IdUser: userId, showEmpty: true }).then((res) => res.data.data)
   });
 
   useEffect(() => {
     // Find the user based on ID
-    const foundUser = UserListWithUpdates.find(u => u.IdUser === userId);
+    const foundUser = UserListWithUpdates?.find(u => u.IdUser === userId);
     if (foundUser) {
       setUser(foundUser);
     }
@@ -180,7 +180,7 @@ export default function UserDailyDetailView({ userId, onBack }: UserDetailViewPr
                             {typeof update.WorkOut === 'number' && (
 
                               <div>
-                                <div className={`inline-flex items-center justify-center w-7 h-7 rounded-full ${update.WorkOut_Follow >= 3 ? 'bg-orange-100 text-orange-600' : 'bg-red-100 text-red-600'
+                                <div className={`inline-flex items-center justify-center w-7 h-7 rounded-full ${update.WorkOut_Follow! >= 3 ? 'bg-orange-100 text-orange-600' : 'bg-red-100 text-red-600'
                                   }`}>
                                   {update.WorkOut}/5
                                 </div>

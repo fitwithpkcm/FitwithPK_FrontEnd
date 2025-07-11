@@ -1,6 +1,7 @@
 import React,{ useState } from 'react';
 import { X, ChevronLeft, ChevronRight, ArrowLeftRight, Maximize } from 'lucide-react';
 import { format, parse, parseISO } from 'date-fns';
+import { ProgressPhoto } from './weekly-track-view';
 
 interface Photo {
   id: number;
@@ -9,7 +10,7 @@ interface Photo {
 }
 
 interface PhotoViewerProps {
-  photos: Photo[];
+  photos: ProgressPhoto[];
   initialIndex?: number;
   onClose: () => void;
 }

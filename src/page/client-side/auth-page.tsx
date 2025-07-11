@@ -9,6 +9,11 @@ import { useQuery } from "@tanstack/react-query";
 import { BASE_URL } from "@/common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
 
+interface UserType {
+  IsAdmin: number;
+  IsUser: number;
+}
+
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
@@ -32,7 +37,7 @@ export default function AuthPage() {
 
 
 
-  const { data: userType, refetch } = useQuery({
+  const { data: userType, refetch } = useQuery<UserType>({
     queryKey: ['validateToken'],
     queryFn: async () => {
       const stored = localStorage.getItem("userData");
@@ -42,9 +47,9 @@ export default function AuthPage() {
       if (!userData?.token) throw new Error("No token found");
 
       const response = await validateToken(0);
-      return response.data?.data;
+      return response.data?.data as UserType; // Type assertion here
     },
-    enabled: false // Disable automatic fetching
+    enabled: false
   });
 
   useEffect(() => {
@@ -78,9 +83,9 @@ export default function AuthPage() {
         onSuccess: (userData) => {
           console.log("Login successful page:", userData);
           if (userData.IsAdmin === 1) {
-             setLocation(RENDER_URL.ADMIN_DASHBOARD);
+            setLocation(RENDER_URL.ADMIN_DASHBOARD);
           } else {
-             setLocation(RENDER_URL.STUDENT_DASHBOARD);
+            setLocation(RENDER_URL.STUDENT_DASHBOARD);
           }
         },
         onError: (error) => {
@@ -111,9 +116,15 @@ export default function AuthPage() {
       } else {
         setError(response.data?.message || "Registration failed");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Registration error:", err);
-      setError(err.response?.data?.message || "Registration failed");
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Registration failed");
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Registration failed");
+      }
     } finally {
       setLoading(false);
     }

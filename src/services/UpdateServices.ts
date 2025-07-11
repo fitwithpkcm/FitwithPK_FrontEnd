@@ -11,7 +11,7 @@ export const getDailyUpdate = (params: unknown = null) => {
         url: API_URL.GET_DAILY_UPDATES,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<IDailyStats[]>) => {
         return response;
     });
 };

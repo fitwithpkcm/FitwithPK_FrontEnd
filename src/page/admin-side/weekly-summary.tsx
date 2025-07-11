@@ -1,62 +1,70 @@
-import React,{ useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { USER_TARGET } from "@/common/Constant";
 import moment from 'moment';
+import { unknown } from "zod";
+import { WeeklyDay } from "../client-side/home-page";
+import { x_metric } from "./client-metrics-chart";
 
+interface WeeklySummaryProps {
+  selectedMetric: string; // or whatever type this should be
+  weeklyData: WeeklyDay[]; // Using the WeeklyDay interface from earlier
+  currentMetric: x_metric; // or whatever type this should be
+}
 
-export function WeeklySummary({ selectedMetric, weeklyData, currentMetric }) {
+export function WeeklySummary({ selectedMetric, weeklyData, currentMetric }: WeeklySummaryProps) {
   // Filter out the "Total" entry for calculations
   const weekDaysData = weeklyData.filter(day => day.WeekDay !== "Total");
-  
+
   // Calculate metrics based on selectedMetric
   const getDailyAverage = () => {
     const count = weekDaysData.length;
     if (count === 0) return 0;
-    
-    const sum = weekDaysData.reduce((sum, day) => {
-      return sum + Number(day[selectedMetric === 'Water_Percent' ? 'Water' : 
-                            selectedMetric === 'Steps_Percent' ? 'Steps' : 'Sleep'] || 0);
+
+    const sum = weekDaysData.reduce((sum: number, day: { [x: string]: unknown; }) => {
+      return sum + Number(day[selectedMetric === 'Water_Percent' ? 'Water' :
+        selectedMetric === 'Steps_Percent' ? 'Steps' : 'Sleep'] || 0);
     }, 0);
-    
+
     return sum / count;
   };
 
   const getBestDay = () => {
     if (weekDaysData.length === 0) return 0;
-    
-    return Math.max(...weekDaysData.map(day => 
-      Number(day[selectedMetric === 'Water_Percent' ? 'Water' : 
-                selectedMetric === 'Steps_Percent' ? 'Steps' : 'Sleep'] || 0)
+
+    return Math.max(...weekDaysData.map((day: { [x: string]: unknown; }) =>
+      Number(day[selectedMetric === 'Water_Percent' ? 'Water' :
+        selectedMetric === 'Steps_Percent' ? 'Steps' : 'Sleep'] || 0)
     ));
   };
 
   const getGoalAchievement = () => {
     const target = selectedMetric === 'Water_Percent' ? USER_TARGET.DAILY_TARGET.WATER :
-                   selectedMetric === 'Steps_Percent' ? USER_TARGET.DAILY_TARGET.STEPS :
-                   USER_TARGET.DAILY_TARGET.SLEEP;
-    
-    const achievementPercentages = weekDaysData.map(day => {
-      const value = Number(day[selectedMetric === 'Water_Percent' ? 'Water' : 
-                              selectedMetric === 'Steps_Percent' ? 'Steps' : 'Sleep'] || 0);
+      selectedMetric === 'Steps_Percent' ? USER_TARGET.DAILY_TARGET.STEPS :
+        USER_TARGET.DAILY_TARGET.SLEEP;
+
+    const achievementPercentages = weekDaysData.map((day: { [x: string]: unknown; }) => {
+      const value = Number(day[selectedMetric === 'Water_Percent' ? 'Water' :
+        selectedMetric === 'Steps_Percent' ? 'Steps' : 'Sleep'] || 0);
       return (value / target) * 100;
     });
-    
+
     if (achievementPercentages.length === 0) return 0;
-    
-    const average = achievementPercentages.reduce((sum, p) => sum + p, 0) / achievementPercentages.length;
+
+    const average = achievementPercentages.reduce((sum: number, p: number) => sum + p, 0) / achievementPercentages.length;
     return Math.min(Math.round(average), 100); // Cap at 100%
   };
 
   const getConsistentDays = () => {
     const target = selectedMetric === 'Water_Percent' ? USER_TARGET.DAILY_TARGET.WATER :
-                   selectedMetric === 'Steps_Percent' ? USER_TARGET.DAILY_TARGET.STEPS :
-                   USER_TARGET.DAILY_TARGET.SLEEP;
-    
+      selectedMetric === 'Steps_Percent' ? USER_TARGET.DAILY_TARGET.STEPS :
+        USER_TARGET.DAILY_TARGET.SLEEP;
+
     const consistentDays = weekDaysData.filter(day => {
-      const value = Number(day[selectedMetric === 'Water_Percent' ? 'Water' : 
-                              selectedMetric === 'Steps_Percent' ? 'Steps' : 'Sleep'] || 0);
+      const value = Number(day[selectedMetric === 'Water_Percent' ? 'Water' :
+        selectedMetric === 'Steps_Percent' ? 'Steps' : 'Sleep'] || 0);
       return value >= target * 0.8; // At least 80% of target
     });
-    
+
     return consistentDays.length;
   };
 
@@ -65,7 +73,7 @@ export function WeeklySummary({ selectedMetric, weeklyData, currentMetric }) {
   const goalAchievement = getGoalAchievement();
   const consistentDays = getConsistentDays();
 
-  const formatValue = (value, metric) => {
+  const formatValue = (value:number, metric:string) => {
     if (metric === 'Water_Percent') return `${(value / 10).toFixed(1)}L`;
     if (metric === 'Steps_Percent') return `${(value / 1000).toFixed(1)}k`;
     return `${value.toFixed(1)}h`;
@@ -73,19 +81,19 @@ export function WeeklySummary({ selectedMetric, weeklyData, currentMetric }) {
 
   const getInsightMessage = () => {
     if (weekDaysData.length === 0) return "No data available for this week.";
-    
+
     if (selectedMetric === 'Water_Percent') {
       if (goalAchievement >= 90) return "Excellent hydration this week! Your client consistently met water intake goals.";
       if (goalAchievement >= 70) return "Good hydration overall. A few days could use improvement.";
       return "Hydration needs attention. Consider strategies to increase daily water intake.";
     }
-    
+
     if (selectedMetric === 'Steps_Percent') {
       if (goalAchievement >= 90) return "Fantastic activity levels! Your client was very active this week.";
       if (goalAchievement >= 70) return "Moderate activity recorded. Look for opportunities to add more movement.";
       return "Low activity levels this week. Encourage more daily steps or physical activity.";
     }
-    
+
     // Sleep metric
     if (goalAchievement >= 90) return "Consistent, quality sleep this week. Your client is well-rested!";
     if (goalAchievement >= 70) return "Sleep patterns are decent but could be more consistent.";
@@ -96,8 +104,8 @@ export function WeeklySummary({ selectedMetric, weeklyData, currentMetric }) {
     <div className="mt-8 bg-white rounded-lg p-6 border">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-gray-900">
-          Weekly {selectedMetric === 'Water_Percent' ? 'Hydration' : 
-                 selectedMetric === 'Steps_Percent' ? 'Activity' : 'Sleep'} Summary
+          Weekly {selectedMetric === 'Water_Percent' ? 'Hydration' :
+            selectedMetric === 'Steps_Percent' ? 'Activity' : 'Sleep'} Summary
         </h3>
         <div
           className="px-3 py-1 rounded-full text-xs font-medium"

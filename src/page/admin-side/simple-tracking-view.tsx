@@ -248,7 +248,7 @@ export default function SimpleTrackingView() {
                       <div
                         key={user.IdUser}
                         className="flex items-center justify-between p-4 bg-white rounded-lg border hover:bg-gray-50 cursor-pointer"
-                        onClick={() => handleSelectUser(user.IdUser)}
+                        onClick={() => handleSelectUser(user.IdUser!)}
                       >
                         <div className="flex items-center">
                           <div className={`w-14 h-14 ${getRandomColor(fullname)} rounded-full flex items-center justify-center text-white text-xl font-bold mr-4`}>
@@ -257,7 +257,7 @@ export default function SimpleTrackingView() {
                           <div>
                             <p className="text-lg font-semibold">{user.FirstName} {user.LastName}</p>
                             <p className="text-sm text-gray-500">
-                              {formatDate(user.Day) == "" ? " " : `Last update: ${formatDate(user.Day)}`}
+                              {formatDate(user.Day!) == "" ? " " : `Last update: ${formatDate(user.Day!)}`}
                             </p>
                           </div>
                         </div>
@@ -275,7 +275,7 @@ export default function SimpleTrackingView() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleSendReminder(user.IdUser);
+                                handleSendReminder(user.IdUser!);
                               }}
                               className="p-2 bg-orange-100 hover:bg-orange-200 rounded-full transition-colors"
                               title="Send Reminder"
@@ -329,7 +329,7 @@ export default function SimpleTrackingView() {
                         <div>
                           <p className="text-lg font-semibold">{fullname}</p>
                           <p className="text-sm text-gray-500">
-                            {formatDate(user.DateRange) == "" ? "Not Available" : `Last update: ${formatDate(user.DateRange)}`}
+                            {formatDate(user.DateRange!) == "" ? "Not Available" : `Last update: ${formatDate(user.DateRange!)}`}
                           </p>
                         </div>
                       </div>

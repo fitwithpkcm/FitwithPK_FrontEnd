@@ -18,6 +18,13 @@ interface ClientMetricsChartProps {
   onBack?: () => void;
 }
 
+export interface x_metric {
+  key: string
+  label: string
+  color: string
+  lightColor: string
+}
+
 
 export default function ClientMetricsChart({ onBack }: ClientMetricsChartProps) {
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), "yyyy-MM-dd"));
@@ -36,7 +43,7 @@ export default function ClientMetricsChart({ onBack }: ClientMetricsChartProps) 
   }, []);
 
   // Metrics options
-  const metrics = [
+  const metrics: x_metric[] = [
     { key: "Sleep_Percent", label: "Sleep (hours)", color: "#8B5CF6", lightColor: "#F3E8FF" },
     { key: "Water_Percent", label: "Water (L)", color: "#06B6D4", lightColor: "#ECFEFF" },
     { key: "Steps_Percent", label: "Steps", color: "#10B981", lightColor: "#ECFDF5" }
@@ -50,7 +57,7 @@ export default function ClientMetricsChart({ onBack }: ClientMetricsChartProps) 
    * fetch daily updates for this weeek 
    */
   const { data: dailyUpdatesForWeek = [] } = useQuery<IDailyStats[]>({
-    queryKey: ["daily-updates-forweek",selectedClient,startDate],
+    queryKey: ["daily-updates-forweek", selectedClient, startDate],
     queryFn: () => getDailyUpdateForAWeek({ Day: moment(startDate).format("DD-MM-YYYY"), IdUser: selectedClient }).then(res => res.data.data)
   });
 

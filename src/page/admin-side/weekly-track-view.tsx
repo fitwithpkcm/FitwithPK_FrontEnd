@@ -38,10 +38,10 @@ interface BodyMeasurement {
 }
 
 // Interface for progress photos
-interface ProgressPhoto {
-  id: number|undefined|string;
+export interface ProgressPhoto {
+  id: number | undefined | string;
   date: string | undefined;
-  imageUrl: string |undefined;
+  imageUrl: string | undefined;
 }
 
 // Interface for the component props
@@ -467,11 +467,11 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
                 >
                   <img
                     src={photo.imageUrl}
-                    alt={`Progress photo from ${formatDisplayDate(photo.date)}`}
+                    alt={`Progress photo from ${formatDisplayDate(photo.date!)}`}
                     className="w-full h-auto object-cover aspect-square"
                   />
                   <div className="absolute bottom-0 left-0 right-0 bg-gray-700 bg-opacity-70 text-white text-xs py-1 px-2 truncate">
-                    {formatDisplayDate(photo.date)}
+                    {formatDisplayDate(photo.date!)}
                   </div>
                 </div>
               ))}
