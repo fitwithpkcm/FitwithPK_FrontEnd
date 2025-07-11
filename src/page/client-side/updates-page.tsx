@@ -2,21 +2,21 @@ import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "../../hooks/use-auth";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest } from "../../lib/queryClient";
 import { format, parseISO } from "date-fns";
 import { CalendarIcon, Plus, ArrowUpIcon, ChevronRightIcon, Droplet, ActivityIcon, Clock, PencilIcon, FilterIcon, UploadIcon, X, ChevronRight, ChevronLeft, ImageIcon } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { MobileNav } from "@/components/layout/mobile-nav";
-import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
+import { Calendar } from "../../components/ui/calendar";
+import { MobileNav } from "../../components/layout/mobile-nav";
+import { Button } from "../../components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../components/ui/form";
+import { Input } from "../../components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { RadioGroup, RadioGroupItem } from "../../components/ui/radio-group";
+import { useToast } from "../../hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { Progress } from "../../components/ui/progress";
 /* import { DailyUpdate, BodyMeasurement } from "@shared/schema"; */
 import { dailyUpdate, getDailyUpdate, getDailyUpdateForAWeek, getProgressGallery, getSingleDayUpdate, getWeeklyUpdate, weeklyUpdate } from "../../services/UpdateServices";
 
@@ -25,15 +25,15 @@ import GraphDataChart from "./progressWeeklyChart";
 import { IBodyMeasurement } from '../../interface/IBodyMeasurement'
 import moment from 'moment';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { IDailyStats } from "@/interface/IDailyUpdates";
-import RatingSmiley from "@/components/ui/rating-smiley";
-import { calculatePercentage } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../../components/ui/dialog";
+import { IDailyStats } from "../../interface/IDailyUpdates";
+import RatingSmiley from "../../components/ui/rating-smiley";
+import { calculatePercentage } from "../../lib/utils";
 
 import { setBaseUrl } from "../../services/HttpService"
 import { ManageLocalStorage } from "../../services/Localstorage"
-import { ILoginUserData } from "@/interface/ILoginUserData";
-import { IStudentGallery } from "@/interface/IStudentGallery";
+import { ILoginUserData } from "../../interface/ILoginUserData";
+import { IStudentGallery } from "../../interface/IStudentGallery";
 
 
 
