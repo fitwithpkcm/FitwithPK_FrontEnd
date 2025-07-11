@@ -138,7 +138,9 @@ export default function ClientMetricsChart() {
 
   const renderBarChart = (
     weeklyData: WeeklyDay[],
-    metricKey: string
+    metricKey: string,
+    color: string,
+    name: string
   ) => {
     return (
       <>
