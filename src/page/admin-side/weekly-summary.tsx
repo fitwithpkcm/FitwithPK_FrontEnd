@@ -73,7 +73,7 @@ export function WeeklySummary({ selectedMetric, weeklyData, currentMetric }: Wee
   const goalAchievement = getGoalAchievement();
   const consistentDays = getConsistentDays();
 
-  const formatValue = (value:number, metric) => {
+  const formatValue = (value:number, metric:string) => {
     if (metric === 'Water_Percent') return `${(value / 10).toFixed(1)}L`;
     if (metric === 'Steps_Percent') return `${(value / 1000).toFixed(1)}k`;
     return `${value.toFixed(1)}h`;
