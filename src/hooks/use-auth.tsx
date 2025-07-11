@@ -4,11 +4,11 @@ import {
   useMutation,
   UseMutationResult,
 } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "../hooks/use-toast";
 import { RENDER_URL } from "../common/Urls"; // Make sure this path is correct
 import { login } from "../services/LoginServices";
-import { queryClient } from "@/lib/queryClient"; // adjust the import path as needed
-import { ILoginUserData, Info } from "@/interface/ILoginUserData";
+import { queryClient } from "../lib/queryClient"; // adjust the import path as needed
+import { ILoginUserData, Info } from "../interface/ILoginUserData";
 
 
 type IUserData = {
