@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Moon, Sun, Monitor } from 'lucide-react';
@@ -23,7 +23,7 @@ export function ThemeSettings({ open, onOpenChange }: ThemeSettingsProps) {
   if (!mounted) {
     return null;
   }
-  
+
   const handleThemeChange = (newTheme: ThemeOption) => {
     setTheme(newTheme);
   };
@@ -36,26 +36,26 @@ export function ThemeSettings({ open, onOpenChange }: ThemeSettingsProps) {
         </DialogHeader>
         <div className="grid gap-6 py-4">
           <div className="grid grid-cols-3 gap-3">
-            <ThemeButton 
-              icon={<Sun className="h-5 w-5" />} 
+            <ThemeButton
+              icon={<Sun className="h-5 w-5" />}
               label="Light"
               isSelected={theme === 'light'}
               onClick={() => handleThemeChange('light')}
             />
-            <ThemeButton 
-              icon={<Moon className="h-5 w-5" />} 
+            <ThemeButton
+              icon={<Moon className="h-5 w-5" />}
               label="Dark"
               isSelected={theme === 'dark'}
               onClick={() => handleThemeChange('dark')}
             />
-            <ThemeButton 
-              icon={<Monitor className="h-5 w-5" />} 
+            <ThemeButton
+              icon={<Monitor className="h-5 w-5" />}
               label="System"
               isSelected={theme === 'system'}
               onClick={() => handleThemeChange('system')}
             />
           </div>
-          
+
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mt-4">
             <h3 className="font-medium mb-2">About themes</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -79,9 +79,8 @@ function ThemeButton({ icon, label, isSelected, onClick }: ThemeButtonProps) {
   return (
     <Button
       variant={isSelected ? "default" : "outline"}
-      className={`flex flex-col items-center justify-center py-6 gap-2 ${
-        isSelected ? "bg-primary-500 text-white hover:bg-primary-600" : ""
-      }`}
+      className={`flex flex-col items-center justify-center py-6 gap-2 ${isSelected ? "bg-primary-500 text-white hover:bg-primary-600" : ""
+        }`}
       onClick={onClick}
     >
       {icon}

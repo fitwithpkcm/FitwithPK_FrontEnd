@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from "react";
-import { cn } from "./lib/utils";
+import React,{ useState, useEffect, useRef } from "react";
+import { cn } from "../../lib/utils";
 import { Trophy } from "lucide-react";
+
 
 interface GoalProgressRingProps {
   progress: number; // 0 to 100

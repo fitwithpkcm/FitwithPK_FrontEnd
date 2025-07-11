@@ -1,4 +1,4 @@
-import  React,{ useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { format, parse, parseISO } from 'date-fns';
 import PhotoViewer from './photo-viewer';
@@ -82,7 +82,7 @@ const groupPhotosByMonth = (photos: Photo[]) => {
     // Parse the date from dd-MM-yyyy format
     const date = parse(photo.date, 'dd-MM-yyyy', new Date());
     const monthYear = format(date, 'MMMM yyyy');
-    
+
     if (!grouped[monthYear]) {
       grouped[monthYear] = [];
     }
@@ -94,7 +94,7 @@ const groupPhotosByMonth = (photos: Photo[]) => {
 
 export default function AllPhotosView({ userId, allPhotos, onBack }: AllPhotosViewProps) {
   const [user, setUser] = useState<any>(null);
-  const [photos, setPhotos] = useState<Photo[]>(allPhotos ? allPhotos : []);
+  const [photos, setPhotos] = useState<ProgressPhoto[]>(allPhotos ? allPhotos : []);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
 
