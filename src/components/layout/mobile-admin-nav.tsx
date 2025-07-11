@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Home, BarChart, Calendar, FileText, Settings, Plus, Apple, Dumbbell, Clipboard, ClipboardCheck } from "lucide-react";
-import { RENDER_URL } from "@/common/Urls";
+import { RENDER_URL } from "../../common/Urls";
 import React from "react";
 
 
