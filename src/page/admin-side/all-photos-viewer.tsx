@@ -95,10 +95,10 @@ const groupPhotosByMonth = (photos: ProgressPhoto[]) => {
 export default function AllPhotosView({ userId, allPhotos, onBack }: AllPhotosViewProps) {
   const [user, setUser] = useState<any>(null);
   const [photos, setPhotos] = useState<ProgressPhoto[]>(allPhotos ? allPhotos : []);
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<ProgressPhoto | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
 
-  const handlePhotoClick = (photo: Photo) => {
+  const handlePhotoClick = (photo: ProgressPhoto) => {
     setSelectedPhoto(photo);
     setViewerOpen(true);
   };
@@ -139,11 +139,11 @@ export default function AllPhotosView({ userId, allPhotos, onBack }: AllPhotosVi
                 >
                   <img
                     src={photo.imageUrl}
-                    alt={`Progress photo from ${formatPhotoDate(photo.date)}`}
+                    alt={`Progress photo from ${formatPhotoDate(photo.date!)}`}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute bottom-0 left-0 right-0 bg-gray-800 bg-opacity-60 px-2 py-1">
-                    <p className="text-white text-xs">{formatPhotoDate(photo.date)}</p>
+                    <p className="text-white text-xs">{formatPhotoDate(photo.date!)}</p>
                   </div>
                 </div>
               ))}

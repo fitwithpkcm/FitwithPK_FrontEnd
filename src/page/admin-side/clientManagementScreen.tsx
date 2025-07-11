@@ -10,31 +10,7 @@ import { ACCESS_STATUS } from "@/common/Constant";
 import { BASE_URL } from "@/common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
 
-
-interface Client {
-  id: number;
-  name: string;
-  email: string;
-  avatar: string;
-  status: "active" | "paused" | "inactive";
-  joinDate: string;
-  lastActivity: string;
-}
-
-const clients: Client[] = [
-  { id: 1, name: "Sarah Johnson", email: "sarah@email.com", avatar: "SJ", status: "active", joinDate: "2024-01-15", lastActivity: "2 hours ago" },
-  { id: 2, name: "Mike Chen", email: "mike@email.com", avatar: "MC", status: "active", joinDate: "2024-02-01", lastActivity: "4 hours ago" },
-  { id: 3, name: "Emma Davis", email: "emma@email.com", avatar: "ED", status: "active", joinDate: "2024-01-20", lastActivity: "1 day ago" },
-  { id: 4, name: "Alex Brown", email: "alex@email.com", avatar: "AB", status: "paused", joinDate: "2024-01-10", lastActivity: "3 days ago" },
-  { id: 5, name: "Lisa Wilson", email: "lisa@email.com", avatar: "LW", status: "active", joinDate: "2024-02-10", lastActivity: "6 hours ago" },
-  { id: 6, name: "Tom Garcia", email: "tom@email.com", avatar: "TG", status: "inactive", joinDate: "2024-01-05", lastActivity: "1 week ago" },
-];
-
-interface ClientManagementScreenProps {
-  onViewProfile?: (clientId: number | undefined) => void;
-}
-
-export default function ClientManagementScreen({ onViewProfile }: ClientManagementScreenProps) {
+export default function ClientManagementScreen() {
   const [clientList, setClientList] = useState<IUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -151,7 +127,7 @@ export default function ClientManagementScreen({ onViewProfile }: ClientManageme
               <div className="flex items-center justify-between">
                 <div
                   className="flex items-center flex-1 cursor-pointer hover:bg-gray-50 p-2 rounded-md -m-2"
-                  onClick={() => onViewProfile?.(client.IdUser)}
+                  onClick={() => { alert('viewing removed') }}
                 >
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
                     <span className="text-blue-600 font-semibold">{client.FirstName?.[0] ?? ''}{client.LastName?.[0] ?? ''}</span>

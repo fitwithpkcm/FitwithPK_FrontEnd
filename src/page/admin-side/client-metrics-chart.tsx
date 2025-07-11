@@ -15,9 +15,7 @@ import { getUserListWithUpdates_ForCoach } from "@/services/AdminServices";
 import { WeeklyDay } from "../client-side/home-page";
 
 
-interface ClientMetricsChartProps {
-  onBack?: () => void;
-}
+
 
 export interface x_metric {
   key: string
@@ -27,7 +25,7 @@ export interface x_metric {
 }
 
 
-export default function ClientMetricsChart({ onBack }: ClientMetricsChartProps) {
+export default function ClientMetricsChart() {
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -140,9 +138,7 @@ export default function ClientMetricsChart({ onBack }: ClientMetricsChartProps) 
 
   const renderBarChart = (
     weeklyData: WeeklyDay[],
-    metricKey: string,
-    color: string = '#4f46e5',
-    label: string = 'Value'
+    metricKey: string
   ) => {
     return (
       <>
@@ -185,7 +181,7 @@ export default function ClientMetricsChart({ onBack }: ClientMetricsChartProps) 
       </header>
 
       {/* Header with Back Button */}
-      {onBack && (
+      {/* {onBack && (
         <div className="flex items-center mb-6">
           <button
             onClick={onBack}
@@ -195,7 +191,7 @@ export default function ClientMetricsChart({ onBack }: ClientMetricsChartProps) 
             <span>Back</span>
           </button>
         </div>
-      )}
+      )} */}
 
       <div className="bg-white rounded-lg border p-6">
         {/* Client Selection - Scalable Design */}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Switch, Route } from "wouter";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
@@ -6,7 +6,7 @@ import AuthPage from './page/client-side/auth-page';
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from './hooks/use-auth';
-import { setBaseUrl } from "../src/Services/HttpService"
+import { setBaseUrl } from "./services/HttpService"
 import { BASE_URL } from './common/Constant';
 import { RENDER_URL } from './common/Urls';
 import HomePage from './page/client-side/home-page'
@@ -16,9 +16,11 @@ import OnBoardPage from './page/client-side/intake-form-page';
 import ProfilePage from './page/client-side/profile-page';
 import AdminDashboard from './page/admin-side/admin-dashboard';
 import SimpleTrackingView from './page/admin-side/simple-tracking-view';
-import Analytics from './page/admin-side/analytics';
 import ClientMetricsChart from './page/admin-side/client-metrics-chart';
-import ClientManagementScreen from './page/admin-side/ClientManagementScreen';
+import ClientManagementScreen from './page/admin-side/clientManagementScreen'
+
+
+
 
 function Router() {
   console.log("Router rendering");
@@ -32,7 +34,6 @@ function Router() {
       <Route path={RENDER_URL.STUDENT_PROFILE} component={ProfilePage} />
 
 
-      {/* admin pages */}
       {/* admin pages */}
       <Route path={RENDER_URL.ADMIN_DASHBOARD} component={AdminDashboard} />
       <Route path={RENDER_URL.ADMIN_UPDATES} component={SimpleTrackingView} />
