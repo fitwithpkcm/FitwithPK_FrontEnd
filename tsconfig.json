@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react",
-    "baseUrl": ".",
+    "outDir": "./dist",
     "paths": {
       "@/*": ["./src/*"],
       "@shared/*": ["./shared/*"]
