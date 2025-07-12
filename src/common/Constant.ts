@@ -1,6 +1,6 @@
 // Login
 
-export const BASE_URL = "https://pk-fit-api-production.up.railway.app"
+export const BASE_URL = "https://api.fitwithpk.com"
 
 export const LOGIN_REQUEST = "LOGIN_REQUEST";
 export const LOGIN_SUCCESS = "LOGIN_SUCCESS";
