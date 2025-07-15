@@ -17,6 +17,9 @@ interface UserType {
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
+  const [registerMobile, setRegisterMobile] = useState("");
+  const [registerHeight, setRegisterHeight] = useState("");
+  const [registerWeight, setRegisterWeight] = useState("");
 
   const { user, loginMutation, registerMutation } = useAuth();
 
@@ -100,34 +103,34 @@ export default function AuthPage() {
     e.preventDefault();
     setError("");
 
-    try {
-      setLoading(true);
-      const response = await axios.post("/api/Account/register", { // Changed endpoint
-        name: registerName,
-        email: registerEmail,
-        password: registerPassword,
-        // Add any additional required fields from old API
-      });
-
-      if (response.data?.success) {
-        const userData = response.data.data;
-        localStorage.setItem("userData", JSON.stringify(userData)); // Changed key
-        // setLocation(RENDER_URL.STAFF_DASHBOARD); // Or appropriate redirect
-      } else {
-        setError(response.data?.message || "Registration failed");
+    registerMutation.mutate(
+      {
+        EmailID: registerEmail,
+        Password: registerPassword,
+        FirstName: registerName.split(' ')[0],
+        LastName: registerName.split(' ')[1] || '',
+        Mobile: registerMobile,
+        IsUser: 1,
+        LoginType: "normal",
+        Height: registerHeight, // Add height
+        Weight: registerWeight, // Add weight
+      },
+      {
+        onSuccess: (data) => {
+          console.log("Registration successful:", data);
+        },
+        onError: (error) => {
+          console.error("Registration error:", error);
+          if (axios.isAxiosError(error)) {
+            setError(error.response?.data?.message || "Registration failed");
+          } else if (error instanceof Error) {
+            setError(error.message);
+          } else {
+            setError("Registration failed");
+          }
+        }
       }
-    } catch (err) {
-      console.error("Registration error:", err);
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || "Registration failed");
-      } else if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Registration failed");
-      }
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
   return (
@@ -202,7 +205,7 @@ export default function AuthPage() {
           <form onSubmit={handleRegister} className="space-y-4">
             <div>
               <label htmlFor="register-name" className="block text-sm font-medium mb-1">
-                Full Name
+                Full Name (First and Last)
               </label>
               <input
                 id="register-name"
@@ -245,12 +248,58 @@ export default function AuthPage() {
               />
             </div>
 
+            <div>
+              <label htmlFor="register-mobile" className="block text-sm font-medium mb-1">
+                Mobile Number
+              </label>
+              <input
+                id="register-mobile"
+                type="tel"
+                value={registerMobile}
+                onChange={(e) => setRegisterMobile(e.target.value)}
+                className="w-full p-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Your mobile number"
+                required
+              />
+            </div>
+
+            {/* New Height and Weight fields */}
+            <div>
+              <label htmlFor="register-height" className="block text-sm font-medium mb-1">
+                Height (cm)
+              </label>
+              <input
+                id="register-height"
+                type="number"
+                value={registerHeight}
+                onChange={(e) => setRegisterHeight(e.target.value)}
+                className="w-full p-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Your height in cm"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="register-weight" className="block text-sm font-medium mb-1">
+                Weight (kg)
+              </label>
+              <input
+                id="register-weight"
+                type="number"
+                value={registerWeight}
+                onChange={(e) => setRegisterWeight(e.target.value)}
+                className="w-full p-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Your weight in kg"
+                required
+              />
+            </div>
+
             <Button
               type="submit"
               className="w-full h-12 mt-4"
-              disabled={loading}
+              disabled={registerMutation.isPending}
             >
-              {loading ? "Creating account..." : "Sign Up"}
+              {registerMutation.isPending ? "Creating account..." : "Sign Up"}
             </Button>
           </form>
         )}

@@ -39,7 +39,7 @@ export const registerUser = (params: unknown) => {
         url: API_URL.REGISTRATION,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<unknown>) => {
         return response;
     });
 };

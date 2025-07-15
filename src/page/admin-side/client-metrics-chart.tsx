@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Calendar, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, ArrowLeft, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { IDailyStats, IUpdatesForUser } from "../../interface/IDailyUpdates";
@@ -14,7 +14,7 @@ import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
 import { getUserListWithUpdates_ForCoach } from "../../services/AdminServices";
 import { WeeklyDay } from "../client-side/home-page";
 
-
+import { startOfWeek, endOfWeek } from 'date-fns';
 
 
 export interface x_metric {
@@ -26,8 +26,8 @@ export interface x_metric {
 
 
 export default function ClientMetricsChart() {
-  const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), "yyyy-MM-dd"));
-  const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [startDate, setStartDate] = useState(format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"));
+const [endDate, setEndDate] = useState(format(endOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"));  
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedMetric, setSelectedMetric] = useState("Sleep_Percent");
 
@@ -66,6 +66,13 @@ export default function ClientMetricsChart() {
     queryKey: ["coach-userlist"],
     queryFn: () => getUserListWithUpdates_ForCoach({ Day: moment(startDate).format("DD-MM-YYYY") }).then(res => res.data.data)
   });
+
+ useEffect(() => {
+  const firstUserId = UserList?.[0]?.IdUser?.toString();
+  if (firstUserId) {
+    setSelectedClient(firstUserId);
+  }
+}, [UserList]);
 
 
   let weeklyData: WeeklyDay[] = [

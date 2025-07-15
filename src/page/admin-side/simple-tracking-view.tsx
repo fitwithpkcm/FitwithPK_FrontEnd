@@ -4,7 +4,7 @@ import { Check, X, AlertTriangle, Calendar, Bell } from "lucide-react";
 import WeeklyTrackingView from "./weekly-track-view";
 import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
-import {  getUserListWithUpdates_ForCoach, getUserListWithWeeklyUpdates_ForCoach } from "../../services/AdminServices";
+import { getUserListWithUpdates_ForCoach, getUserListWithWeeklyUpdates_ForCoach } from "../../services/AdminServices";
 import { IUser } from "../../interface/models/User";
 import { useQuery } from "@tanstack/react-query";
 import moment from 'moment';
@@ -122,7 +122,7 @@ export default function SimpleTrackingView() {
   // Count updated and missed users
   const updatedCount = UserListWithUpdates?.filter(user => user.IdStats != null).length;
 
-  const missedCount = UserListWithUpdates!.length - updatedCount!;
+  const missedCount = UserListWithUpdates?.length ? UserListWithUpdates.length : 0;
 
   // Handle user selection
   const handleSelectUser = (userId: number) => {

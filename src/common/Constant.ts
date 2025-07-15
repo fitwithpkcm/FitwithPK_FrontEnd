@@ -63,7 +63,7 @@ export const ACCESS_STATUS = Object.freeze({
     NUMBER: 1,
   },
   DE_ACTIVE: {
-    NAME: 'DE_ACTIVE',
+    NAME: 'IN_ACTIVE',
     KEY: 'D',
     NUMBER: 2,
   },

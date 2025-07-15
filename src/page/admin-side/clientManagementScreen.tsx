@@ -3,25 +3,28 @@ import { Users, Play, Pause, X, Search } from "lucide-react";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
 import { IUpdatesForUser } from "../../interface/IDailyUpdates";
 import { IUser } from "../../interface/models/User";
-import { useQuery } from "@tanstack/react-query";
-import { getUserListForACoach } from "../../services/AdminServices";
-import { ACCESS_STATUS } from "../../common/Constant";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { getUserListForACoach, setUpdateActiveStatus } from "../../services/AdminServices";
+import { ACCESS_STATUS, AccessStatusType } from "../../common/Constant";
 
 import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
+import { queryClient } from "../../lib/queryClient";
+
+
 
 export default function ClientManagementScreen() {
   const [clientList, setClientList] = useState<IUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const handleStatusChange = (clientId: number | undefined, newStatus: "active" | "paused" | "inactive") => {
+  const handleStatusChange = (clientId: number, newStatus: number) => {
     setClientList(prev =>
       prev.map(client =>
-        client.IdUser === clientId ? { ...client, status: newStatus } : client
-      )
-    );
-  };
+        client.IdUser === clientId ? { ...client, ActiveStatus: newStatus } : client
+      ));
 
+    updateActiveStatus({ clientID: clientId, status: newStatus });
+  };
 
   /**
   * author : basil1112
@@ -31,11 +34,29 @@ export default function ClientManagementScreen() {
     setBaseUrl(BASE_URL);
   }, []);
 
+  const viewProfile = () => {
+
+  }
+
 
   // Fetch user's list 
   const { data: coach_client_list } = useQuery<IUser[]>({
     queryKey: ["coach-userlist"],
     queryFn: () => getUserListForACoach(null).then(res => res.data.data)
+  });
+
+
+  const { mutate: updateActiveStatus } = useMutation({
+    mutationFn: (data: { clientID: number, status: number }) => {
+      const payload = {
+        ActiveStatus: data.status,
+        AcceptingUserID: data.clientID
+      };
+      return setUpdateActiveStatus(payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coach-userlist"] });
+    }
   });
 
 
@@ -59,6 +80,15 @@ export default function ClientManagementScreen() {
       case ACCESS_STATUS.PAUSE.NUMBER: return "⏸️";
       case ACCESS_STATUS.DE_ACTIVE.NUMBER: return "⭕";
       default: return "⭕";
+    }
+  };
+
+  const getStatusName = (status: number | undefined) => {
+    switch (status) {
+      case ACCESS_STATUS.ACTIVE.NUMBER: return ACCESS_STATUS.ACTIVE.NAME;
+      case ACCESS_STATUS.PAUSE.NUMBER: return ACCESS_STATUS.PAUSE.NAME;
+      case ACCESS_STATUS.DE_ACTIVE.NUMBER: return ACCESS_STATUS.DE_ACTIVE.NAME;
+      default: return "Unknown";
     }
   };
 
@@ -127,7 +157,7 @@ export default function ClientManagementScreen() {
               <div className="flex items-center justify-between">
                 <div
                   className="flex items-center flex-1 cursor-pointer hover:bg-gray-50 p-2 rounded-md -m-2"
-                  onClick={() => { alert('viewing removed') }}
+                  onClick={() => { }}
                 >
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
                     <span className="text-blue-600 font-semibold">{client.FirstName?.[0] ?? ''}{client.LastName?.[0] ?? ''}</span>
@@ -141,16 +171,16 @@ export default function ClientManagementScreen() {
 
                 <div className="flex items-center space-x-2">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(client.ActiveStatus)}`}>
-                    {getStatusIcon(client.ActiveStatus)} {client.ActiveStatus}
+                    {getStatusIcon(client.ActiveStatus) }{ getStatusName(client.ActiveStatus)}
                   </span>
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex justify-end mt-3 space-x-2">
-                {client.ActiveStatus !== ACCESS_STATUS.ACTIVE.NUMBER && (
+                {client.ActiveStatus !== ACCESS_STATUS.ACTIVE.NUMBER && client.IdUser && (
                   <button
-                    onClick={() => handleStatusChange(client.IdUser, "active")}
+                    onClick={() => handleStatusChange(client.IdUser!, ACCESS_STATUS.ACTIVE.NUMBER)}
                     className="flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-md text-sm hover:bg-green-200"
                   >
                     <Play size={14} className="mr-1" />
@@ -158,9 +188,9 @@ export default function ClientManagementScreen() {
                   </button>
                 )}
 
-                {client.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER && (
+                {client.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER && client.IdUser && (
                   <button
-                    onClick={() => handleStatusChange(client.IdUser, "paused")}
+                    onClick={() => handleStatusChange(client.IdUser!, ACCESS_STATUS.PAUSE.NUMBER)}
                     className="flex items-center px-3 py-1 bg-yellow-100 text-yellow-700 rounded-md text-sm hover:bg-yellow-200"
                   >
                     <Pause size={14} className="mr-1" />
@@ -168,9 +198,9 @@ export default function ClientManagementScreen() {
                   </button>
                 )}
 
-                {client.ActiveStatus !== ACCESS_STATUS.DE_ACTIVE.NUMBER && (
+                {client.ActiveStatus !== ACCESS_STATUS.DE_ACTIVE.NUMBER && client.IdUser && (
                   <button
-                    onClick={() => handleStatusChange(client.IdUser, "inactive")}
+                    onClick={() => handleStatusChange(client.IdUser!, ACCESS_STATUS.DE_ACTIVE.NUMBER)}
                     className="flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200"
                   >
                     <X size={14} className="mr-1" />

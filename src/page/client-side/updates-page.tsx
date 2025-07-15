@@ -94,7 +94,7 @@ export default function UpdatesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toDateString());
   const [files, setFiles] = useState<File[]>([])
 
   const currentDate = new Date();
@@ -124,6 +124,10 @@ export default function UpdatesPage() {
   useEffect(() => {
     setBaseUrl(BASE_URL);
   }, []);
+
+  useEffect(() => {
+    console.log("hello", selectedDate);
+  }, [selectedDate])
 
   /**
    * handle file change 
@@ -421,6 +425,8 @@ export default function UpdatesPage() {
     mutationFn: async (data: DailyUpdateFormValues) => {
       // Transform string enum values to boolean and validate all fields present
 
+      console.log("datea",selectedDate);
+
       const transformedData = {
         Steps: data.Steps || null,
         Water: data.Water || null,
@@ -586,6 +592,17 @@ export default function UpdatesPage() {
                       <p className="text-sm text-gray-500 dark:text-gray-400">Day {dayNumber}</p>
                     </div>
                     <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" onClick={() => {
+                    // Set the selected date from the update's DayDate
+                        if (update.DayDate) {
+                          const dateParts = update.DayDate.split('-');
+                          if (dateParts.length === 3) {
+                            const day = parseInt(dateParts[0], 10);
+                            const month = parseInt(dateParts[1], 10) - 1; // Months are 0-indexed
+                            const year = parseInt(dateParts[2], 10);
+                            const date = new Date(year, month, day);
+                            setSelectedDate(date.toDateString());
+                          }
+                        }
                       form.reset({
                         Steps: update.Steps ?? undefined,
                         Water: update.Water ?? undefined,
@@ -768,6 +785,8 @@ export default function UpdatesPage() {
     );
   };
 
+  console.log(">>>>HERE ",selectedDate);
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       <header className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 py-4 px-4 sm:px-6">
@@ -775,7 +794,7 @@ export default function UpdatesPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Updates</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{format(selectedDate, "EEEE, MMMM d")}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{selectedDate}</p>
             </div>
             <Button
               onClick={() => {

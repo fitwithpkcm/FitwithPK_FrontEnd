@@ -43,3 +43,14 @@ export const getUserListWithWeeklyUpdates_ForCoach = (params: unknown) => {
         return response;
     });
 };
+
+
+export const setUpdateActiveStatus = (params: unknown) => {
+    return httpCall({
+        url: API_URL.APPROVE_USER,
+        method: "post",
+        data: params
+    }).then((response: ApiResponse<unknown[]>) => {
+        return response;
+    });
+};

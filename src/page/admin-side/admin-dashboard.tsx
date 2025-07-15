@@ -1,16 +1,44 @@
 // Create a new file at src/page/admin-side/admin-dashboard.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "../../components/ui/button";
 import { useAuth } from "../../hooks/use-auth";
 import { RENDER_URL } from "../../common/Urls";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
 import { ArrowRightLeft, BarChart2, ClipboardCheck, Plus, Target, Trash2, UserCheck, Users } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { IUser } from "@/interface/models/User";
+import { getUserListForACoach, getUserListWithUpdates_ForCoach } from "@/services/AdminServices";
+import { ACCESS_STATUS, BASE_URL } from "@/common/Constant";
+import { setBaseUrl } from "@/services/HttpService";
+import { IUpdatesForUser } from "@/interface/IDailyUpdates";
+import moment from "moment";
 
 export default function AdminDashboard() {
 
   const data = useAuth();
   const [, setLocation] = useLocation();
+  const currentDate = new Date();
+
+  /**
+  * author : basil1112
+  * set up base url
+   */
+  useEffect(() => {
+    setBaseUrl(BASE_URL);
+  }, []);
+
+  // Fetch user's list 
+  const { data: coach_client_list } = useQuery<IUser[]>({
+    queryKey: ["coach-userlist-dashboard"],
+    queryFn: () => getUserListForACoach(null).then(res => res.data.data)
+  });
+
+  // Fetch user's list 
+  const { data: UserListWithUpdates } = useQuery<IUpdatesForUser[]>({
+    queryKey: ["coach-userlist-dashboard"],
+    queryFn: () => getUserListWithUpdates_ForCoach({ Day: moment(currentDate).format("DD-MM-YYYY") }).then(res => res.data.data)
+  });
 
   const [quickNotes, setQuickNotes] = useState<string[]>([
     "Weekly progress reviews due this Friday",
@@ -32,6 +60,18 @@ export default function AdminDashboard() {
     setQuickNotes(quickNotes.filter((_, i) => i !== index));
   };
 
+  const getActiveUserCount = (clientList: IUser[]): number => {
+    const data = clientList.filter((element) => {
+      return element.ActiveStatus == ACCESS_STATUS.ACTIVE.NUMBER
+    })
+    return data ? data.length : 0
+  }
+
+  const getUpdatedCount = (UserListWithUpdates: IUpdatesForUser[]) => {
+    const updatedCount = UserListWithUpdates?.filter(user => user.IdStats != null).length;
+    return updatedCount ? updatedCount : 0;
+  }
+
   return (
 
     <div className="min-h-screen bg-background text-foreground pb-20">
@@ -50,7 +90,7 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Active Clients</p>
-                  <p className="text-2xl font-bold text-green-600">18/24</p>
+                  <p className="text-2xl font-bold text-green-600">{`${getActiveUserCount(coach_client_list ? coach_client_list : [])}/${coach_client_list?.length}`}</p>
                   <p className="text-xs text-gray-400">Tap to manage</p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -63,7 +103,7 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Daily Updates</p>
-                  <p className="text-2xl font-bold text-blue-600">15/18</p>
+                  <p className="text-2xl font-bold text-blue-600">{`${getUpdatedCount(UserListWithUpdates ? UserListWithUpdates : [])}/${coach_client_list?.length}`}</p>
                   <p className="text-xs text-gray-400">Tap to view</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">

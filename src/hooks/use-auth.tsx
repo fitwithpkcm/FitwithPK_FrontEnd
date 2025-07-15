@@ -5,8 +5,8 @@ import {
   UseMutationResult,
 } from "@tanstack/react-query";
 import { useToast } from "../hooks/use-toast";
-import { RENDER_URL } from "../common/Urls"; // Make sure this path is correct
-import { login } from "../services/LoginServices";
+import { API_URL, RENDER_URL } from "../common/Urls"; // Make sure this path is correct
+import { login, registerUser } from "../services/LoginServices";
 import { queryClient } from "../lib/queryClient"; // adjust the import path as needed
 import { ILoginUserData, Info } from "../interface/ILoginUserData";
 
@@ -27,7 +27,7 @@ type AuthContextType = {
   error: Error | null;
   loginMutation: UseMutationResult<ILoginUserData, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
-  registerMutation: UseMutationResult<IUserData, Error, RegisterData>;
+  registerMutation: UseMutationResult<unknown, Error, RegisterData>;
 };
 
 type LoginData = {
@@ -37,9 +37,15 @@ type LoginData = {
 };
 
 type RegisterData = {
-  name: string;
-  email: string;
-  password: string;
+  EmailID: string;
+  Password: string;
+  FirstName: string;
+  LastName: string;
+  Mobile: string;
+  IsUser: number;
+  LoginType: string;
+  Height: string;
+  Weight: string;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -97,35 +103,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const registerMutation = useMutation({
+  const registerMutation = useMutation<unknown, Error, RegisterData>({
     mutationFn: async (credentials: RegisterData) => {
-      const response = await fetch("/api/Account/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentials)
-      });
+      const response = await registerUser(credentials);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Registration failed");
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Registration failed");
       }
-
-      const responseData = await response.json();
-
-      if (!responseData.success) {
-        throw new Error(responseData.message || "Registration failed");
-      }
-
-      const userData = {
-        token: responseData.data.token,
-        ...responseData.data.info
-      };
-
-      localStorage.setItem("userData", JSON.stringify(userData));
-      return userData;
     },
-    onSuccess: (userData) => {
-      queryClient.setQueryData(["userData"], userData);
+    onSuccess: () => {
+      toast({
+        title: "Registration successful",
+        description: "Your account has been created successfully",
+        variant: "default"
+      });
     },
     onError: (error) => {
       toast({
