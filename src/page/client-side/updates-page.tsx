@@ -848,10 +848,10 @@ export default function UpdatesPage() {
             <CardContent className="p-4">
               <Calendar
                 mode="single"
-                selected={selectedDate}
+                selected={moment(selectedDate).toDate()}
                 onSelect={(date: Date | undefined) => {
                   if (date) {
-                    setSelectedDate(date);
+                    setSelectedDate(date.toDateString());
                     setShowCalendar(false);
                   }
                 }}
