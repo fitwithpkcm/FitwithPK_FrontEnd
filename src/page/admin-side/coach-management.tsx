@@ -539,7 +539,7 @@ export default function CoachManagementScreen() {
                             Edit Coach
                         </button>
                         <button
-                            onClick={() => startClientAssignment(selectedCoach)}
+                            onClick={() => setSelectedCoach(selectedCoach)}
                             className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
                         >
                             Assign Clients
@@ -882,7 +882,7 @@ export default function CoachManagementScreen() {
                                         }
                                     }));
                                     // Add an empty slot for the certificate file
-                                    setCertificateFiles(prev => [...prev, null]);
+                                    //setCertificateFiles(prev => [...prev, null]);
                                 }}
                                 className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center gap-1 text-sm"
                             >

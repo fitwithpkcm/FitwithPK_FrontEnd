@@ -147,10 +147,11 @@ export default function HomePage() {
 
 
   const { data: dietTargetGoalPlans = {
-    FileName: '', 
+    FileName: { 'diet_plan': '', 'workout_plan': '' },
     Targets: {
       steps: 100, sleep: 1, water: 1
-    }
+    },
+    FeedBack:''
   } } = useQuery<IdDietPlan | null>({
     queryKey: ['dietPlan'],
     queryFn: async () => {
