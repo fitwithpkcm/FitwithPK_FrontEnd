@@ -22,7 +22,7 @@ type IUserData = {
 };
 
 type AuthContextType = {
-  user: IUserData | null;
+  user: ILoginUserData | null;
   isLoading: boolean;
   error: Error | null;
   loginMutation: UseMutationResult<ILoginUserData, Error, LoginData>;
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   // Check localStorage for existing session
-  const { data: user, error, isLoading, refetch } = useQuery<IUserData | null, Error>({
+  const { data: user, error, isLoading, refetch } = useQuery<ILoginUserData | null, Error>({
     queryKey: ["userData"],
     queryFn: async () => {
       const storedUser = localStorage.getItem("userData");

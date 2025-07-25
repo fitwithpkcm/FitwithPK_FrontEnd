@@ -71,3 +71,7 @@ export interface IUser extends IprofileInfo {
   ActiveStatus?:number
 }
 
+
+export interface SuperAdminResponse {
+  IsSuperAdmin: number; 
+}

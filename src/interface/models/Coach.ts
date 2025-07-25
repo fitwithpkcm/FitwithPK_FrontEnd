@@ -33,3 +33,10 @@ export interface Certification {
     centre: string
     file_url: string
 }
+
+
+export interface CoachStudentAssign {
+    IdAssign?: number
+    IdCoach: number
+    IdUser: number
+}

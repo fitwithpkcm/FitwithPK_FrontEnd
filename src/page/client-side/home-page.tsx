@@ -25,6 +25,7 @@ import { RENDER_URL } from "../../common/Urls";
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
+import { IdDietPlan } from "../../interface/IDietPlan";
 
 
 pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs';
@@ -145,17 +146,25 @@ export default function HomePage() {
   });
 
 
-  const { data: dietPlanFiles = { FileName: '' } } = useQuery({
+  const { data: dietTargetGoalPlans = {
+    FileName: '', 
+    Targets: {
+      steps: 100, sleep: 1, water: 1
+    }
+  } } = useQuery<IdDietPlan | null>({
     queryKey: ['dietPlan'],
     queryFn: async () => {
-      const res = await getDietPlan(null);
+      const res: ApiResponse<IdDietPlan[]> = await getDietPlan(null);
       const data = res.data?.data?.map(element => ({
-        FileName: JSON.parse(element.FileName)
+        ...element,
+        FileName: JSON.parse(element.FileName.toString()),
       }));
+      return data.length > 0 ? data[0] : null;
 
-      return data.length > 0 ? data[0] : null
     }
   });
+
+
 
 
   //useEffect
@@ -168,9 +177,9 @@ export default function HomePage() {
   }, [latestUpdate])
 
   useEffect(() => {
-    if (dietPlanFiles != null) {
-      setWorkOutPdfUrl(`${BASE_URL}/uploads/weekly/${dietPlanFiles?.FileName?.workout_plan}`);
-      setDietPdfUrl(`${BASE_URL}/uploads/weekly/${dietPlanFiles?.FileName?.diet_plan}`);
+    if (dietTargetGoalPlans != null) {
+      setWorkOutPdfUrl(`${BASE_URL}/uploads/workplans/${dietTargetGoalPlans?.FileName?.workout_plan}`);
+      setDietPdfUrl(`${BASE_URL}/uploads/dietplans/${dietTargetGoalPlans?.FileName?.diet_plan}`);
     }
   }, []);
 
@@ -494,9 +503,9 @@ export default function HomePage() {
               </div>
               <div className="flex items-end">
                 <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{latestUpdate?.Steps || 0}</span>
-                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 mb-1">/ {USER_TARGET.DAILY_TARGET.STEPS}</span>
+                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 mb-1">/ {dietTargetGoalPlans?.Targets.steps}</span>
               </div>
-              <Progress value={calculatePercentage(latestUpdate?.Steps || 0, USER_TARGET.DAILY_TARGET.STEPS)} className="mt-2 h-2 dark:bg-gray-800" />
+              <Progress value={calculatePercentage(latestUpdate?.Steps || 0, dietTargetGoalPlans!.Targets.steps)} className="mt-2 h-2 dark:bg-gray-800" />
             </CardContent>
           </Card>
 
@@ -509,9 +518,9 @@ export default function HomePage() {
               </div>
               <div className="flex items-end">
                 <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{latestUpdate?.Water || 0}</span>
-                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 mb-1">/ {USER_TARGET.DAILY_TARGET.WATER} ltrs</span>
+                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 mb-1">/ {dietTargetGoalPlans?.Targets.water} ltrs</span>
               </div>
-              <Progress value={calculatePercentage(latestUpdate?.Water || 0, USER_TARGET.DAILY_TARGET.WATER)} className="mt-2 h-2 bg-gray-100 dark:bg-gray-800">
+              <Progress value={calculatePercentage(latestUpdate?.Water || 0, dietTargetGoalPlans!.Targets.water)} className="mt-2 h-2 bg-gray-100 dark:bg-gray-800">
                 <div className="h-full bg-blue-500 rounded-full" />
               </Progress>
               <div className="mt-2 flex justify-center">
@@ -546,9 +555,9 @@ export default function HomePage() {
               </div>
               <div className="flex items-end">
                 <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{latestUpdate?.Sleep || 7.5}</span>
-                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 mb-1">/ {USER_TARGET.DAILY_TARGET.SLEEP} hours</span>
+                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 mb-1">/ {dietTargetGoalPlans?.Targets.sleep} hours</span>
               </div>
-              <Progress value={calculatePercentage(latestUpdate?.Sleep || 0, USER_TARGET.DAILY_TARGET.SLEEP)} className="mt-2 h-2 bg-gray-100 dark:bg-gray-800">
+              <Progress value={calculatePercentage(latestUpdate?.Sleep || 0, dietTargetGoalPlans!.Targets.sleep)} className="mt-2 h-2 bg-gray-100 dark:bg-gray-800">
                 <div className="h-full bg-purple-500 rounded-full" />
               </Progress>
 
@@ -831,24 +840,9 @@ export default function HomePage() {
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
               <div className="p-4">
                 <div className="flex items-start mb-3">
-                  <div className="flex-shrink-0 mr-3">
-                    <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
-                      <span className="text-primary-700 dark:text-primary-300 font-bold">PK</span>
-                    </div>
-                  </div>
                   <div>
-                    <div className="flex items-center">
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100">Coach PK</h4>
-                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Yesterday</span>
-                    </div>
                     <div className="mt-1 text-sm text-gray-700 dark:text-gray-300">
-                      <p>Great job on hitting your step goal consistently this week! I noticed your water intake could use some improvement.</p>
-                      <p className="mt-2">For next week, let's focus on:</p>
-                      <ul className="list-disc pl-5 mt-1 space-y-1 text-sm">
-                        <li>Increasing your water intake to at least 2L daily</li>
-                        <li>Adding 10 minutes of stretching after your workouts</li>
-                        <li>Tracking your protein intake more carefully</li>
-                      </ul>
+                      <p>{dietTargetGoalPlans?.FeedBack}</p>
                     </div>
                   </div>
                 </div>

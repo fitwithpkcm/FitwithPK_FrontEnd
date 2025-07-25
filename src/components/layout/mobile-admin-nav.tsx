@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, BarChart, Calendar, FileText, Settings, Plus, Apple, Dumbbell, Clipboard, ClipboardCheck } from "lucide-react";
+import { Home, BarChart, Calendar, FileText, Settings, Plus, Apple, Dumbbell, Clipboard, ClipboardCheck, BarChart2, Target, ArrowRightLeft, Cog } from "lucide-react";
 import { RENDER_URL } from "../../common/Urls";
 import React from "react";
 
@@ -26,10 +26,31 @@ export function MobileAdminNav() {
           />
 
           <NavItem
-            icon={<ClipboardCheck className="h-6 w-6" />}
+            icon={<BarChart2 className="h-6 w-6" />}
             label="Analytics"
             href={RENDER_URL.ADMIN_ANALYTICS}
             isActive={location === RENDER_URL.ADMIN_ANALYTICS}
+          />
+
+          <NavItem
+            icon={<Target className="h-6 w-6" />}
+            label="Targets"
+            href={RENDER_URL.ADMIN_TARGETS}
+            isActive={location === RENDER_URL.ADMIN_TARGETS}
+          />
+
+          <NavItem
+            icon={<ArrowRightLeft className="h-6 w-6" />}
+            label="NutriSwap"
+            href={RENDER_URL.ADMIN_NUTRISWAP}
+            isActive={location === RENDER_URL.ADMIN_NUTRISWAP}
+          />
+
+          <NavItem
+            icon={<Cog className="h-6 w-6" />}
+            label="Settings"
+            href={RENDER_URL.ADMIN_SETTINGS}
+            isActive={location === RENDER_URL.ADMIN_SETTINGS}
           />
 
         </div>

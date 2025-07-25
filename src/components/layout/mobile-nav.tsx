@@ -29,18 +29,18 @@ export function MobileNav() {
             href={RENDER_URL.STUDENT_NUTRI_SWAP}
             isActive={location === RENDER_URL.STUDENT_NUTRI_SWAP}
           />
-          <NavItem
+          {/* <NavItem
             icon={<Dumbbell className="h-6 w-6" />}
             label="Workouts"
             href="/my-exercises"
             isActive={location === "/my-exercises"}
-          />
-          <NavItem
+          /> */}
+         {/*  <NavItem
             icon={<FileText className="h-6 w-6" />}
             label="Diet/Plan"
             href="/diet-workout"
             isActive={location === "/diet-workout"}
-          />
+          /> */}
           <NavItem
             icon={<Settings className="h-6 w-6" />}
             label="Profile"

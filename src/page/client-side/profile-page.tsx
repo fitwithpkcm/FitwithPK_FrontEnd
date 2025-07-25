@@ -62,18 +62,21 @@ export default function ProfilePage() {
     queryFn: () => getMyCoachDetails(0).then((res: ApiResponse<ICoach>) => res.data.data)
   });
 
-  const { data: loggedUserDetails } = useQuery<Partial<IUser>>({
+const { data: loggedUserDetails } = useQuery<Partial<IUser> | null | undefined>({
     queryKey: ["get_mydetails"],
-    queryFn: () => getLoggedUserDetails(0).then((res: ApiResponse<Partial<IUser>>) => {
-      if (Array.isArray(res.data.data)) {
-        return res.data.data[0]
-      } else {
-        return null;
-      }
-    }).catch((error: unknown) => {
-      console.log("error handling", error);
-    })
-  });
+    queryFn: async () => {
+        try {
+            const res = await getLoggedUserDetails(0) as ApiResponse<Partial<IUser[]>>;
+            if (Array.isArray(res.data.data) && res.data.data.length > 0) {
+                return res.data.data[0];
+            }
+            return null;
+        } catch (error) {
+            console.log("error handling", error);
+            return undefined; // Now matches the type
+        }
+    }
+});
 
 
 

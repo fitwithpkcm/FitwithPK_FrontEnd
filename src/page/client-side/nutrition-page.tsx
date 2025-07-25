@@ -406,6 +406,7 @@ export default function NutritionPage() {
                               size="sm"
                               className="flex items-center gap-1"
                               onClick={() => {
+                                console.log(alt);
                                 setSelectedAlternative(alt);
                                 setShowBenefitsDialog(true);
                               }}

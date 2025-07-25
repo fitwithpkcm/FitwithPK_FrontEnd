@@ -18,6 +18,10 @@ import AdminDashboard from './page/admin-side/admin-dashboard';
 import SimpleTrackingView from './page/admin-side/simple-tracking-view';
 import ClientMetricsChart from './page/admin-side/client-metrics-chart';
 import ClientManagementScreen from './page/admin-side/clientManagementScreen'
+import NutriSwapScreen from './page/admin-side/nutriswap-screen';
+import SettingsScreen from './page/admin-side/admin-setting';
+import UserTargetsScreen from './page/admin-side/target-screen';
+import CoachManagementScreen from './page/admin-side/coach-management';
 
 
 
@@ -26,6 +30,7 @@ function Router() {
   console.log("Router rendering");
   return (
     <Switch>
+      <Route path="/" component={AuthPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path={RENDER_URL.STUDENT_DASHBOARD} component={HomePage} />
       <Route path={RENDER_URL.STUDENT_ONBOARD} component={OnBoardPage} />
@@ -39,8 +44,10 @@ function Router() {
       <Route path={RENDER_URL.ADMIN_UPDATES} component={SimpleTrackingView} />
       <Route path={RENDER_URL.ADMIN_ANALYTICS} component={ClientMetricsChart} />
       <Route path={RENDER_URL.ADMIN_CLIENT_MANAGEMENT} component={ClientManagementScreen} />
-
-
+      <Route path={RENDER_URL.ADMIN_NUTRISWAP} component={NutriSwapScreen} />
+      <Route path={RENDER_URL.ADMIN_SETTINGS} component={SettingsScreen} />
+      <Route path={RENDER_URL.ADMIN_TARGETS} component={UserTargetsScreen} />
+      <Route path={RENDER_URL.ADMIN_COACH_MANAGE} component={CoachManagementScreen} />
 
     </Switch>
   );

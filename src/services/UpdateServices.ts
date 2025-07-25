@@ -5,6 +5,7 @@ import { IDailyStats } from "../interface/IDailyUpdates";
 import { Metric } from "../page/client-side/progressWeeklyChart";
 import { IBodyMeasurement } from "../interface/IBodyMeasurement";
 import { IStudentGallery } from "../interface/IStudentGallery";
+import { IdDietPlan } from "../interface/IDietPlan";
 
 export const getDailyUpdate = (params: unknown = null) => {
     return httpCall({
@@ -92,7 +93,7 @@ export const getDietPlan = (params: unknown) => {
         url: API_URL.GET_DIET_PLAN,
         method: "post",
         data: params
-    }).then((response: ApiResponse<{ FileName: string }[]>) => {
+    }).then((response: ApiResponse<IdDietPlan[]>) => {
         return response;
     });
 };

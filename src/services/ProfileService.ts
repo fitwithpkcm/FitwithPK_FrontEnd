@@ -1,6 +1,6 @@
 import { httpCall } from "./HttpService";
 import { API_URL } from "../common/Urls";
-import { ICoach } from "../interface/models/Coach";
+import { CoachStudentAssign, ICoach } from "../interface/models/Coach";
 import { IUser } from "../interface/models/User";
 
 export const getMyCoachDetails = (params: unknown) => {
@@ -19,7 +19,18 @@ export const getLoggedUserDetails = (params: unknown) => {
         url: API_URL.USERLIST,
         method: "post",
         data: params
-    }).then((response: ApiResponse<Partial<IUser>>) => {
+    }).then((response: ApiResponse<Partial<IUser[]>>) => {
+        return response;
+    });
+};
+
+
+export const getAlreadyAssignedList = (params: unknown) => {
+    return httpCall({
+        url: API_URL.ASSIGNED_COACH_LIST,
+        method: "post",
+        data: params
+    }).then((response: ApiResponse<CoachStudentAssign[]>) => {
         return response;
     });
 };
