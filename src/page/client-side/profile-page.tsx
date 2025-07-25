@@ -92,7 +92,7 @@ const { data: loggedUserDetails } = useQuery<Partial<IUser> | null | undefined>(
   const RenderCertifications = () => {
     return (
       <div className="space-y-6">
-        {myCoachDetails?.ProfessionalDetails.certifications.map((certification, index) => (
+        {myCoachDetails?.ProfessionalDetails?.certifications.map((certification, index) => (
           <div key={index} className="flex items-start">
             <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex-shrink-0 flex items-center justify-center">
               <Award className="h-4 w-4 text-primary-600 dark:text-primary-400" />
@@ -156,7 +156,7 @@ const { data: loggedUserDetails } = useQuery<Partial<IUser> | null | undefined>(
 
     return (
       <div className="flex flex-wrap gap-2">
-        {myCoachDetails?.ProfessionalDetails.specializations.map((specialization, index) => {
+        {myCoachDetails?.ProfessionalDetails?.specializations.map((specialization, index) => {
           const colorIndex = index % colorClasses.length;
           const colors = colorClasses[colorIndex];
           return (
@@ -424,7 +424,7 @@ const { data: loggedUserDetails } = useQuery<Partial<IUser> | null | undefined>(
               <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
                 <div className="relative h-48 overflow-hidden">
                   <img
-                    src={`${BASE_URL}${myCoachDetails.BasicDetails.banner_image}`}
+                    src={`${BASE_URL}${myCoachDetails?.BasicDetails?.banner_image}`}
                     alt="Fitness background"
                     className="absolute inset-0 w-full h-full object-cover"
                   />
@@ -436,7 +436,7 @@ const { data: loggedUserDetails } = useQuery<Partial<IUser> | null | undefined>(
                   <div className="flex flex-col items-center -mt-16">
                     <div className="w-32 h-32 rounded-full border-4 border-white dark:border-gray-900 overflow-hidden bg-white dark:bg-gray-800">
                       <img
-                        src={`${BASE_URL}${myCoachDetails.BasicDetails.profile_picture}`}
+                        src={`${BASE_URL}${myCoachDetails?.BasicDetails?.profile_picture}`}
                         alt="Coach PK"
                         className="w-full h-full object-cover"
                       />
@@ -479,7 +479,7 @@ const { data: loggedUserDetails } = useQuery<Partial<IUser> | null | undefined>(
 
                     </div>
                     <div className="flex flex-wrap justify-center gap-2 mb-4">
-                      {myCoachDetails.BasicDetails.social_media.map((social, index) => {
+                      {myCoachDetails.BasicDetails?.social_media.map((social, index) => {
                         // Determine the appropriate icon based on the platform
                         let IconComponent;
                         switch (social.platform.toLowerCase()) {
@@ -527,7 +527,7 @@ const { data: loggedUserDetails } = useQuery<Partial<IUser> | null | undefined>(
                 <CardContent className="p-5">
                   <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">About</h3>
                   <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    {myCoachDetails.ProfessionalDetails.about}
+                    {myCoachDetails?.ProfessionalDetails?.about}
                   </p>
                 </CardContent>
               </Card>

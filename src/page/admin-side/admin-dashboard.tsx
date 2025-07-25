@@ -13,16 +13,18 @@ import { ACCESS_STATUS, BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService";
 import { IUpdatesForUser } from "../../interface/IDailyUpdates";
 import moment from "moment";
+import { useTheme } from "next-themes";
 
 export default function AdminDashboard() {
 
   const data = useAuth();
   const [, setLocation] = useLocation();
+  const { theme, setTheme } = useTheme();
   const currentDate = new Date();
 
   const { user, } = useAuth();
 
-  console.log(user);
+
 
   /**
   * author : basil1112
@@ -30,6 +32,7 @@ export default function AdminDashboard() {
    */
   useEffect(() => {
     setBaseUrl(BASE_URL);
+    setTheme('light')
   }, []);
 
   // Fetch user's list 
@@ -50,7 +53,7 @@ export default function AdminDashboard() {
     queryFn: () => isSuperAdminApi(0).then(res => res.data.data)
   });
 
- 
+
 
 
 
@@ -144,7 +147,7 @@ export default function AdminDashboard() {
 
               <button
                 className="bg-white p-4 rounded-lg border text-left hover:shadow-md transition-shadow"
-               onClick={() => { setLocation(RENDER_URL.ADMIN_TARGETS) }}
+                onClick={() => { setLocation(RENDER_URL.ADMIN_TARGETS) }}
               >
                 <div className="flex items-center mb-2">
                   <Target className="text-purple-600 mr-2" size={20} />
@@ -155,7 +158,7 @@ export default function AdminDashboard() {
 
               <button
                 className="bg-white p-4 rounded-lg border text-left hover:shadow-md transition-shadow"
-               onClick={() => { setLocation(RENDER_URL.ADMIN_NUTRISWAP) }}
+                onClick={() => { setLocation(RENDER_URL.ADMIN_NUTRISWAP) }}
               >
                 <div className="flex items-center mb-2">
                   <ArrowRightLeft className="text-orange-600 mr-2" size={20} />

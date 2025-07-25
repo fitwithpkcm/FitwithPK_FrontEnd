@@ -57,6 +57,9 @@ export default function HomePage() {
   const { user } = useAuth();
   const currentDate = new Date();
 
+  if (user?.info.EmailID == "devumani10@gmail.com" || user?.info.EmailID == "devumani3@gmail.com") {
+    alert("Odikko Nee");
+  }
 
   const { theme, setTheme } = useTheme();
   const [waterInputOpen, setWaterInputOpen] = useState(false);
@@ -151,7 +154,7 @@ export default function HomePage() {
     Targets: {
       steps: 100, sleep: 1, water: 1
     },
-    FeedBack:''
+    FeedBack: ''
   } } = useQuery<IdDietPlan | null>({
     queryKey: ['dietPlan'],
     queryFn: async () => {
