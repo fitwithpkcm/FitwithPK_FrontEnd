@@ -7,7 +7,8 @@
     "dev": "vite --host",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+     "generate-pwa-assets": "pwa-assets-generator --preset minimal"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -79,7 +80,8 @@
     "wouter": "^3.7.0",
     "ws": "^8.18.2",
     "zod": "^3.24.3",
-    "zod-validation-error": "^3.4.0"
+    "zod-validation-error": "^3.4.0",
+    "workbox-window": "^7.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.26.0",
@@ -109,7 +111,9 @@
     "typescript": "~5.7.3",
     "typescript-eslint": "^8.31.1",
     "vite": "^6.3.4",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-plugin-pwa": "^1.0.2",
+    "vite-tsconfig-paths": "^5.1.4",
+    "pwa-assets-generator": "^6.0.0"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.9"
