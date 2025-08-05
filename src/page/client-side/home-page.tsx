@@ -722,28 +722,28 @@ export default function HomePage() {
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="outline"
-                  className="flex items-center justify-between h-auto gap-2 bg-gradient-to-r from-primary-50 to-blue-50 hover:from-primary-100 hover:to-blue-100 border-primary-200 dark:from-primary-950/30 dark:to-blue-950/30 dark:border-primary-800 dark:hover:from-primary-950/40 dark:hover:to-blue-950/40"
+                  className="flex items-center justify-between  h-auto gap-2 bg-gradient-to-r from-primary-50 to-blue-50 hover:from-primary-100 hover:to-blue-100 border-primary-200 dark:from-primary-950/30 dark:to-blue-950/30 dark:border-primary-800 dark:hover:from-primary-950/40 dark:hover:to-blue-950/40"
                   onClick={() => {
                     setPdfType('workout');
                     setPdfViewerOpen(true);
                   }}
                 >
-                  <div className="flex flex-col items-start w-full"> {/* Changed min-w-0 to w-full */}
-                    <span className="text-base font-medium text-gray-900 dark:text-gray-100 truncate w-full">Workout Plan</span>
-                    <span className="text-xs text-gray-600 dark:text-gray-400 text-left break-words w-full">8-Week Strength Program</span> {/* Added break-words */}
+                  <div className="flex flex-col items-start min-w-0"> {/* Added min-w-0 */}
+                    <span className="text-base font-medium text-gray-900 dark:text-gray-100">Workout Plan</span> {/* Added truncate */}
+                    <span className="text-xs text-pretty text-left text-gray-600 dark:text-gray-400">Strength Program</span> {/* Added truncate */}
                   </div>
                 </Button>
                 <Button
                   variant="outline"
-                  className="flex items-center justify-between h-auto gap-2 bg-gradient-to-r from-green-50 to-lime-50 hover:from-green-100 hover:to-lime-100 border-green-200 dark:from-green-950/30 dark:to-lime-950/30 dark:border-green-800 dark:hover:from-green-950/40 dark:hover:to-lime-950/40"
+                  className="flex items-center justify-between px-4 py-6 h-auto gap-2 bg-gradient-to-r from-green-50 to-lime-50 hover:from-green-100 hover:to-lime-100 border-green-200 dark:from-green-950/30 dark:to-lime-950/30 dark:border-green-800 dark:hover:from-green-950/40 dark:hover:to-lime-950/40"
                   onClick={() => {
                     setPdfType('diet');
                     setPdfViewerOpen(true);
                   }}
                 >
-                  <div className="flex flex-col items-start w-full"> {/* Changed min-w-0 to w-full */}
-                    <span className="text-base font-medium text-gray-900 dark:text-gray-100 truncate w-full">Diet Plan</span>
-                    <span className="text-xs text-gray-600 dark:text-gray-400 text-left break-words w-full">Nutrition Guide & Meal Plan</span> {/* Added break-words */}
+                  <div className="flex flex-col items-start min-w-0"> {/* Added min-w-0 */}
+                    <span className="text-base font-medium text-gray-900 dark:text-gray-100 truncate">Diet Plan</span> {/* Added truncate */}
+                    <span className="text-xs text-pretty text-left text-gray-600 dark:text-gray-400 truncate">Nutrition Guide & Meal Plan</span> {/* Added truncate */}
                   </div>
                 </Button>
               </div>
