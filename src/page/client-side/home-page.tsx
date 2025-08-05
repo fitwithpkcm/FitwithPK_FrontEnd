@@ -181,6 +181,7 @@ export default function HomePage() {
   }, [latestUpdate])
 
   useEffect(() => {
+    console.log("filesnames",dietTargetGoalPlans);
     if (dietTargetGoalPlans != null) {
       setWorkOutPdfUrl(`${BASE_URL}/uploads/workplans/${dietTargetGoalPlans?.FileName?.workout_plan}`);
       setDietPdfUrl(`${BASE_URL}/uploads/dietplans/${dietTargetGoalPlans?.FileName?.diet_plan}`);
@@ -456,6 +457,7 @@ export default function HomePage() {
     setWorkoutRating(1);
     setWorkoutNotes("");
     setWorkoutCompleted(true);
+    setWorkoutRatingOpen(false);
   };
 
   return (
@@ -485,9 +487,13 @@ export default function HomePage() {
               </Button>
             </Link>
 
-            <div className="h-9 w-9 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
+            <div className="h-9 w-9 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center"
+            onClick={()=>{
+              
+            }}
+            >
               <span className="text-primary-700 dark:text-primary-300 font-medium text-sm">
-                BJ
+                {user?.info?.FirstName.charAt(0)}{user?.info?.LastName.charAt(0)}
               </span>
             </div>
           </div>
@@ -584,43 +590,43 @@ export default function HomePage() {
               </div>
               <p className="text-sm text-gray-800 dark:text-gray-200">Upper Body Strength</p>
 
-              {latestUpdate?.WorkOut_Follow ? (
+              {latestUpdate?.WorkOut ? (
                 <div className="mt-auto flex items-center justify-between">
                   <div className="flex items-center">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center ${latestUpdate.WorkOut_Follow === 1 ? 'bg-red-500' :
-                      latestUpdate.WorkOut_Follow === 2 ? 'bg-orange-500' :
-                        latestUpdate.WorkOut_Follow === 3 ? 'bg-yellow-500' :
-                          latestUpdate.WorkOut_Follow === 4 ? 'bg-lime-500' :
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center ${latestUpdate.WorkOut === 1 ? 'bg-red-500' :
+                      latestUpdate.WorkOut === 2 ? 'bg-orange-500' :
+                        latestUpdate.WorkOut === 3 ? 'bg-yellow-500' :
+                          latestUpdate.WorkOut === 4 ? 'bg-lime-500' :
                             'bg-green-500'
                       }`}>
-                      {latestUpdate.WorkOut_Follow === 1 && (
+                      {latestUpdate.WorkOut === 1 && (
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm2.97 4.43l1.06-1.06 1.06 1.06 1.415-1.414-1.06-1.06 1.06-1.06-1.415-1.416-1.06 1.06-1.06-1.06-1.414 1.415 1.06 1.06-1.06 1.06 1.414 1.415z" />
                         </svg>
                       )}
-                      {latestUpdate.WorkOut_Follow === 2 && (
+                      {latestUpdate.WorkOut === 2 && (
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm8 5H9v2h6v-2z" />
                         </svg>
                       )}
-                      {latestUpdate.WorkOut_Follow === 3 && (
+                      {latestUpdate.WorkOut === 3 && (
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm8 5H9v2h6v-2z" />
                         </svg>
                       )}
-                      {latestUpdate.WorkOut_Follow === 4 && (
+                      {latestUpdate.WorkOut === 4 && (
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm1.146 5.146l1.414 1.414L12 15.12l2.44 2.44 1.414-1.414L12 12.292l-3.854 3.854z" />
                         </svg>
                       )}
-                      {(!latestUpdate.WorkOut_Follow || latestUpdate.WorkOut_Follow === 5) && (
+                      {(!latestUpdate.WorkOut || latestUpdate.WorkOut === 5) && (
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm4.592 4.295l2.7-4.055 1.416.943-3.85 5.776-3.374-2.7.943-1.176 2.165 1.212z" />
                         </svg>
                       )}
                     </div>
                     <span className="text-sm font-medium ml-2 text-gray-800 dark:text-gray-200">
-                      {latestUpdate.WorkOut_Follow || 5}/5
+                      {latestUpdate.WorkOut || 5}/5
                     </span>
                   </div>
                   <Button

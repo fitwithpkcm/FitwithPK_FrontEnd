@@ -21,7 +21,11 @@ import { Progress } from "../../components/ui/progress";
 import { dailyUpdate, getDailyUpdate, getDailyUpdateForAWeek, getProgressGallery, getSingleDayUpdate, getWeeklyUpdate, weeklyUpdate } from "../../services/UpdateServices";
 
 import { BASE_URL, UNITS, USER_TARGET } from "../../common/Constant";
-import GraphDataChart from "./progressWeeklyChart";
+
+//import GraphDataChart from "./progressWeeklyChart";
+
+import GraphDataChart from "../admin-side/AdminProgressWeeklyChart";
+
 import { IBodyMeasurement } from '../../interface/IBodyMeasurement'
 import moment from 'moment';
 
@@ -34,6 +38,7 @@ import { setBaseUrl } from "../../services/HttpService"
 import { ManageLocalStorage } from "../../services/Localstorage"
 import { ILoginUserData } from "../../interface/ILoginUserData";
 import { IStudentGallery } from "../../interface/IStudentGallery";
+import { useTheme } from "next-themes";
 
 
 
@@ -94,10 +99,15 @@ export default function UpdatesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toDateString());
+  //const [selectedDate, setSelectedDate] = useState<string>(new Date().toDateString());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [files, setFiles] = useState<File[]>([])
 
   const currentDate = new Date();
+
+  const { theme, setTheme } = useTheme();
+
+  console.log(theme);
 
   // For photo functionality
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -425,7 +435,7 @@ export default function UpdatesPage() {
     mutationFn: async (data: DailyUpdateFormValues) => {
       // Transform string enum values to boolean and validate all fields present
 
-      console.log("datea",selectedDate);
+      console.log("datea", selectedDate);
 
       const transformedData = {
         Steps: data.Steps || null,
@@ -592,17 +602,17 @@ export default function UpdatesPage() {
                       <p className="text-sm text-gray-500 dark:text-gray-400">Day {dayNumber}</p>
                     </div>
                     <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" onClick={() => {
-                    // Set the selected date from the update's DayDate
-                        if (update.DayDate) {
-                          const dateParts = update.DayDate.split('-');
-                          if (dateParts.length === 3) {
-                            const day = parseInt(dateParts[0], 10);
-                            const month = parseInt(dateParts[1], 10) - 1; // Months are 0-indexed
-                            const year = parseInt(dateParts[2], 10);
-                            const date = new Date(year, month, day);
-                            setSelectedDate(date.toDateString());
-                          }
+                      // Set the selected date from the update's DayDate
+                      if (update.DayDate) {
+                        const dateParts = update.DayDate.split('-');
+                        if (dateParts.length === 3) {
+                          const day = parseInt(dateParts[0], 10);
+                          const month = parseInt(dateParts[1], 10) - 1; // Months are 0-indexed
+                          const year = parseInt(dateParts[2], 10);
+                          const date = new Date(year, month, day);
+                          setSelectedDate(date);
                         }
+                      }
                       form.reset({
                         Steps: update.Steps ?? undefined,
                         Water: update.Water ?? undefined,
@@ -785,7 +795,7 @@ export default function UpdatesPage() {
     );
   };
 
-  console.log(">>>>HERE ",selectedDate);
+  console.log(">>>>HERE ", selectedDate);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -794,7 +804,7 @@ export default function UpdatesPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Updates</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{selectedDate}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{selectedDate!.toDateString()}</p>
             </div>
             <Button
               onClick={() => {
@@ -804,8 +814,7 @@ export default function UpdatesPage() {
                 addUpdateShowView();
 
               }}
-              className="bg-primary-600 hover:bg-primary-700 text-white flex items-center gap-1"
-              size="sm"
+              variant="outline" size="sm" className="mr-2 text-xs"
             >
               <Plus className="h-4 w-4" />
               Add Update
@@ -851,7 +860,7 @@ export default function UpdatesPage() {
                 selected={moment(selectedDate).toDate()}
                 onSelect={(date: Date | undefined) => {
                   if (date) {
-                    setSelectedDate(date.toDateString());
+                    setSelectedDate(date);
                     setShowCalendar(false);
                   }
                 }}
@@ -906,7 +915,9 @@ export default function UpdatesPage() {
             </div>
 
             {/*Graph Data Details */}
-            <GraphDataChart selectedDate={selectedDate} />
+            {/*   <GraphDataChart selectedDate={selectedDate} /> */}
+
+            <GraphDataChart selectedDate={selectedDate} darkMode={theme == "dark" ? true : false} />
 
 
             {/* Body Measurements */}

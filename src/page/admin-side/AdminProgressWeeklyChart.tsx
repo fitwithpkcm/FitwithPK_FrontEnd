@@ -14,16 +14,47 @@ import { format } from 'date-fns'
 
 interface GRAPH_PROPS {
   selectedDate: Date,
-  userId?: number
+  userId?: number,
+  darkMode?: boolean // Add dark mode prop
 }
 
 type PeriodKey = 'week' | 'month' | '6month' | 'year'
 
-export default function GraphDataChart({ selectedDate: propDate, userId }: GRAPH_PROPS) {
+export default function GraphDataChart({ 
+  selectedDate: propDate, 
+  userId, 
+  darkMode = false 
+}: GRAPH_PROPS) {
   const [selectedDate, setSelectedDate] = useState<Date>(propDate ?? new Date())
   const [timePeriod, setTimePeriod] = useState<PeriodKey>('6month')
   const [selectedMeasurement, setSelectedMeasurement] = useState<string>('')
   const queryClient = useQueryClient()
+
+  // Theme colors
+  const theme = useMemo(() => ({
+    background: darkMode ? 'bg-gray-900' : 'bg-white',
+    text: darkMode ? 'text-gray-100' : 'text-gray-900',
+    textSecondary: darkMode ? 'text-gray-400' : 'text-gray-500',
+    border: darkMode ? 'border-gray-700' : 'border-gray-200',
+    button: {
+      active: darkMode ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white',
+      inactive: darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600',
+      refresh: darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600',
+      measurement: {
+        active: darkMode ? 'bg-gray-700 text-white' : 'bg-gray-900 text-white',
+        inactive: darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'
+      }
+    },
+    chart: {
+      grid: darkMode ? '#374151' : '#e5e7eb',
+      axis: darkMode ? '#9CA3AF' : '#6B7280',
+      line: '#3B82F6',
+      tooltip: {
+        background: darkMode ? '#1F2937' : '#FFFFFF',
+        text: darkMode ? '#F3F4F6' : '#111827'
+      }
+    }
+  }), [darkMode])
 
   /* --------------------------------------------------
    *  Helper: map UI period selector ⇒ API label
@@ -143,26 +174,26 @@ export default function GraphDataChart({ selectedDate: propDate, userId }: GRAPH
    *  Early‑return loading / error states
    * ------------------------------------------------*/
   if (isLoading) {
-    return <div className="p-4 text-center text-gray-500">Loading chart…</div>
+    return <div className={`p-4 text-center ${theme.textSecondary}`}>Loading chart...</div>
   }
   if (error) {
-    return <div className="p-4 text-center text-red-500">Error loading data.</div>
+    return <div className="p-4 text-center text-red-500">No data to display</div>
   }
   if (!chartData.length) {
-    return <div className="p-4 text-center text-gray-500">No data to display.</div>
+    return <div className={`p-4 text-center ${theme.textSecondary}`}>No data to display.</div>
   }
 
   /* --------------------------------------------------
    *  MAIN UI
    * ------------------------------------------------*/
   return (
-    <div className="bg-white mb-4 overflow-hidden border w-full rounded-lg shadow-sm">
+    <div className={`${theme.background} mb-4 overflow-hidden border ${theme.border} w-full rounded-lg shadow-sm`}>
       <div className="p-2 pb-0">
         {/* Header */}
         <div className="flex justify-between items-start mb-2">
           <div>
-            <div className="text-3xl font-bold">{getCurrentValue()}</div>
-            <div className="text-xs text-gray-500">
+            <div className={`text-3xl font-bold ${theme.text}`}>{getCurrentValue()}</div>
+            <div className={`text-xs ${theme.textSecondary}`}>
               {format(selectedDate, 'dd MMM yy')}
             </div>
           </div>
@@ -178,15 +209,14 @@ export default function GraphDataChart({ selectedDate: propDate, userId }: GRAPH
               <button
                 key={key}
                 onClick={() => setTimePeriod(key as PeriodKey)}
-                className={`px-2 py-1 rounded ${timePeriod === key ? 'bg-blue-600 text-white' : 'bg-gray-100'
-                  }`}
+                className={`px-2 py-1 rounded ${timePeriod === key ? theme.button.active : theme.button.inactive}`}
               >
                 {label}
               </button>
             ))}
             <button
               onClick={() => refreshMutation.mutate()}
-              className="px-2 py-1 rounded bg-gray-100"
+              className={`px-2 py-1 rounded ${theme.button.refresh}`}
               title="Refresh"
             >
               ↻
@@ -201,12 +231,12 @@ export default function GraphDataChart({ selectedDate: propDate, userId }: GRAPH
               data={chartData}
               margin={{ top: 5, right: 20, bottom: 5, left: 10 }}
             >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.chart.grid} />
               <XAxis
                 dataKey="date"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fontSize: 8, fill: '#9CA3AF' }}
+                tick={{ fontSize: 8, fill: theme.chart.axis }}
                 height={30}
                 interval="preserveEnd"
                 minTickGap={15}
@@ -215,18 +245,25 @@ export default function GraphDataChart({ selectedDate: propDate, userId }: GRAPH
                 domain={['auto', 'auto']}
                 axisLine={false}
                 tickLine={false}
-                tick={{ fontSize: 9, fill: '#9CA3AF' }}
+                tick={{ fontSize: 9, fill: theme.chart.axis }}
                 width={25}
                 tickCount={5}
               />
-              <Tooltip />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: theme.chart.tooltip.background,
+                  borderColor: theme.border,
+                  color: theme.chart.tooltip.text,
+                  borderRadius: '0.5rem'
+                }}
+              />
               {selectedMeasurement && (
                 <Line
                   type="monotone"
                   dataKey={selectedMeasurement}
-                  stroke="#3B82F6"
+                  stroke={theme.chart.line}
                   strokeWidth={2}
-                  dot={{ r: 3, fill: '#3B82F6' }}
+                  dot={{ r: 3, fill: theme.chart.line }}
                   activeDot={{ r: 5 }}
                 />
               )}
@@ -234,7 +271,7 @@ export default function GraphDataChart({ selectedDate: propDate, userId }: GRAPH
           </ResponsiveContainer>
         </div>
 
-        <div className="text-xs text-gray-500 mb-2 pl-2">
+        <div className={`text-xs ${theme.textSecondary} mb-2 pl-2`}>
           Average: {getAverageValue()}
         </div>
       </div>
@@ -245,10 +282,11 @@ export default function GraphDataChart({ selectedDate: propDate, userId }: GRAPH
           {measurementKeys.map(key => (
             <button
               key={key}
-              className={`py-2 px-2 rounded-full text-xs sm:text-sm truncate ${selectedMeasurement === key
-                ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-600'
-                }`}
+              className={`py-2 px-2 rounded-full text-xs sm:text-sm truncate ${
+                selectedMeasurement === key 
+                  ? theme.button.measurement.active 
+                  : theme.button.measurement.inactive
+              }`}
               onClick={() => setSelectedMeasurement(key)}
             >
               {prettifyMeasurement(key)}
