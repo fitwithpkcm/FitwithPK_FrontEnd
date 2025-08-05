@@ -110,6 +110,16 @@ export const setCoachAssign = (params: unknown): Promise<ApiResponse<unknown>> =
     });
 };
 
+export const deleteCoachAssign = (params: unknown): Promise<ApiResponse<unknown>> => {
+    return httpCall({
+        url: API_URL.REMOVE_COACH_STUDENT,
+        method: "post",
+        data: params
+    }).then((response: ApiResponse<unknown>) => {
+        return response;
+    });
+};
+
 
 export const isSuperAdminApi = (params: unknown): Promise<ApiResponse<SuperAdminResponse>> => {
     return httpCall({

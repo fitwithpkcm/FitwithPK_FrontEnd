@@ -3,7 +3,7 @@ import { Plus, Upload, X, Camera, User, FileText, Award, Tag, Users, Phone, Mess
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { setBaseUrl } from '../../services/HttpService';
 import { BASE_URL } from '../../common/Constant';
-import { addCoach, getAllCoach, setCoachAssign } from '../../services/AdminServices';
+import { addCoach, deleteCoachAssign, getAllCoach, setCoachAssign } from '../../services/AdminServices';
 import { Certification, CoachStudentAssign, ICoach } from '../../interface/models/Coach';
 import { MobileAdminNav } from '../../components/layout/mobile-admin-nav';
 import { IUser } from '@/interface/models/User';
@@ -123,6 +123,20 @@ export default function CoachManagementScreen() {
     // Define the mutation for coach assign
     const { mutate: assignCoachToStudent } = useMutation({
         mutationFn: setCoachAssign,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["get_mydetails"] });
+            queryClient.invalidateQueries({ queryKey: ["get_alreadyAssigned"] });
+
+        },
+        onError: (error) => {
+            console.error("Error", error);
+
+        }
+    });
+
+
+    const { mutate: deleteCoachToStudent } = useMutation({
+        mutationFn: deleteCoachAssign,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["get_mydetails"] });
             queryClient.invalidateQueries({ queryKey: ["get_alreadyAssigned"] });
@@ -287,6 +301,14 @@ export default function CoachManagementScreen() {
             return;
         }
         assignCoachToStudent({ coachId, studentId });
+    }
+
+    const handleRemoveCoachStudentAssign = (coachId: number | undefined, studentId: number | undefined) => {
+        if (coachId === undefined || studentId === undefined) {
+            alert("Both coach and student IDs are required");
+            return;
+        }
+        deleteCoachToStudent({ coachId, studentId });
     }
 
     // Add specialization
@@ -1083,11 +1105,15 @@ export default function CoachManagementScreen() {
                                     <p className="text-sm text-gray-600">{client.EmailID}</p>
                                 </div>
                                 {alreadyAssigned?.some(val => val.IdUser === client.IdUser) ?
-                                    <button
-                                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                                    >
-                                        Done
-                                    </button>
+                                    <>
+                                        <button
+                                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                            onClick={() => { handleRemoveCoachStudentAssign(selectedCoach.IdCoach, client.IdUser) }}
+                                        >
+                                            Remove
+                                        </button>
+
+                                    </>
                                     :
                                     <button
                                         onClick={() => {

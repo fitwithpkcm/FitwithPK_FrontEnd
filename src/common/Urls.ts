@@ -67,6 +67,7 @@ export const API_URL = {
     ADD_COACH: "/user/addUpdateCoachDetails",
     GET_COACHALL_LIST: "/user/getAllCoachList",
     ASSIGN_COACH_STUDENT : "/user/assignCoachToStudent",
+     REMOVE_COACH_STUDENT : "/user/removeCoachToStudent",
      ASSIGNED_COACH_LIST : "/user/getAllCoachAssignedUser",
     GET_PROFILE_DETAILS: "/student/getStudentProfile",
     GET_SINGLE_DAY: '/student/getSingleDayUpdate',

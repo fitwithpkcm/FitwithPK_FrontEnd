@@ -399,7 +399,7 @@ export default function NutritionPage() {
                           <div className="flex justify-between items-start">
                             <div>
                               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{alt.name}</h3>
-                              <p className="text-gray-500 dark:text-gray-400">{alt.quantity} serving</p>
+                              <p className="text-gray-500 dark:text-gray-400">{alt.quantity} g serving</p>
                             </div>
                             <Button
                               variant="outline"
