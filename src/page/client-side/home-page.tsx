@@ -181,13 +181,21 @@ export default function HomePage() {
   }, [latestUpdate])
 
   useEffect(() => {
-    console.log("filesnames",dietTargetGoalPlans);
+    console.log("filesnames", dietTargetGoalPlans);
     if (dietTargetGoalPlans != null) {
       setWorkOutPdfUrl(`${BASE_URL}/uploads/workplans/${dietTargetGoalPlans?.FileName?.workout_plan}`);
       setDietPdfUrl(`${BASE_URL}/uploads/dietplans/${dietTargetGoalPlans?.FileName?.diet_plan}`);
     }
   }, []);
 
+
+  useEffect(() => { 
+    console.log("filesnames 2nd try", dietTargetGoalPlans);
+    if (dietTargetGoalPlans != null) {
+      setWorkOutPdfUrl(`${BASE_URL}/uploads/workplans/${dietTargetGoalPlans?.FileName?.workout_plan}`);
+      setDietPdfUrl(`${BASE_URL}/uploads/dietplans/${dietTargetGoalPlans?.FileName?.diet_plan}`);
+    }
+  }, [dietTargetGoalPlans]);
 
   /**
    * author : basil1112
@@ -488,9 +496,9 @@ export default function HomePage() {
             </Link>
 
             <div className="h-9 w-9 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center"
-            onClick={()=>{
-              
-            }}
+              onClick={() => {
+
+              }}
             >
               <span className="text-primary-700 dark:text-primary-300 font-medium text-sm">
                 {user?.info?.FirstName.charAt(0)}{user?.info?.LastName.charAt(0)}
