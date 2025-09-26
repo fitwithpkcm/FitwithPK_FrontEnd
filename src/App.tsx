@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Switch, Route } from "wouter";
+import { registerSW } from './pwa'
 import { TooltipProvider } from "./components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
 import AuthPage from './page/client-side/auth-page';
@@ -58,7 +59,11 @@ function App() {
   useEffect(() => {
     console.log("App rendering");
     setBaseUrl(BASE_URL)
+    registerSW()
   }, []);
+
+
+
 
   return (
     <QueryClientProvider client={queryClient}>
