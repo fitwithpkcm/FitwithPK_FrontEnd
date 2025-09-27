@@ -8,6 +8,7 @@ import { validateToken } from "../..//services/LoginServices";
 import { useQuery } from "@tanstack/react-query";
 import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 interface UserType {
   IsAdmin: number;
@@ -157,6 +158,7 @@ export default function AuthPage() {
           >
             Sign Up
           </button>
+          <PWAInstallPrompt />
         </div>
 
         {error && <div className="mb-4 text-red-600">{error}</div>}
