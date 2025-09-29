@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { apiRequest, queryClient } from "../../lib/queryClient";
 import { dailyUpdate, getDailyUpdate, getDailyUpdateForAWeek, getDietPlan, getSingleDayUpdate } from "../../services/UpdateServices";
 import { setBaseUrl } from "../../services/HttpService"
-import { BASE_URL, USER_TARGET } from "../../common/Constant";
+import { ACCESS_STATUS, BASE_URL, USER_TARGET } from "../../common/Constant";
 import { IDailyStats } from "../../interface/IDailyUpdates";
 import moment from 'moment';
 import { RENDER_URL } from "../../common/Urls";
@@ -26,6 +26,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { IdDietPlan } from "../../interface/IDietPlan";
+import { IUser } from "@/interface/models/User";
+import { getLoggedUserDetails } from "@/services/ProfileService";
 
 
 pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs';
@@ -54,7 +56,7 @@ export interface WeeklyDay {
 // function starts
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user,logoutMutation } = useAuth();
   const currentDate = new Date();
 
   if (user?.info.EmailID == "devumani10@gmail.com" || user?.info.EmailID == "devumani3@gmail.com") {
@@ -65,6 +67,8 @@ export default function HomePage() {
   const [waterInputOpen, setWaterInputOpen] = useState(false);
   const [stepsInputOpen, setStepsInputOpen] = useState(false);
   const [sleepInputOpen, setSleepInputOpen] = useState(false);
+  const [paymentFailedAlert, setPaymentFailedAlert] = useState(false);
+
   const [waterAmount, setWaterAmount] = useState<string | number | undefined>("");
   const [stepsAmount, setStepsAmount] = useState<string | number | undefined>("");
   const [sleepAmount, setSleepAmount] = useState<string | number | undefined>("");
@@ -168,6 +172,32 @@ export default function HomePage() {
     }
   });
 
+
+  const { data: loggedUserDetails } = useQuery<Partial<IUser> | null | undefined>({
+      queryKey: ["get_mydetails"],
+      queryFn: async () => {
+          try {
+              const res = await getLoggedUserDetails(0) as ApiResponse<Partial<IUser[]>>;
+              if (Array.isArray(res.data.data) && res.data.data.length > 0) {
+                  return res.data.data[0];
+              }
+              return null;
+          } catch (error) {
+              console.log("error handling", error);
+              return undefined; // Now matches the type
+          }
+      }
+  });
+  
+  
+  useEffect(()=>{
+  if(loggedUserDetails){
+      if(loggedUserDetails.ActiveStatus == ACCESS_STATUS.PAYMENT_FAILED.NUMBER){
+        setPaymentFailedAlert(true)
+      }
+  }
+    
+  },[loggedUserDetails]);
 
 
 
@@ -466,6 +496,10 @@ export default function HomePage() {
     setWorkoutNotes("");
     setWorkoutCompleted(true);
     setWorkoutRatingOpen(false);
+  };
+
+    const handleLogout = () => {
+    logoutMutation.mutate();
   };
 
   return (
@@ -911,6 +945,27 @@ export default function HomePage() {
       </main>
 
       <MobileNav />
+
+
+      {/* alert message dialog */}
+
+      <Dialog open={paymentFailedAlert}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Payment Failed</DialogTitle>
+            <DialogDescription>
+              Feature are not accessible due to payment failure, please update your payment.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={handleLogout}>
+              Logout
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
 
       {/* Water Input Dialog */}
       <Dialog open={waterInputOpen} onOpenChange={setWaterInputOpen}>
