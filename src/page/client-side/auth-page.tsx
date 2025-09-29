@@ -119,6 +119,7 @@ export default function AuthPage() {
       {
         onSuccess: (data) => {
           console.log("Registration successful:", data);
+          setError("Registration Successfull,wait for coach to verify your details")
         },
         onError: (error) => {
           console.error("Registration error:", error);
