@@ -78,7 +78,7 @@ export default function SimpleTrackingView() {
   // Fetch user's list 
   const { data: UserListWithUpdates } = useQuery<IUpdatesForUser[]>({
     queryKey: ["coach-userlist"],
-    queryFn: () => getUserListWithUpdates_ForCoach({ Day: moment(currentDate).format("DD-MM-YYYY") }).then(res => res.data.data)
+    queryFn: () => getUserListWithUpdates_ForCoach({ Day: moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY") }).then(res => res.data.data)
   });
 
   //fetch weekly 
@@ -120,9 +120,9 @@ export default function SimpleTrackingView() {
 
 
   // Count updated and missed users
-  const updatedCount = UserListWithUpdates?.filter(user => user.IdStats != null).length;
+  const updatedCount = UserListWithUpdates?.filter(user => (moment(user.Day!, "DD-MM-YYYY").format("DD-MM-YYYY") == moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY"))).length;
 
-  const missedCount = UserListWithUpdates?.length ? UserListWithUpdates.length : 0;
+  const missedCount = UserListWithUpdates?.length ? (UserListWithUpdates.length - updatedCount!): 0;
 
   // Handle user selection
   const handleSelectUser = (userId: number) => {
@@ -148,7 +148,7 @@ export default function SimpleTrackingView() {
         <h1 className="font-bold text-lg text-gray-900 dark:text-white">FitwithPKAdmin</h1>
       </header>
 
-      <div className="mt-14 p-4 h-full w-full">
+      <div className="mt-14 mb-14 p-4 h-full w-full">
         {selectedUserId ? (
           viewMode === "daily" ? (
             <UserDailyDetailView userId={selectedUserId} onBack={handleBackToList} />
@@ -244,6 +244,9 @@ export default function SimpleTrackingView() {
                       .substring(0, 2)
                       .toUpperCase();
 
+                    console.log("111>>", moment(user.Day!, "DD-MM-YYYY").format("DD-MM-YYYY"));
+                    console.log("222", moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY"));
+
                     return (
                       <div
                         key={user.IdUser}
@@ -257,21 +260,20 @@ export default function SimpleTrackingView() {
                           <div>
                             <p className="text-lg font-semibold">{user.FirstName} {user.LastName}</p>
                             <p className="text-sm text-gray-500">
-                              {formatDate(user.Day!) == "" ? " " : `Last update: ${formatDate(user.Day!)}`}
+                              {(moment(user.Day!, "DD-MM-YYYY").format("DD-MM-YYYY") == moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY")) ? `Last update: ${formatDate(user.Day!)}` : `Last update: ${formatDate(user.Day!)}`}
                             </p>
                           </div>
                         </div>
 
                         <div className="flex items-center space-x-2">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${user.IdStats != null ? 'bg-green-100' : 'bg-red-100'
-                            }`}>
-                            {user.IdStats != null ? (
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${(moment(user.Day!, "DD-MM-YYYY").format("DD-MM-YYYY") == moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY")) ? 'bg-green-100' : 'bg-red-100'}`}>
+                            {(moment(user.Day!, "DD-MM-YYYY").format("DD-MM-YYYY") == moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY")) ? (
                               <Check size={20} className="text-green-600" />
                             ) : (
                               <X size={20} className="text-red-600" />
                             )}
                           </div>
-                          {user.IdStats == null && (
+                          {(moment(user.Day!, "DD-MM-YYYY").format("DD-MM-YYYY") != moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY")) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -329,6 +331,7 @@ export default function SimpleTrackingView() {
                         <div>
                           <p className="text-lg font-semibold">{fullname}</p>
                           <p className="text-sm text-gray-500">
+
                             {formatDate(user.DateRange!) == "" ? "Not Available" : `Last update: ${formatDate(user.DateRange!)}`}
                           </p>
                         </div>
