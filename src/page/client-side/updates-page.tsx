@@ -49,6 +49,7 @@ const dailyUpdateSchema = z.object({
   Sleep: z.coerce.number().min(0).max(24).optional(),
   Diet_Follow: z.coerce.number().min(0).max(5).optional(),
   WorkOut: z.coerce.number().min(0).max(5).optional(),
+  Notes: z.string() 
 });
 
 type DailyUpdateFormValues = z.infer<typeof dailyUpdateSchema>;
@@ -95,6 +96,7 @@ export default function UpdatesPage() {
     Neck: '',
     Quadriceps: '',
     UpperArm: '',
+    Notes:''
   });
   const { user } = useAuth();
   const { toast } = useToast();
@@ -307,6 +309,7 @@ export default function UpdatesPage() {
             Sleep: updates.Sleep ?? undefined,
             Diet_Follow: updates.Diet_Follow ?? undefined,
             WorkOut: updates.WorkOut ?? undefined,
+            Notes:updates.Notes ?? undefined
           });
           return [updates]; // Wrap in array to match IDailyStats[]
         }
@@ -350,6 +353,7 @@ export default function UpdatesPage() {
     formdata.append("UpperArm", measurementForm.UpperArm);
     formdata.append("Quadriceps", measurementForm.Quadriceps);
     formdata.append("BodyHip", measurementForm.BodyHip);
+    formdata.append("Notes",measurementForm.Notes);
     updateMeasurements(formdata)
   }
 
@@ -387,6 +391,7 @@ export default function UpdatesPage() {
       Sleep: undefined,
       Diet_Follow: undefined,
       WorkOut: undefined,
+      Notes:undefined
     },
   });
 
@@ -444,7 +449,8 @@ export default function UpdatesPage() {
         Sleep: data.Sleep || null,
         Diet_Follow: data.Diet_Follow,
         WorkOut: data.WorkOut,
-        Day: moment(selectedDate).format("DD-MM-YYYY")
+        Day: moment(selectedDate).format("DD-MM-YYYY"),
+        Notes:data.Notes || null
       };
 
       console.log("Submitting data:", transformedData);
@@ -1257,6 +1263,7 @@ export default function UpdatesPage() {
                     Neck: '',
                     Quadriceps: '',
                     UpperArm: '',
+                    Notes:''
                   });
                   setShowMeasurementForm(false);
                   setIsEditing(false);
@@ -1475,6 +1482,42 @@ export default function UpdatesPage() {
                               />
                             </FormControl>
                             <span className="ml-3 text-gray-500 dark:text-gray-400">hours</span>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+
+                  {/* Notes */}
+                <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
+                  <CardContent className="p-5">
+                    <div className="flex items-center mb-4">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-indigo-600">
+                          <path d="M10.5 2C2 2 2 10.5 2 10.5C2 19 10.5 19 10.5 19C19 19 19 10.5 19 10.5M10.5 2C19 2 19 10.5 19 10.5M10.5 2C10.5 2 10.5 6.5 14.5 8.5M19 10.5C19 10.5 14.5 10.5 12.5 14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                      <h3 className="ml-3 font-medium text-gray-800 dark:text-gray-200">Notes</h3>
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="Notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center">
+                            <FormControl>
+                              <Input
+                                type="text"
+                                placeholder="Notes"
+                                className="flex-1"
+                                {...field}
+                                value={field.value ?? ""}
+                              />
+                            </FormControl>
+                          
                           </div>
                           <FormMessage />
                         </FormItem>
@@ -1729,11 +1772,13 @@ export default function UpdatesPage() {
                   </CardContent>
                 </Card>
 
+
+
                 {/* Submit button */}
                 <div className="w-100 mt-6 text-center">
                   <Button
                     type="submit"
-                    className="bg-primary-600 w-100 border hover:bg-primary-700 text-white"
+                    variant="outline" size="sm" className="mr-2 text-xs"
                     disabled={mutation.isPending}
                   >
                     {mutation.isPending ? "Submitting..." : "Submit Update"}
