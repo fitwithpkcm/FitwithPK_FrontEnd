@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { format, subDays } from "date-fns";
-import { Check, X, AlertTriangle, Calendar, Bell } from "lucide-react";
+import { Check, X, AlertTriangle, Calendar, Bell, ArrowLeft } from "lucide-react";
 import WeeklyTrackingView from "./weekly-track-view";
 import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
@@ -122,7 +122,7 @@ export default function SimpleTrackingView() {
   // Count updated and missed users
   const updatedCount = UserListWithUpdates?.filter(user => (moment(user.Day!, "DD-MM-YYYY").format("DD-MM-YYYY") == moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY"))).length;
 
-  const missedCount = UserListWithUpdates?.length ? (UserListWithUpdates.length - updatedCount!): 0;
+  const missedCount = UserListWithUpdates?.length ? (UserListWithUpdates.length - updatedCount!) : 0;
 
   // Handle user selection
   const handleSelectUser = (userId: number) => {
@@ -144,9 +144,31 @@ export default function SimpleTrackingView() {
   return (
     <>
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-50 flex items-center justify-center px-4">
-        <h1 className="font-bold text-lg text-gray-900 dark:text-white">FitwithPKAdmin</h1>
-      </header>
+      <header className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-50 flex items-center px-4">
+  <div className="flex items-center w-full">
+    {/* Back button - always takes space but conditionally visible */}
+    <div className="flex-shrink-0 mr-3">
+      {selectedUserId ? (
+        <button
+          onClick={() => handleBackToList()}
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+        >
+          <ArrowLeft size={20} className="text-gray-900 dark:text-white" />
+        </button>
+      ) : (
+        <div className="w-10 h-10"></div> 
+      )}
+    </div>
+    
+    {/* Centered title */}
+    <div className="flex-1 flex justify-center">
+      <h1 className="font-bold text-lg text-gray-900 dark:text-white">FitwithPKAdmin</h1>
+    </div>
+    
+    {/* Right side spacer for balance */}
+    <div className="flex-shrink-0 w-10"></div>
+  </div>
+</header>
 
       <div className="mt-14 mb-14 p-4 h-full w-full">
         {selectedUserId ? (
