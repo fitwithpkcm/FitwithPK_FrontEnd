@@ -92,10 +92,12 @@ export default function NutritionPage() {
   });
 
   const getSwapProductsMutation = useMutation({
-    mutationFn: async ({ food, weight }: { food: string; weight: string | null }) => {
+    mutationFn: async ({ food, weight, foodType, nutritionGoal }: { food: string; weight: string | null, foodType: string | null, nutritionGoal: "fat-loss" | "muscle-gain" | "maintenance" }) => {
       const currentFoodItem = {
         Food: food,
-        Quantity: weight
+        Quantity: weight,
+        FoodType: foodType,
+        NutritionGoal: nutritionGoal
       };
 
       try {
@@ -171,7 +173,7 @@ export default function NutritionPage() {
    * fetch daily updates for this weeek 
    */
 
-    getSwapProductsMutation.mutate({ food: foodItem!.name, weight: quantity })
+    getSwapProductsMutation.mutate({ food: foodItem!.name, weight: quantity, foodType: activeNutrient, nutritionGoal})
 
 
     /* 
