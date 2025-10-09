@@ -62,6 +62,7 @@ export default function NutritionPage() {
   const [activeNutrient, setActiveNutrient] = useState<keyof IFoodCatergory>("Protein");
   const [nutritionGoal, setNutritionGoal] = useState<"fat-loss" | "muscle-gain" | "maintenance">("maintenance");
 
+  const [inputValue, setInputValue] = useState('');
   const [foodItem, setFoodItem] = useState<FoodAlternative | null>();
   const [quantity, setQuantity] = useState<string | null>("");
   const [selectedAlternative, setSelectedAlternative] = useState<FoodAlternative | null>(null);
@@ -147,7 +148,7 @@ export default function NutritionPage() {
 
   const handleFoodItemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-
+    setInputValue(value);
     // Show suggestions based on input
     if (value.length > 0) {
 
@@ -162,6 +163,7 @@ export default function NutritionPage() {
 
   const selectSuggestion = (suggestion: FoodAlternative) => {
     setFoodItem(suggestion);
+    setInputValue(suggestion.name);
     setSuggestions([]);
   };
 
@@ -235,7 +237,7 @@ export default function NutritionPage() {
                   <Input
                     id="foodItem"
                     placeholder="Enter a food item"
-                    value={foodItem?.name}
+                    value={inputValue}
                     onChange={handleFoodItemChange}
                     className="w-full"
                   />
@@ -301,8 +303,6 @@ export default function NutritionPage() {
                   </Button>
                 </div>
               </div>
-
-
 
               <Button type="submit" className="w-full">Calculate Alternatives</Button>
             </form>
@@ -389,7 +389,7 @@ export default function NutritionPage() {
                         {alt.imageUrl && (
                           <div className="w-full md:w-1/3 h-48 md:h-auto">
                             <img
-                              src={alt.imageUrl}
+                              src={`${BASE_URL}/uploads/nutriimg/${alt.imageUrl}`}
                               alt={alt.name}
                               className="w-full h-full object-cover"
                             />
