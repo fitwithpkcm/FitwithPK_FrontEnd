@@ -161,6 +161,10 @@ export default function NutritionPage() {
     }
   };
 
+
+
+  
+
   const selectSuggestion = (suggestion: FoodAlternative) => {
     setFoodItem(suggestion);
     setInputValue(suggestion.name);
