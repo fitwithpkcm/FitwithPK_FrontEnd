@@ -1,7 +1,7 @@
 import { httpCall } from "./HttpService";
 import { API_URL } from "../common/Urls";
 import { CoachStudentAssign, ICoach } from "../interface/models/Coach";
-import { IUser } from "../interface/models/User";
+import { ISubscriptionHistory, IUser } from "../interface/models/User";
 
 export const getMyCoachDetails = (params: unknown) => {
     return httpCall({
@@ -31,6 +31,17 @@ export const getAlreadyAssignedList = (params: unknown) => {
         method: "post",
         data: params
     }).then((response: ApiResponse<CoachStudentAssign[]>) => {
+        return response;
+    });
+};
+
+
+export const getSubscriptionHistroy = (params: unknown) => {
+    return httpCall({
+        url: API_URL.GET_SUBSCRIPTION_HISTORY,
+        method: "post",
+        data: params
+    }).then((response: ApiResponse<ISubscriptionHistory[]>) => {
         return response;
     });
 };

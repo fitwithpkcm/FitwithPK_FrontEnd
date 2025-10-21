@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Award, Droplet, MessageSquare, Sun, Moon, Trophy, Check, Dumbbell, Flame, Plus, ChevronRight, FileText } from "lucide-react";
@@ -6,17 +8,15 @@ import { Link } from "wouter";
 import { MobileNav } from "../../components/layout/mobile-nav";
 import { Progress } from "../../components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Separator } from "../../components/ui/separator";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useAuth } from "../../hooks/use-auth";
 import { Switch } from "../../components/ui/switch";
 import { useTheme } from "next-themes";
 import { Input } from "../../components/ui/input";
-import { useToast } from "../../hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../components/ui/dialog";
-import { apiRequest, queryClient } from "../../lib/queryClient";
-import { dailyUpdate, getDailyUpdate, getDailyUpdateForAWeek, getDietPlan, getSingleDayUpdate } from "../../services/UpdateServices";
+import { queryClient } from "../../lib/queryClient";
+import { dailyUpdate, getDailyUpdateForAWeek, getDietPlan, getSingleDayUpdate } from "../../services/UpdateServices";
 import { setBaseUrl } from "../../services/HttpService"
 import { ACCESS_STATUS, BASE_URL, USER_TARGET } from "../../common/Constant";
 import { IDailyStats } from "../../interface/IDailyUpdates";
@@ -29,6 +29,7 @@ import { IdDietPlan } from "../../interface/IDietPlan";
 import { IUser } from "@/interface/models/User";
 import { getLoggedUserDetails } from "@/services/ProfileService";
 
+import toast from 'react-hot-toast';
 
 pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs';
 
@@ -56,7 +57,7 @@ export interface WeeklyDay {
 // function starts
 
 export default function HomePage() {
-  const { user,logoutMutation } = useAuth();
+  const { user, logoutMutation } = useAuth();
   const currentDate = new Date();
 
   if (user?.info.EmailID == "devumani10@gmail.com" || user?.info.EmailID == "devumani3@gmail.com") {
@@ -86,7 +87,7 @@ export default function HomePage() {
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [workoutPdfUrl, setWorkOutPdfUrl] = useState("https://api.fitwithpk.com/uploads/onboard/1748047093391-Lastest.pdf");
   const [dietPdfUrl, setDietPdfUrl] = useState("https://api.fitwithpk.com/uploads/onboard/1748047093391-Lastest.pdf");
-  const { toast } = useToast();
+
 
   // Activity feed items
   const activityItems: ActivityItem[] = [
@@ -174,30 +175,31 @@ export default function HomePage() {
 
 
   const { data: loggedUserDetails } = useQuery<Partial<IUser> | null | undefined>({
-      queryKey: ["get_mydetails"],
-      queryFn: async () => {
-          try {
-              const res = await getLoggedUserDetails(0) as ApiResponse<Partial<IUser[]>>;
-              if (Array.isArray(res.data.data) && res.data.data.length > 0) {
-                  return res.data.data[0];
-              }
-              return null;
-          } catch (error) {
-              console.log("error handling", error);
-              return undefined; // Now matches the type
-          }
+    queryKey: ["get_mydetails"],
+    queryFn: async () => {
+      try {
+        const res = await getLoggedUserDetails(0) as ApiResponse<Partial<IUser[]>>;
+        if (Array.isArray(res.data.data) && res.data.data.length > 0) {
+          return res.data.data[0];
+        }
+        return null;
+      } catch (error) {
+        console.log("error handling", error);
+        return undefined; // Now matches the type
       }
+    }
   });
-  
-  
-  useEffect(()=>{
-  if(loggedUserDetails){
-      if(loggedUserDetails.ActiveStatus == ACCESS_STATUS.PAYMENT_FAILED.NUMBER){
-        setPaymentFailedAlert(true)
+
+
+  useEffect(() => {
+    if (loggedUserDetails) {
+      if (loggedUserDetails.ActiveStatus == ACCESS_STATUS.PAYMENT_FAILED.NUMBER) {
+        //setPaymentFailedAlert(true);
+        toast("Hello World");
       }
-  }
-    
-  },[loggedUserDetails]);
+    }
+
+  }, [loggedUserDetails]);
 
 
 
@@ -498,7 +500,7 @@ export default function HomePage() {
     setWorkoutRatingOpen(false);
   };
 
-    const handleLogout = () => {
+  const handleLogout = () => {
     logoutMutation.mutate();
   };
 

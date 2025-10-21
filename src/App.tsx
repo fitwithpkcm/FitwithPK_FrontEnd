@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Switch, Route } from "wouter";
+import { BrowserRouter } from 'react-router-dom';
 import { registerSW } from './pwa'
 import { TooltipProvider } from "./components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
@@ -23,10 +24,10 @@ import NutriSwapScreen from './page/admin-side/nutriswap-screen';
 import SettingsScreen from './page/admin-side/admin-setting';
 import UserTargetsScreen from './page/admin-side/target-screen';
 import CoachManagementScreen from './page/admin-side/coach-management';
-
-
-
-
+import ClientProfileScreen from './page/admin-side/client-profile-screen';
+import PaymentHistoryScreen from './page/admin-side/payment-histroy-details';
+import PricingPlanManagementScreen from './page/admin-side/admin-pricing-plan';
+import { Toaster } from 'react-hot-toast';
 function Router() {
   console.log("Router rendering");
   return (
@@ -49,6 +50,11 @@ function Router() {
       <Route path={RENDER_URL.ADMIN_SETTINGS} component={SettingsScreen} />
       <Route path={RENDER_URL.ADMIN_TARGETS} component={UserTargetsScreen} />
       <Route path={RENDER_URL.ADMIN_COACH_MANAGE} component={CoachManagementScreen} />
+      <Route path={RENDER_URL.ADMIN_CLIENT_PROFILE} component={ClientProfileScreen} />
+      <Route path={RENDER_URL.ADMIN_PAYMENT_HISTORY} component={PaymentHistoryScreen} />
+      <Route path={RENDER_URL.ADMIN_COACH_PRICING} component={PricingPlanManagementScreen} />
+
+
 
     </Switch>
   );
@@ -68,11 +74,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-        <AuthProvider>
-          <TooltipProvider>
-            <Router />
-          </TooltipProvider>
-        </AuthProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <TooltipProvider>
+              <Router />
+              <Toaster/>
+            </TooltipProvider>
+          </AuthProvider>
+        </BrowserRouter>
       </ThemeProvider>
     </QueryClientProvider>
   );

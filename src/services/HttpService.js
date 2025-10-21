@@ -14,17 +14,13 @@ export const httpCall = async payload => {
   config.headers = { Token: token };
   config.method = payload.method ? payload.method : "get";
   config.url = payload.url ? payload.url : "";
-  if (payload.data) {
+
+  if (payload.method?.toLowerCase() === "get" && payload.data) {
+    config.params = payload.data;
+  } else if (payload.data) {
     config.data = payload.data;
-    // config.data = JSON.stringify(payload.data);
   }
   return axios(config);
-  //   if(payload.method==='put'){
-  //     config.data=payload.data
-  //   }else{
-  //   config.data =JSON.stringify(payload.data);
-  //   }
-  //   return axios(config);
 }
 
 

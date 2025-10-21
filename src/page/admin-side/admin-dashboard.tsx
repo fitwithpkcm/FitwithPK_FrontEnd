@@ -5,7 +5,7 @@ import { Button } from "../../components/ui/button";
 import { useAuth } from "../../hooks/use-auth";
 import { RENDER_URL } from "../../common/Urls";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
-import { ArrowRightLeft, BarChart2, ClipboardCheck, Plus, Target, Trash2, UserCheck, Users } from "lucide-react";
+import { ArrowRightLeft, BarChart2, ClipboardCheck, EuroIcon, Plus, Target, Trash2, UserCheck, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { IUser, SuperAdminResponse } from "../../interface/models/User";
 import { getUserListForACoach, getUserListWithUpdates_ForCoach, isSuperAdminApi } from "../../services/AdminServices";
@@ -187,6 +187,19 @@ export default function AdminDashboard() {
                     <span className="font-medium">Coaches</span>
                   </div>
                   <p className="text-xs text-gray-500">Manage coach profiles</p>
+                </button>
+              }
+
+              {isSuperAdmin?.IsSuperAdmin == 1 &&
+                <button
+                  className="bg-white p-4 rounded-lg border text-left hover:shadow-md transition-shadow"
+                  onClick={() => { setLocation(RENDER_URL.ADMIN_COACH_PRICING) }}
+                >
+                  <div className="flex items-center mb-2">
+                    <EuroIcon className="text-indigo-600 mr-2" size={20} />
+                    <span className="font-medium">Pricing Plans</span>
+                  </div>
+                  <p className="text-xs text-gray-500">Manage Subscriptions</p>
                 </button>
               }
             </div>

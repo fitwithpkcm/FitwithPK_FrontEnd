@@ -18,7 +18,7 @@ import {
   DialogFooter,
   DialogClose
 } from "../../components/ui/dialog";
-import { Settings, PencilIcon, Award, HeartPulse, Terminal, Mail, Phone, ArrowLeft } from "lucide-react";
+import { Settings, PencilIcon, Award, HeartPulse, Terminal, Mail, Phone, ArrowLeft, EuroIcon, Wallet2Icon, HandCoins } from "lucide-react";
 import { Facebook, Instagram, Twitter, Linkedin, Youtube, Globe } from 'lucide-react';
 import { format } from "date-fns";
 import { ThemeSettings } from "../../components/theme-settings";
@@ -28,6 +28,7 @@ import { ICoach } from "../../interface/models/Coach";
 import { BASE_URL, UNITS } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
 import { IUser } from "../../interface/models/User";
+import toast from "react-hot-toast";
 
 type GoalType = "weight-loss" | "muscle-gain" | "maintenance";
 
@@ -62,21 +63,21 @@ export default function ProfilePage() {
     queryFn: () => getMyCoachDetails(0).then((res: ApiResponse<ICoach>) => res.data.data)
   });
 
-const { data: loggedUserDetails } = useQuery<Partial<IUser> | null | undefined>({
+  const { data: loggedUserDetails } = useQuery<Partial<IUser> | null | undefined>({
     queryKey: ["get_mydetails"],
     queryFn: async () => {
-        try {
-            const res = await getLoggedUserDetails(0) as ApiResponse<Partial<IUser[]>>;
-            if (Array.isArray(res.data.data) && res.data.data.length > 0) {
-                return res.data.data[0];
-            }
-            return null;
-        } catch (error) {
-            console.log("error handling", error);
-            return undefined; // Now matches the type
+      try {
+        const res = await getLoggedUserDetails(0) as ApiResponse<Partial<IUser[]>>;
+        if (Array.isArray(res.data.data) && res.data.data.length > 0) {
+          return res.data.data[0];
         }
+        return null;
+      } catch (error) {
+        console.log("error handling", error);
+        return undefined; // Now matches the type
+      }
     }
-});
+  });
 
 
 
@@ -348,6 +349,101 @@ const { data: loggedUserDetails } = useQuery<Partial<IUser> | null | undefined>(
                 </div>
               </div>
             </Card>
+
+            {/* Subscription Info */}
+            <Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 rounded-2xl overflow-hidden">
+              <CardHeader className="px-6 py-5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-gray-200/50 dark:border-gray-700/50">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                    Subscription Plan
+                  </CardTitle>
+                  <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                    <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                      Active
+                    </span>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <div className="p-6 space-y-6">
+                {/* Plan Name */}
+                <div className="flex items-start space-x-4 p-4 bg-white dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200">
+                  <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
+                    <Wallet2Icon className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Current Plan</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white truncate">
+                      {loggedUserDetails?.PlanName || "No Active Plan"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Plan Description */}
+                <div className="flex items-start space-x-4 p-4 bg-white dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200">
+                  <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-md">
+                    <HandCoins className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Plan Features</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white leading-relaxed">
+                      {loggedUserDetails?.PlanDescription || "No description available"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Pricing */}
+                <div className="flex items-start space-x-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-100 dark:border-blue-800/50 shadow-sm">
+                  <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shadow-md">
+                    <EuroIcon className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Pricing</p>
+                    <div className="flex items-baseline space-x-2">
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {loggedUserDetails?.Price ? `€${loggedUserDetails.Price}` : "€---"}
+                      </p>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        / {loggedUserDetails?.BillingCycle || "---"}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      Next billing: {loggedUserDetails?.EndDate ?
+                        new Date(loggedUserDetails.EndDate).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        }) : "---"
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Button */}
+                <button
+                  className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                  onClick={() => {
+                    toast.error("Contact your coach", {
+                      position: 'bottom-center',
+                      duration: 4000,
+                      style: {
+                        marginBottom: '70px',
+                        background: '#ef4444',
+                        color: 'white',
+                        padding: '12px 20px',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      },
+                    })
+                  }}
+                >
+                  Manage Subscription
+                </button>
+              </div>
+            </Card>
+
 
             {/* Settings Shortcuts */}
             <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
@@ -953,12 +1049,12 @@ function SettingsLink({ icon, label }: SettingsLinkProps) {
 
 // Add fitness goal dialog at the end of the component
 export function FitnessGoalDialog({ open, onOpenChange, goalWeight, setGoalWeight, goalType, setGoalType }: {
-   open: boolean;
+  open: boolean;
   onOpenChange: (open: boolean) => void;
   goalWeight: string;
   setGoalWeight: (weight: string) => void;
-  goalType: GoalType;  
-  setGoalType: (type: GoalType) => void;  
+  goalType: GoalType;
+  setGoalType: (type: GoalType) => void;
 }) {
   const { toast } = useToast();
   // Create local state to track changes before saving

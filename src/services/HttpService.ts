@@ -20,15 +20,18 @@ export const httpCall = async (payload: HttpPayload): Promise<AxiosResponse> => 
   const userDataString = ManageLocalStorage.get("userData");
   const userData: UserData = userDataString ? JSON.parse(userDataString) : {};
   const token = userData.token ? userData.token : "";
-  
+
   config.headers = { Token: token };
   config.method = payload.method ? payload.method : "get";
   config.url = payload.url ? payload.url : "";
-  
-  if (payload.data) {
+
+  if (payload.method?.toLowerCase() === "get" && payload.data) {
+    console.log("inside the get methods");
+    config.params = payload.data;
+  } else if (payload.data) {
     config.data = payload.data;
   }
-  
+
   return axios(config);
 };
 
@@ -37,7 +40,7 @@ export const httpUpload = (payload: HttpPayload): Promise<AxiosResponse> => {
   const userDataString = ManageLocalStorage.get("userData");
   const userData: UserData = userDataString ? JSON.parse(userDataString) : {};
   const token = userData.token ? userData.token : "";
-  
+
   config.headers = {
     Token: token,
     "Content-Type": "multipart/form-data"
@@ -45,7 +48,7 @@ export const httpUpload = (payload: HttpPayload): Promise<AxiosResponse> => {
   config.method = "post";
   config.url = payload.url ? payload.url : "";
   config.data = payload.data;
-  
+
   return axios(config);
 };
 

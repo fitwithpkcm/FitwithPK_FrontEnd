@@ -10,10 +10,11 @@ import { ACCESS_STATUS, AccessStatusType } from "../../common/Constant";
 import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
 import { queryClient } from "../../lib/queryClient";
-
-
+import { RENDER_URL } from "@/common/Urls";
+import { useNavigate } from 'react-router-dom';
 
 export default function ClientManagementScreen() {
+  const navigate = useNavigate();
   const [clientList, setClientList] = useState<IUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -34,7 +35,15 @@ export default function ClientManagementScreen() {
     setBaseUrl(BASE_URL);
   }, []);
 
-  const viewProfile = () => {
+  const viewProfile = (userId: unknown) => {
+
+    navigate(RENDER_URL.ADMIN_CLIENT_PROFILE, {
+      state: {
+        selectedUserID: userId
+      }
+    });
+    //urgent
+    //fix this 
 
   }
 
@@ -157,7 +166,10 @@ export default function ClientManagementScreen() {
               <div className="flex items-center justify-between">
                 <div
                   className="flex items-center flex-1 cursor-pointer hover:bg-gray-50 p-2 rounded-md -m-2"
-                  onClick={() => { }}
+                  onClick={() => {
+                    console.log(client.IdUser);
+                    viewProfile(client.IdUser);
+                  }}
                 >
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
                     <span className="text-blue-600 font-semibold">{client.FirstName?.[0] ?? ''}{client.LastName?.[0] ?? ''}</span>
@@ -171,7 +183,7 @@ export default function ClientManagementScreen() {
 
                 <div className="flex items-center space-x-2">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(client.ActiveStatus)}`}>
-                    {getStatusIcon(client.ActiveStatus) }{ getStatusName(client.ActiveStatus)}
+                    {getStatusIcon(client.ActiveStatus)}{getStatusName(client.ActiveStatus)}
                   </span>
                 </div>
               </div>

@@ -38,7 +38,7 @@ export interface IUserOnBoardAttributes {
   medications?: string;
   supplementWillingness?: string;
   recentBloodTest?: boolean;
-  uploadFileNames?:string,
+  uploadFileNames?: string,
   fitnessGoals?: string;
   biggestChallenge?: string;
   challengingHabits?: string;
@@ -47,7 +47,28 @@ export interface IUserOnBoardAttributes {
   motivation?: string;
 }
 
-export interface IprofileInfo {
+
+export interface ISubscription {
+  IdSub?: number;
+  IdPricingPlan?: number;
+  IdUser?: number;
+  StartDate?: string;
+  EndDate?: string;
+  IsActiveStatus?: number;
+  BufferDay?: string;
+  PaidDate?: string;
+  PaidAmount?: number;
+  TotalDue?: number;
+  PlanName?: string,
+  IsExpired?: number,
+  BalanceAmount?: number,
+  PlanDescription?: string
+  Price?: number
+  BillingCycle?: string,
+ 
+}
+
+export interface IprofileInfo extends ISubscription {
   Address?: string;
   Profession?: string;
   DateOfBirth?: string;
@@ -68,10 +89,32 @@ export interface IUser extends IprofileInfo {
   DeleteStatus?: 0 | 1;
   LoginType?: string;
   ApproveStatus: "Y" | "N";
-  ActiveStatus?:number
+  ActiveStatus?: number
 }
 
 
 export interface SuperAdminResponse {
-  IsSuperAdmin: number; 
+  IsSuperAdmin: number;
+}
+
+
+export interface ISubscriptionHistory {
+  IdSubHistroy?: number
+  IdSub?: number
+  IdUser?: number
+  PaidDate?: string
+  PaidAmount?: number
+  BufferDay?: number
+  TotalDue?: number
+  DueDate?: string
+  IdPricingPlan?: number
+  StartDate?: string
+  EndDate?: string
+  IsAlive?: number
+  PlanName?: string
+  PlanDescription?: string
+  Price?: number
+  IsActive?: number
+  BillingCycle?: string,
+  BalanceAmount?: number
 }
