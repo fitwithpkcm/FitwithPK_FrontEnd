@@ -1,7 +1,9 @@
-import { httpCall, httpUpload } from "./HttpService";
+
 import { API_URL } from "../common/Urls";
 import { ILoginUserData } from "../interface/ILoginUserData";
 import { UserProfile } from "../page/client-side/intake-form-page";
+import { httpCall, httpUpload } from "./HttpService";
+
 
 /* export const login = params => {
     return httpCall({
@@ -67,9 +69,10 @@ export const onBoardFileUpload = (params: FormData) => {
 
 // null is fine for default value; still keep param as `unknown`
 export const fetchOnBoardUserAttributes = (params: unknown = null) => {
+   
     return httpCall({
         url: API_URL.ONBOARD_PROFILE_ATTRIBUTE_UPDATE,
-        method: "get",
+        method:"get",
         data: params
     }).then((response: ApiResponse<UserProfile>) => {
         return response;
