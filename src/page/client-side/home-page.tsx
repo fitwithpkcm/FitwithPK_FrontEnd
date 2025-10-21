@@ -311,19 +311,16 @@ export default function HomePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
       queryClient.invalidateQueries({ queryKey: ['daily-updates-forweek'] })
-      toast({
-        title: "Water intake updated",
-        description: "Your water intake has been recorded successfully",
-      });
+      toast.success('Your water intake has been recorded successfully', {
+        position: 'bottom-center'
+      })
       setWaterInputOpen(false);
       setWaterAmount("");
     },
     onError: (error) => {
-      toast({
-        title: "Failed to update water intake",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error(`Failed ${error.message}`, {
+        position: 'bottom-center'
+      })
     },
   });
 
@@ -347,19 +344,17 @@ export default function HomePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
       queryClient.invalidateQueries({ queryKey: ['daily-updates-forweek'] })
-      toast({
-        title: "Steps updated",
-        description: "Your steps count has been recorded successfully",
-      });
+      toast.success('Your steps count has been recorded successfully', {
+        position: 'bottom-center'
+      })
+
       setStepsInputOpen(false);
       setStepsAmount("");
     },
     onError: (error) => {
-      toast({
-        title: "Failed to update steps",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error(`Failed to update steps ${error.message}`, {
+        position: 'bottom-center'
+      })
     },
   });
 
@@ -382,19 +377,20 @@ export default function HomePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
       queryClient.invalidateQueries({ queryKey: ['daily-updates-forweek'] })
-      toast({
-        title: "Sleep hours updated",
-        description: "Your sleep hours have been recorded successfully",
-      });
+      toast.success('Your sleep hours have been recorded successfully', {
+        position: 'bottom-center'
+      })
+
       setSleepInputOpen(false);
       setSleepAmount("");
     },
     onError: (error) => {
-      toast({
-        title: "Failed to update sleep hours",
-        description: error.message,
-        variant: "destructive",
-      });
+
+      toast.success(' Failed to update sleep hours', {
+        position: 'bottom-center'
+      })
+
+
     },
   });
 
@@ -418,28 +414,26 @@ export default function HomePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
       queryClient.invalidateQueries({ queryKey: ['daily-updates-forweek'] })
-      toast({
-        title: "Workout status updated",
-        description: workoutCompleted ? "Great job completing your workout!" : "Workout status updated",
-      });
+
+       toast.success('Workout status updated', {
+        position: 'bottom-center'
+      })
+
     },
     onError: (error) => {
-      toast({
-        title: "Failed to update workout status",
-        description: error.message,
-        variant: "destructive",
-      });
+       toast.error('Failed to update Workout status', {
+        position: 'bottom-center'
+      })
     },
   });
 
   const handleWaterSubmit = () => {
     const amount = parseFloat("" + waterAmount);
     if (isNaN(amount) || amount <= 0) {
-      toast({
-        title: "Invalid input",
-        description: "Please enter a valid water amount",
-        variant: "destructive",
-      });
+       toast.error('Please enter a valid water amount', {
+        position: 'bottom-center'
+      })
+
       return;
     }
     // Save to localStorage for auto-fill in updates page
@@ -450,11 +444,10 @@ export default function HomePage() {
   const handleStepsSubmit = () => {
     const steps = parseInt("" + stepsAmount);
     if (isNaN(steps) || steps <= 0) {
-      toast({
-        title: "Invalid input",
-        description: "Please enter a valid number of steps",
-        variant: "destructive",
-      });
+       toast.error('Please enter a valid number of steps', {
+        position: 'bottom-center'
+      })
+
       return;
     }
     // Save to localStorage for auto-fill in updates page
@@ -466,11 +459,9 @@ export default function HomePage() {
   const handleSleepSubmit = () => {
     const hours = parseFloat("" + sleepAmount);
     if (isNaN(hours) || hours <= 0 || hours > 24) {
-      toast({
-        title: "Invalid input",
-        description: "Please enter a valid number of sleep hours (between 0 and 24)",
-        variant: "destructive",
-      });
+       toast.error('Please enter a valid number of sleep hours (between 0 and 24)', {
+        position: 'bottom-center'
+      })
       return;
     }
     // Save to localStorage for auto-fill in updates page
@@ -482,11 +473,11 @@ export default function HomePage() {
   const handleWorkOutSubmit = () => {
 
     if (isNaN(workoutRating)) {
-      toast({
-        title: "Invalid input",
-        description: "Please enter a valid number of sleep hours (between 0 and 24)",
-        variant: "destructive",
-      });
+      
+       toast.error('Please enter a valid number of sleep hours (between 0 and 24)', {
+        position: 'bottom-center'
+      })
+
       return;
     }
     // Save to localStorage for auto-fill in updates page

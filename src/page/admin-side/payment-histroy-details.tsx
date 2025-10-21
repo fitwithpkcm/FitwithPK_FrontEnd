@@ -57,8 +57,8 @@ export default function PaymentHistoryScreen() {
   const handleEdit = (index: number, data: ISubscriptionHistory) => {
     setEditIndex(index);
     setEditedData({
-      PaidAmount: data.PaidAmount,
-      BufferDay: data.BufferDay,
+      PaidAmount: data.PaidAmount!,
+      BufferDay: data.BufferDay!,
     });
   };
 
@@ -103,7 +103,7 @@ export default function PaymentHistoryScreen() {
         </span>
       );
 
-    if (data.BalanceAmount > 0)
+    if (data.BalanceAmount! > 0)
       return (
         <span className="flex items-center gap-1 text-red-600 bg-red-100 px-2 py-1 text-xs font-medium rounded-full">
           <XCircle size={14} /> Partial
@@ -141,7 +141,7 @@ export default function PaymentHistoryScreen() {
                 {isEditing ? (
                   <>
                     <button
-                      onClick={() => handleSave(data.IdSubHistroy)}
+                      onClick={() => handleSave(data.IdSubHistroy!)}
                       className="p-1.5 rounded-lg bg-green-100 hover:bg-green-200 text-green-700"
                     >
                       <Save size={16} />
