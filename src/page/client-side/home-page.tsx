@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Award, Droplet, MessageSquare, Sun, Moon, Trophy, Check, Dumbbell, Flame, Plus, ChevronRight, FileText } from "lucide-react";
+import { Award, Droplet, MessageSquare, Sun, Moon, Trophy, Check, Dumbbell, Flame, Plus, ChevronRight, FileText, X, CreditCard } from "lucide-react";
 import { formatDate, calculatePercentage, isEmpty } from "../../lib/utils";
 import { Link } from "wouter";
 import { MobileNav } from "../../components/layout/mobile-nav";
@@ -195,7 +195,61 @@ export default function HomePage() {
     if (loggedUserDetails) {
       if (loggedUserDetails.ActiveStatus == ACCESS_STATUS.PAYMENT_FAILED.NUMBER) {
         //setPaymentFailedAlert(true);
-        toast("Hello World");
+        toast.custom(
+          (t) => (
+            <div
+              className={`${t.visible ? 'animate-enter' : 'animate-leave'
+                } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-4 border-red-500`}
+            >
+              <div className="flex-1 w-0 p-4">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 pt-0.5">
+                    <CreditCard className="h-6 w-6 text-red-500" />
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      Payment Required
+                    </p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      Your subscription payment is overdue. Please update your payment.
+                    </p>
+                    <div className="mt-3 flex space-x-4">
+                      <button
+                        onClick={() => {
+                          // Add your payment action here
+                          console.log('Redirect to payment');
+                          toast.dismiss(t.id);
+                        }}
+                        className="bg-red-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-red-700 transition-colors"
+                        style={{ visibility: "hidden" }}
+                      >
+                        Update
+                      </button>
+                      <button
+                        onClick={() => toast.dismiss(t.id)}
+                        className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-sm font-medium hover:bg-gray-300 transition-colors"
+                      >
+                        Remind Me Later
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex border-l border-gray-200">
+                <button
+                  onClick={() => toast.dismiss(t.id)}
+                  className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-500 hover:text-gray-700 focus:outline-none"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          ),
+          {
+            duration: Infinity, 
+            position: 'top-right',
+          }
+        );
       }
     }
 
@@ -415,13 +469,13 @@ export default function HomePage() {
       queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
       queryClient.invalidateQueries({ queryKey: ['daily-updates-forweek'] })
 
-       toast.success('Workout status updated', {
+      toast.success('Workout status updated', {
         position: 'bottom-center'
       })
 
     },
     onError: (error) => {
-       toast.error('Failed to update Workout status', {
+      toast.error('Failed to update Workout status', {
         position: 'bottom-center'
       })
     },
@@ -430,7 +484,7 @@ export default function HomePage() {
   const handleWaterSubmit = () => {
     const amount = parseFloat("" + waterAmount);
     if (isNaN(amount) || amount <= 0) {
-       toast.error('Please enter a valid water amount', {
+      toast.error('Please enter a valid water amount', {
         position: 'bottom-center'
       })
 
@@ -444,7 +498,7 @@ export default function HomePage() {
   const handleStepsSubmit = () => {
     const steps = parseInt("" + stepsAmount);
     if (isNaN(steps) || steps <= 0) {
-       toast.error('Please enter a valid number of steps', {
+      toast.error('Please enter a valid number of steps', {
         position: 'bottom-center'
       })
 
@@ -459,7 +513,7 @@ export default function HomePage() {
   const handleSleepSubmit = () => {
     const hours = parseFloat("" + sleepAmount);
     if (isNaN(hours) || hours <= 0 || hours > 24) {
-       toast.error('Please enter a valid number of sleep hours (between 0 and 24)', {
+      toast.error('Please enter a valid number of sleep hours (between 0 and 24)', {
         position: 'bottom-center'
       })
       return;
@@ -473,8 +527,8 @@ export default function HomePage() {
   const handleWorkOutSubmit = () => {
 
     if (isNaN(workoutRating)) {
-      
-       toast.error('Please enter a valid number of sleep hours (between 0 and 24)', {
+
+      toast.error('Please enter a valid number of sleep hours (between 0 and 24)', {
         position: 'bottom-center'
       })
 
