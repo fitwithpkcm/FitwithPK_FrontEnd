@@ -2,6 +2,13 @@
 
 export const BASE_URL = "https://api.fitwithpk.com"
 
+/**
+ * VAPID public key for Web Push notifications.
+ * Generate a key pair on the backend with: npx web-push generate-vapid-keys
+ * Paste the PUBLIC key here and keep the PRIVATE key on the server only.
+ */
+export const VAPID_PUBLIC_KEY = "BHPMNC8Ht0G2n6vsJQyWRz3wpu16Zq4UwKdskP_3zm8dizwZzUp--AKlUr20C-QPzQkl-6jZwuWmihnczqA7Who";
+
 export const LOGIN_REQUEST = "LOGIN_REQUEST";
 export const LOGIN_SUCCESS = "LOGIN_SUCCESS";
 export const LOGIN_FAILED = "LOGIN_FAILED";

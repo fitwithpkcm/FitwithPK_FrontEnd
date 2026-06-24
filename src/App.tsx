@@ -27,6 +27,8 @@ import CoachManagementScreen from './page/admin-side/coach-management';
 import ClientProfileScreen from './page/admin-side/client-profile-screen';
 import PaymentHistoryScreen from './page/admin-side/payment-histroy-details';
 import PricingPlanManagementScreen from './page/admin-side/admin-pricing-plan';
+import AdminMealPlanPage from './page/admin-side/meal-plan-page';
+import MealTrackingPage from './page/client-side/meal-tracking-page';
 import { Toaster } from 'react-hot-toast';
 function Router() {
   console.log("Router rendering");
@@ -44,7 +46,7 @@ function Router() {
       {/* admin pages */}
       <Route path={RENDER_URL.ADMIN_DASHBOARD} component={AdminDashboard} />
       <Route path={RENDER_URL.ADMIN_UPDATES} component={SimpleTrackingView} />
-      <Route path={RENDER_URL.ADMIN_ANALYTICS} component={ClientMetricsChart} />
+      <Route path={RENDER_URL.ADMIN_ANALYTICS} component={UserTargetsScreen} />
       <Route path={RENDER_URL.ADMIN_CLIENT_MANAGEMENT} component={ClientManagementScreen} />
       <Route path={RENDER_URL.ADMIN_NUTRISWAP} component={NutriSwapScreen} />
       <Route path={RENDER_URL.ADMIN_SETTINGS} component={SettingsScreen} />
@@ -53,6 +55,8 @@ function Router() {
       <Route path={RENDER_URL.ADMIN_CLIENT_PROFILE} component={ClientProfileScreen} />
       <Route path={RENDER_URL.ADMIN_PAYMENT_HISTORY} component={PaymentHistoryScreen} />
       <Route path={RENDER_URL.ADMIN_COACH_PRICING} component={PricingPlanManagementScreen} />
+      <Route path={RENDER_URL.ADMIN_MEAL_PLAN} component={AdminMealPlanPage} />
+      <Route path={RENDER_URL.STUDENT_MEAL_TRACKING} component={MealTrackingPage} />
 
 
 

@@ -28,6 +28,7 @@ import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { IdDietPlan } from "../../interface/IDietPlan";
 import { IUser } from "@/interface/models/User";
 import { getLoggedUserDetails } from "@/services/ProfileService";
+import { usePushNotification } from "@/hooks/use-push-notification";
 
 import toast from 'react-hot-toast';
 
@@ -59,6 +60,9 @@ export interface WeeklyDay {
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const currentDate = new Date();
+
+  // Register Web Push subscription so coach can send reminders to this client
+  const { status: pushStatus, subscribe: enablePush } = usePushNotification();
 
   if (user?.info.EmailID == "devumani10@gmail.com" || user?.info.EmailID == "devumani3@gmail.com") {
     alert("Odikko Nee");
@@ -590,58 +594,328 @@ export default function HomePage() {
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 py-6 pb-20 sm:px-6 bg-gray-50 dark:bg-gray-950">
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          {/* Steps Card */}
-          <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 cursor-pointer" onClick={() => setStepsInputOpen(true)}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Today's Steps</h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary-500">
-                  <path d="M19 5.5C19 6.9 16.7 8 16 8C15.3 8 13 6.9 13 5.5C13 4.1 14.1 3 16 3C17.9 3 19 4.1 19 5.5ZM16 10C16 10 7 10 7 14.5C7 18.5 12 21 16 21C20 21 21 18 21 14.5C21 11 16 10 16 10ZM11 5.5C11 6.9 8.7 8 8 8C7.3 8 5 6.9 5 5.5C5 4.1 6.1 3 8 3C9.9 3 11 4.1 11 5.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <div className="flex items-end">
-                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{latestUpdate?.Steps || 0}</span>
-                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 mb-1">/ {dietTargetGoalPlans?.Targets.steps}</span>
-              </div>
-              <Progress value={calculatePercentage(latestUpdate?.Steps || 0, dietTargetGoalPlans!.Targets.steps)} className="mt-2 h-2 dark:bg-gray-800" />
-            </CardContent>
-          </Card>
 
-          {/* Water Intake Card */}
-          <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900" onClick={() => setWaterInputOpen(true)}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Water Intake</h3>
-                <Droplet className="h-5 w-5 text-blue-500" />
-              </div>
-              <div className="flex items-end">
-                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{latestUpdate?.Water || 0}</span>
-                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 mb-1">/ {dietTargetGoalPlans?.Targets.water} ltrs</span>
-              </div>
-              <Progress value={calculatePercentage(latestUpdate?.Water || 0, dietTargetGoalPlans!.Targets.water)} className="mt-2 h-2 bg-gray-100 dark:bg-gray-800">
-                <div className="h-full bg-blue-500 rounded-full" />
-              </Progress>
-              <div className="mt-2 flex justify-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs bg-blue-50 text-blue-600 border-blue-200 w-full max-w-[160px]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Add 250ml (0.25L) to current water intake
-                    let currentWater = latestUpdate?.Water || 0;
-                    currentWater = parseFloat("" + currentWater)
-                    const newAmount = currentWater + 0.25;
-                    setWaterAmount(newAmount.toString());
-                    updateWaterMutation.mutate(newAmount);
-                  }}
-                >
-                  + 250ml
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Notification banner — visible until subscribed */}
+        {pushStatus !== 'subscribed' && (
+          <div className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 mb-4 border ${
+            pushStatus === 'denied'
+              ? 'bg-red-50 border-red-200'
+              : pushStatus === 'subscribing'
+              ? 'bg-blue-50 border-blue-200'
+              : 'bg-orange-50 border-orange-200'
+          }`}>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-lg">
+                {pushStatus === 'denied' ? '🚫' : pushStatus === 'subscribing' ? '⏳' : '🔔'}
+              </span>
+              <span className={
+                pushStatus === 'denied' ? 'text-red-800'
+                : pushStatus === 'subscribing' ? 'text-blue-700'
+                : 'text-orange-800'
+              }>
+                {pushStatus === 'denied'
+                  ? 'Notifications blocked — allow them in browser settings to receive coach reminders.'
+                  : pushStatus === 'subscribing'
+                  ? 'Enabling notifications…'
+                  : 'Tap Enable so your coach can send you reminders.'}
+              </span>
+            </div>
+            {(pushStatus === 'idle' || pushStatus === 'error') && (
+              <button
+                onClick={enablePush}
+                className="text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 active:bg-orange-700 px-4 py-2 rounded-lg flex-shrink-0"
+              >
+                Enable
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {/* Steps Card — Radial Spinner */}
+          {(() => {
+            const stepsPct = Math.min(calculatePercentage(latestUpdate?.Steps || 0, dietTargetGoalPlans!.Targets.steps), 100);
+            const R = 42;
+            const circ = 2 * Math.PI * R;
+            const offset = circ * (1 - stepsPct / 100);
+            const isGoalMet = stepsPct >= 100;
+            return (
+              <Card
+                className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 cursor-pointer overflow-hidden"
+                onClick={() => setStepsInputOpen(true)}
+              >
+                <CardContent className="p-3 flex flex-col items-center">
+                  <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1 self-start tracking-wide uppercase">
+                    Steps
+                  </p>
+
+                  {/* Radial ring */}
+                  <div className="relative flex items-center justify-center">
+                    <svg width="108" height="108" viewBox="0 0 108 108">
+                      <defs>
+                        <linearGradient id="stepsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor={isGoalMet ? "#34d399" : "#818cf8"} />
+                          <stop offset="100%" stopColor={isGoalMet ? "#10b981" : "#6366f1"} />
+                        </linearGradient>
+                        <filter id="stepGlow">
+                          <feGaussianBlur stdDeviation="2" result="blur" />
+                          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                        </filter>
+                      </defs>
+
+                      {/* Background track */}
+                      <circle cx="54" cy="54" r={R} fill="none" stroke="#e5e7eb" strokeWidth="7" />
+
+                      {/* Animated dashed spinner ring */}
+                      <circle
+                        cx="54" cy="54" r={R}
+                        fill="none"
+                        stroke={isGoalMet ? "#a7f3d0" : "#c7d2fe"}
+                        strokeWidth="2"
+                        strokeDasharray="4 9"
+                        strokeLinecap="round"
+                      >
+                        <animateTransform
+                          attributeName="transform"
+                          type="rotate"
+                          from="-90 54 54"
+                          to="270 54 54"
+                          dur={isGoalMet ? "4s" : "10s"}
+                          repeatCount="indefinite"
+                        />
+                      </circle>
+
+                      {/* Progress arc */}
+                      <circle
+                        cx="54" cy="54" r={R}
+                        fill="none"
+                        stroke="url(#stepsGrad)"
+                        strokeWidth="7"
+                        strokeLinecap="round"
+                        strokeDasharray={circ}
+                        strokeDashoffset={offset}
+                        transform="rotate(-90 54 54)"
+                        filter={isGoalMet ? "url(#stepGlow)" : undefined}
+                        style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.34,1.56,0.64,1)" }}
+                      />
+
+                      {/* Glowing tip dot */}
+                      {stepsPct > 2 && stepsPct < 100 && (() => {
+                        const angle = ((stepsPct / 100) * 360 - 90) * (Math.PI / 180);
+                        const dotX = 54 + R * Math.cos(angle);
+                        const dotY = 54 + R * Math.sin(angle);
+                        return (
+                          <circle cx={dotX} cy={dotY} r="4" fill="#6366f1" filter="url(#stepGlow)">
+                            <animate attributeName="r" values="3.5;4.5;3.5" dur="1.5s" repeatCount="indefinite" />
+                          </circle>
+                        );
+                      })()}
+                    </svg>
+
+                    {/* Center label */}
+                    <div className="absolute flex flex-col items-center leading-none">
+                      <span className="text-[11px] mb-0.5">👟</span>
+                      <span className="text-lg font-extrabold text-gray-900 dark:text-gray-100 leading-tight tabular-nums">
+                        {(latestUpdate?.Steps || 0).toLocaleString()}
+                      </span>
+                      <span className={`text-[10px] font-bold mt-0.5 ${isGoalMet ? "text-emerald-500" : "text-indigo-500"}`}>
+                        {stepsPct}%
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                    Goal: {(dietTargetGoalPlans?.Targets.steps || 0).toLocaleString()}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          {/* Water Intake Card — Animated Bottle */}
+          {(() => {
+            const waterPct = Math.min(calculatePercentage(latestUpdate?.Water || 0, dietTargetGoalPlans!.Targets.water), 100);
+            // Fillable area inside bottle: y from 22 (base of neck) to 98 (bottle base), height = 76
+            const fillableTop = 22;
+            const fillableBottom = 98;
+            const fillableHeight = fillableBottom - fillableTop;
+            const fillY = fillableBottom - (waterPct / 100) * fillableHeight;
+            const waveAmp = 3;
+            const waveBase = fillY;
+
+            const waterStopTop = waterPct > 60 ? "#38bdf8" : waterPct > 30 ? "#7dd3fc" : "#bae6fd";
+            const waterStopBot = waterPct > 60 ? "#0369a1" : waterPct > 30 ? "#0284c7" : "#38bdf8";
+
+            const wavePath = (dy: number) =>
+              `M10,${waveBase + dy} Q27,${waveBase + dy - waveAmp} 35,${waveBase + dy} Q43,${waveBase + dy + waveAmp} 60,${waveBase + dy} L60,${fillableBottom} L10,${fillableBottom} Z`;
+
+            return (
+              <Card
+                className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 cursor-pointer overflow-hidden"
+                onClick={() => setWaterInputOpen(true)}
+              >
+                <CardContent className="p-3 flex flex-col items-center">
+                  <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1 self-start tracking-wide uppercase">
+                    Water
+                  </p>
+
+                  <div className="relative flex items-center justify-center">
+                    <svg width="70" height="110" viewBox="0 0 70 110">
+                      <defs>
+                        {/* Water gradient */}
+                        <linearGradient id="waterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor={waterStopTop} stopOpacity="0.95" />
+                          <stop offset="100%" stopColor={waterStopBot} stopOpacity="1" />
+                        </linearGradient>
+
+                        {/* Bottle clip shape */}
+                        <clipPath id="bottleClip">
+                          {/* neck + body */}
+                          <path d="M24,12 L24,22 Q10,26 10,38 L10,98 Q10,104 16,104 L54,104 Q60,104 60,98 L60,38 Q60,26 46,22 L46,12 Z" />
+                        </clipPath>
+
+                        {/* Bubble clip — only inside bottle body */}
+                        <clipPath id="bubbleClip">
+                          <rect x="10" y="22" width="50" height="82" />
+                        </clipPath>
+
+                        {/* Shine gradient */}
+                        <linearGradient id="bottleShine" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="white" stopOpacity="0.18" />
+                          <stop offset="40%" stopColor="white" stopOpacity="0.04" />
+                          <stop offset="100%" stopColor="white" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* ── Bottle body background ── */}
+                      <path
+                        d="M24,12 L24,22 Q10,26 10,38 L10,98 Q10,104 16,104 L54,104 Q60,104 60,98 L60,38 Q60,26 46,22 L46,12 Z"
+                        fill="#f0f9ff"
+                        stroke="#bae6fd"
+                        strokeWidth="1.5"
+                      />
+
+                      {/* ── Water fill (clipped to bottle) ── */}
+                      <g clipPath="url(#bottleClip)">
+                        {/* Solid water body */}
+                        <rect x="0" y={fillY} width="70" height="110" fill="url(#waterGrad)" />
+
+                        {/* Animated wave on top of water */}
+                        {waterPct > 0 && waterPct < 100 && (
+                          <path fill="url(#waterGrad)">
+                            <animate
+                              attributeName="d"
+                              values={`${wavePath(0)};${wavePath(waveAmp)};${wavePath(0)}`}
+                              dur="2.2s"
+                              repeatCount="indefinite"
+                              calcMode="spline"
+                              keySplines="0.45 0 0.55 1; 0.45 0 0.55 1"
+                            />
+                          </path>
+                        )}
+
+                        {/* Rising bubbles */}
+                        {waterPct > 5 && (
+                          <g clipPath="url(#bubbleClip)">
+                            <circle cx="22" cy={fillableBottom - 10} r="2" fill="white" fillOpacity="0.4">
+                              <animate attributeName="cy" values={`${fillableBottom - 8};${fillY + 5};${fillableBottom - 8}`} dur="3s" repeatCount="indefinite" />
+                              <animate attributeName="opacity" values="0.5;0;0.5" dur="3s" repeatCount="indefinite" />
+                            </circle>
+                            <circle cx="44" cy={fillableBottom - 20} r="1.5" fill="white" fillOpacity="0.3">
+                              <animate attributeName="cy" values={`${fillableBottom - 18};${fillY + 5};${fillableBottom - 18}`} dur="4s" begin="1s" repeatCount="indefinite" />
+                              <animate attributeName="opacity" values="0.4;0;0.4" dur="4s" begin="1s" repeatCount="indefinite" />
+                            </circle>
+                            <circle cx="33" cy={fillableBottom - 5} r="1" fill="white" fillOpacity="0.25">
+                              <animate attributeName="cy" values={`${fillableBottom - 3};${fillY + 5};${fillableBottom - 3}`} dur="5s" begin="2s" repeatCount="indefinite" />
+                              <animate attributeName="opacity" values="0.3;0;0.3" dur="5s" begin="2s" repeatCount="indefinite" />
+                            </circle>
+                          </g>
+                        )}
+
+                        {/* Shine overlay */}
+                        <rect x="0" y={fillY} width="70" height="110" fill="url(#bottleShine)" />
+                      </g>
+
+                      {/* ── Bottle outline on top ── */}
+                      <path
+                        d="M24,12 L24,22 Q10,26 10,38 L10,98 Q10,104 16,104 L54,104 Q60,104 60,98 L60,38 Q60,26 46,22 L46,12 Z"
+                        fill="none"
+                        stroke={waterPct > 50 ? "#60a5fa" : "#bae6fd"}
+                        strokeWidth="1.8"
+                        style={{ transition: "stroke 0.8s ease" }}
+                      />
+
+                      {/* Horizontal measurement lines on bottle */}
+                      {[25, 50, 75].map((mark) => {
+                        const lineY = fillableBottom - (mark / 100) * fillableHeight;
+                        return (
+                          <line
+                            key={mark}
+                            x1="52" y1={lineY} x2="57" y2={lineY}
+                            stroke="#93c5fd" strokeWidth="1" strokeLinecap="round"
+                          />
+                        );
+                      })}
+
+                      {/* ── Cap ── */}
+                      <rect x="23" y="5" width="24" height="9" rx="3"
+                        fill={waterPct > 0 ? "#3b82f6" : "#94a3b8"}
+                        style={{ transition: "fill 0.8s ease" }}
+                      />
+                      {/* Cap highlight */}
+                      <rect x="24" y="6" width="10" height="3" rx="1.5" fill="white" fillOpacity="0.3" />
+
+                      {/* ── Percentage label inside bottle ── */}
+                      {waterPct > 15 && (
+                        <text
+                          x="35"
+                          y={Math.min(fillY + 18, fillableBottom - 6)}
+                          textAnchor="middle"
+                          fontSize="11"
+                          fontWeight="800"
+                          fill="white"
+                          fillOpacity="0.95"
+                          style={{ userSelect: "none" }}
+                        >
+                          {waterPct}%
+                        </text>
+                      )}
+
+                      {/* Empty label */}
+                      {waterPct === 0 && (
+                        <text x="35" y="68" textAnchor="middle" fontSize="9" fill="#94a3b8">
+                          Empty
+                        </text>
+                      )}
+                    </svg>
+                  </div>
+
+                  {/* Amount text */}
+                  <p className="text-xs font-bold text-gray-900 dark:text-gray-100 mt-0.5">
+                    {latestUpdate?.Water || 0}
+                    <span className="text-[10px] font-normal text-gray-400"> / {dietTargetGoalPlans?.Targets.water}L</span>
+                  </p>
+
+                  {/* Quick add button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-[10px] h-6 mt-1.5 w-full bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950/50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      let currentWater = latestUpdate?.Water || 0;
+                      currentWater = parseFloat("" + currentWater);
+                      const newAmount = +(currentWater + 0.25).toFixed(2);
+                      setWaterAmount(newAmount.toString());
+                      updateWaterMutation.mutate(newAmount);
+                    }}
+                  >
+                    + 250 ml
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })()}
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-6">

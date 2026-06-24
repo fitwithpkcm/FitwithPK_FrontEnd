@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { format, subDays } from "date-fns";
-import { Check, X, AlertTriangle, Calendar, Bell, ArrowLeft } from "lucide-react";
+import { Check, X, AlertTriangle, Calendar, Bell, ArrowLeft, Loader2 } from "lucide-react";
 import WeeklyTrackingView from "./weekly-track-view";
 import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
-import { getUserListWithUpdates_ForCoach, getUserListWithWeeklyUpdates_ForCoach } from "../../services/AdminServices";
+import { getUserListWithUpdates_ForCoach, getUserListWithWeeklyUpdates_ForCoach, sendReminderNotification } from "../../services/AdminServices";
 import { IUser } from "../../interface/models/User";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import moment from 'moment';
 import { IDailyStats, IUpdatesForUser } from "../../interface/IDailyUpdates";
 import { getRandomColor, isEmpty } from "../../lib/utils";
 import UserDailyDetailView from "./user-details-view";
 import { IWeeklyStatsExtended, IWeeklyUpdatesForUser } from "../../interface/IWeeklyUpdates";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
+import toast from "react-hot-toast";
 // Sample user data with tracking status
 const USERS = [
   {
@@ -75,10 +76,12 @@ export default function SimpleTrackingView() {
   }, []);
 
 
-  // Fetch user's list 
+  const yesterday = moment(currentDate).subtract(1, "days").format("DD-MM-YYYY");
+
+  // Fetch user list with their update status for yesterday
   const { data: UserListWithUpdates } = useQuery<IUpdatesForUser[]>({
-    queryKey: ["coach-userlist"],
-    queryFn: () => getUserListWithUpdates_ForCoach({ Day: moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY") }).then(res => res.data.data)
+    queryKey: ["coach-userlist", yesterday],
+    queryFn: () => getUserListWithUpdates_ForCoach({ Day: yesterday }).then(res => res.data.data)
   });
 
   //fetch weekly 
@@ -103,26 +106,61 @@ export default function SimpleTrackingView() {
 
   };
 
-  // Handle sending reminder to user
-  const handleSendReminder = (userId: number) => {
-    const user = USERS.find(u => u.id === userId);
-    if (user) {
-      alert(`Reminder sent to ${user.name}!`);
-    }
+  // Track which user's reminder button is in loading state
+  const [sendingReminderId, setSendingReminderId] = useState<number | null>(null);
+
+  const { mutate: sendReminder } = useMutation({
+    mutationFn: (userId: number) => sendReminderNotification({ IdUser: userId }),
+    onMutate: (userId) => setSendingReminderId(userId),
+    onSuccess: (data: any, userId) => {
+      setSendingReminderId(null);
+      const user = UserListWithUpdates?.find(u => u.IdUser === userId);
+      const name = user ? `${user.FirstName} ${user.LastName}` : 'the client';
+      // Backend always returns 200 — check success flag for real outcome
+      if (data?.data?.success) {
+        toast.success(`Reminder sent to ${name}!`);
+      } else {
+        toast(`📵 ${name}: ${data?.data?.message ?? 'Notification not available'}`, { icon: '⚠️' });
+      }
+    },
+    onError: (_err, userId) => {
+      setSendingReminderId(null);
+      const user = UserListWithUpdates?.find(u => u.IdUser === userId);
+      const name = user ? `${user.FirstName} ${user.LastName}` : 'the client';
+      toast.error(`Failed to send reminder to ${name}. Please try again.`);
+    },
+  });
+
+  /**
+   * "Updated" = the user submitted a COMPLETE daily update for yesterday.
+   * Requirements:
+   *  1. An IdStats row exists for yesterday's date specifically.
+   *  2. Every required field is filled in (not just a partial submission).
+   */
+  const isComplete = (user: IUpdatesForUser): boolean => {
+    if (user.IdStats == null) return false;
+    // The update row must belong to yesterday
+    if (user.Day !== yesterday) return false;
+    return (
+      user.Steps != null &&
+      user.Water != null &&
+      user.Diet_Follow != null &&
+      (user.WorkOut_Follow != null || user.WorkOut != null) &&
+      user.Weight != null &&
+      user.Sleep != null
+    );
   };
 
   // Filter users based on active tab
   const filteredUsers = UserListWithUpdates?.filter(user => {
-    if (activeTab === "updated") return user.IdStats != null;
-    if (activeTab === "missed") return user.IdStats == null;
+    if (activeTab === "updated") return isComplete(user);
+    if (activeTab === "missed") return !isComplete(user);
     return true; // "all" tab
   });
 
-
-  // Count updated and missed users
-  const updatedCount = UserListWithUpdates?.filter(user => (moment(user.Day!, "DD-MM-YYYY").format("DD-MM-YYYY") == moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY"))).length;
-
-  const missedCount = UserListWithUpdates?.length ? (UserListWithUpdates.length - updatedCount!) : 0;
+  // Count updated and missed users — both driven by the same isComplete check
+  const updatedCount = UserListWithUpdates?.filter(isComplete).length ?? 0;
+  const missedCount = (UserListWithUpdates?.length ?? 0) - updatedCount;
 
   // Handle user selection
   const handleSelectUser = (userId: number) => {
@@ -209,7 +247,7 @@ export default function SimpleTrackingView() {
                     onClick={() => setActiveTab('updated')}
                   >
                     <div>
-                      <p className="text-sm text-gray-600">Updated Today</p>
+                      <p className="text-sm text-gray-600">Updated Yesterday</p>
                       <p className="text-2xl font-bold">{updatedCount}</p>
                     </div>
                     <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -257,7 +295,6 @@ export default function SimpleTrackingView() {
                 <div className="space-y-4">
                   {filteredUsers?.map(user => {
                     // Get initials from name
-                    console.log("each user", user);
                     const fullname = `${user.FirstName} ${user.LastName}`;
                     const initials = fullname
                       .split(' ')
@@ -266,8 +303,7 @@ export default function SimpleTrackingView() {
                       .substring(0, 2)
                       .toUpperCase();
 
-                    console.log("111>>", moment(user.Day!, "DD-MM-YYYY").format("DD-MM-YYYY"));
-                    console.log("222", moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY"));
+                    const hasUpdated = isComplete(user);
 
                     return (
                       <div
@@ -282,29 +318,37 @@ export default function SimpleTrackingView() {
                           <div>
                             <p className="text-lg font-semibold">{user.FirstName} {user.LastName}</p>
                             <p className="text-sm text-gray-500">
-                              {(moment(user.Day!, "DD-MM-YYYY").format("DD-MM-YYYY") == moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY")) ? `Last update: ${formatDate(user.Day!)}` : `Last update: ${formatDate(user.Day!)}`}
+                              {hasUpdated
+                                ? `Updated: ${formatDate(user.Day!)}`
+                                : user.Day
+                                  ? `Last update: ${formatDate(user.Day!)}`
+                                  : "No update yet"}
                             </p>
                           </div>
                         </div>
 
                         <div className="flex items-center space-x-2">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${(moment(user.Day!, "DD-MM-YYYY").format("DD-MM-YYYY") == moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY")) ? 'bg-green-100' : 'bg-red-100'}`}>
-                            {(moment(user.Day!, "DD-MM-YYYY").format("DD-MM-YYYY") == moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY")) ? (
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${hasUpdated ? 'bg-green-100' : 'bg-red-100'}`}>
+                            {hasUpdated ? (
                               <Check size={20} className="text-green-600" />
                             ) : (
                               <X size={20} className="text-red-600" />
                             )}
                           </div>
-                          {(moment(user.Day!, "DD-MM-YYYY").format("DD-MM-YYYY") != moment(currentDate).subtract(1, 'days').format("DD-MM-YYYY")) && (
+                          {!hasUpdated && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleSendReminder(user.IdUser!);
+                                sendReminder(user.IdUser!);
                               }}
-                              className="p-2 bg-orange-100 hover:bg-orange-200 rounded-full transition-colors"
+                              disabled={sendingReminderId === user.IdUser}
+                              className="p-2 bg-orange-100 hover:bg-orange-200 rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                               title="Send Reminder"
                             >
-                              <Bell size={16} className="text-orange-600" />
+                              {sendingReminderId === user.IdUser
+                                ? <Loader2 size={16} className="text-orange-600 animate-spin" />
+                                : <Bell size={16} className="text-orange-600" />
+                              }
                             </button>
                           )}
                         </div>

@@ -5,6 +5,7 @@ import { IUpdatesForUser } from "../../interface/IDailyUpdates";
 import { IUser } from "../../interface/models/User";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getUserListForACoach, setUpdateActiveStatus } from "../../services/AdminServices";
+import { useAuth } from "../../hooks/use-auth";
 import { ACCESS_STATUS, AccessStatusType } from "../../common/Constant";
 
 import { BASE_URL } from "../../common/Constant";
@@ -15,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function ClientManagementScreen() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [clientList, setClientList] = useState<IUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -48,9 +50,10 @@ export default function ClientManagementScreen() {
   }
 
 
-  // Fetch user's list 
+  // NOTE: backend must filter clients by the JWT token's owner (the requesting coach).
+  // EmailID in the query key prevents cross-coach cache sharing on the same browser.
   const { data: coach_client_list } = useQuery<IUser[]>({
-    queryKey: ["coach-userlist"],
+    queryKey: ["coach-userlist", user?.info?.EmailID],
     queryFn: () => getUserListForACoach(null).then(res => res.data.data)
   });
 

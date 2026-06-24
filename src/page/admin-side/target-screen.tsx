@@ -1,657 +1,767 @@
 import React, { useEffect, useState } from "react";
-import { Target, Save, Check, User, ArrowLeft, FileText, Upload, Eye, Download, Utensils, Dumbbell, X } from "lucide-react";
-import { format } from "date-fns";
+import {
+  Target, Save, Check, User, ArrowLeft, FileText, Upload, Eye, Download,
+  Utensils, Dumbbell, X, ChevronLeft, ChevronRight, Calendar,
+  BarChart2, Footprints, Droplets, Moon
+} from "lucide-react";
+import { format, startOfWeek, endOfWeek } from "date-fns";
 import { setBaseUrl } from "../../services/HttpService";
-import { BASE_URL } from "../../common/Constant";
+import { BASE_URL, USER_TARGET } from "../../common/Constant";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { IUser } from "../../interface/models/User";
-import { addDietPlan, getUserListForACoach } from "../../services/AdminServices";
+import { IDailyStats, IUpdatesForUser } from "../../interface/IDailyUpdates";
+import { addDietPlan, getUserListForACoach, getUserListWithUpdates_ForCoach } from "../../services/AdminServices";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
-import { getDietPlan } from "../../services/UpdateServices";
+import { getDietPlan, getDailyUpdateForAWeek } from "../../services/UpdateServices";
 import { IdDietPlan } from "../../interface/IDietPlan";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../components/ui/dialog";
-import { Document, Page, pdfjs } from 'react-pdf';
+import { Document, Page } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { Button } from "../../components/ui/button";
+import { calculatePercentage } from "../../lib/utils";
+import { WeeklySummary } from "./weekly-summary";
+import { WeeklyDay } from "../client-side/home-page";
+import moment from "moment";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface UserTarget {
-    steps: number;
-    water: number;
-    sleep: number;
+  steps: number;
+  water: number;
+  sleep: number;
 }
 
+type TabId = "analytics" | "targets" | "plans";
+
+export interface x_metric {
+  key: string;
+  label: string;
+  color: string;
+  lightColor: string;
+  icon: React.ReactNode;
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const METRICS: x_metric[] = [
+  { key: "Sleep_Percent", label: "Sleep", color: "#8B5CF6", lightColor: "#F3E8FF", icon: <Moon size={14} /> },
+  { key: "Water_Percent", label: "Water", color: "#06B6D4", lightColor: "#ECFEFF", icon: <Droplets size={14} /> },
+  { key: "Steps_Percent", label: "Steps", color: "#10B981", lightColor: "#ECFDF5", icon: <Footprints size={14} /> },
+];
+
+const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
+  { id: "analytics", label: "Analytics", icon: <BarChart2 size={16} /> },
+  { id: "targets",   label: "Targets",   icon: <Target size={16} /> },
+  { id: "plans",     label: "Plans",     icon: <FileText size={16} /> },
+];
+
+// ── TargetSlider ──────────────────────────────────────────────────────────────
+
+interface TargetSliderProps {
+  label: string;
+  emoji: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+  color: string;
+  bgColor: string;
+  onChange: (v: number) => void;
+  format?: (v: number) => string;
+}
+
+function TargetSlider({ label, emoji, value, min, max, step, unit, color, bgColor, onChange, format: fmt }: TargetSliderProps) {
+  const pct = ((value - min) / (max - min)) * 100;
+  const display = fmt ? fmt(value) : value.toLocaleString();
+  return (
+    <div className="bg-white rounded-xl border p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 ${bgColor} rounded-full flex items-center justify-center text-lg`}>{emoji}</div>
+          <div>
+            <p className="font-semibold text-gray-800">{label}</p>
+            <p className="text-xs text-gray-400">{unit} per day</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-bold text-gray-900">{display}</p>
+        </div>
+      </div>
+      <div className="relative h-3 rounded-full bg-gray-100">
+        <div
+          className="absolute top-0 left-0 h-3 rounded-full transition-all"
+          style={{ width: `${pct}%`, backgroundColor: color }}
+        />
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={e => onChange(parseFloat(e.target.value))}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        />
+      </div>
+      <div className="flex justify-between text-xs text-gray-400 mt-1">
+        <span>{min.toLocaleString()}</span>
+        <span>{max.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── PlanSection ───────────────────────────────────────────────────────────────
+
+interface PlanFile {
+  id: number;
+  name: string;
+  uploadDate: string;
+  file?: File;
+  url?: string;
+}
+
+interface PlanSectionProps {
+  title: string;
+  icon: React.ReactNode;
+  accent: string;
+  accentBg: string;
+  accentBorder: string;
+  plans: PlanFile[];
+  planName: string;
+  onUpload: () => void;
+  onView: (plan: PlanFile) => void;
+  onDownload: (plan: PlanFile) => void;
+  onRemove: (id: number) => void;
+}
+
+function PlanSection({ title, icon, accent, accentBg, accentBorder, plans, planName, onUpload, onView, onDownload, onRemove }: PlanSectionProps) {
+  return (
+    <div className={`rounded-xl border ${accentBorder} ${accentBg} p-5`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 font-semibold text-gray-800">
+          {icon}
+          {title}
+        </div>
+        <button
+          onClick={onUpload}
+          className={`px-3 py-1.5 ${accent} text-white text-xs rounded-lg flex items-center gap-1 hover:opacity-90 transition-opacity`}
+        >
+          <Upload size={13} /> Upload PDF
+        </button>
+      </div>
+
+      {plans.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-4">No plan uploaded yet</p>
+      ) : (
+        <div className="space-y-2">
+          {plans.map(plan => (
+            <div key={plan.id} className="flex items-center gap-3 bg-white rounded-lg border p-3">
+              <FileText size={18} className="text-gray-500 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 truncate">{plan.name || planName}</p>
+                <p className="text-xs text-gray-400">Uploaded {plan.uploadDate}</p>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button onClick={() => onView(plan)} className="p-1.5 hover:bg-gray-100 rounded-lg" title="View">
+                  <Eye size={15} className="text-gray-500" />
+                </button>
+                <button onClick={() => onDownload(plan)} className="p-1.5 hover:bg-gray-100 rounded-lg" title="Download">
+                  <Download size={15} className="text-gray-500" />
+                </button>
+                <button onClick={() => onRemove(plan.id)} className="p-1.5 hover:bg-red-50 rounded-lg" title="Remove">
+                  <X size={15} className="text-red-400" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
 export default function UserTargetsScreen() {
-    const queryClient = useQueryClient()
-    const [selectedClient, setSelectedClient] = useState<IUser | null>(null);
-    const [targets, setTargets] = useState<UserTarget>({
-        steps: 10000,
-        water: 2.5,
-        sleep: 8.0
-    });
-    const [showPDFViewer, setShowPDFViewer] = useState(false);
-    const [selectedPDF, setSelectedPDF] = useState<{ name: string, url: string } | null>(null);
-    const [dietPlans, setDietPlans] = useState<Array<{ id: number, name: string, uploadDate: string, file?: File }>>([]);
-    const [workoutPlans, setWorkoutPlans] = useState<Array<{ id: number, name: string, uploadDate: string, file?: File }>>([]);
-    const [coachFeedback, setCoachFeedback] = useState<string>("");
-    const [saved, setSaved] = useState(false);
-    const [dietPlanName, setDietPlanName] = useState("");
-    const [workoutPlanName, setWorkoutPlanName] = useState("");
+  const queryClient = useQueryClient();
 
-    const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
-    const [pdfType, setPdfType] = useState<'workout' | 'diet'>('workout');
-    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  // ── shared state ───────────────────────────────────────────────────────────
+  const [selectedClient, setSelectedClient] = useState<IUser | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>("analytics");
 
-    useEffect(() => {
-        setBaseUrl(BASE_URL);
-    }, []);
+  // ── targets state ──────────────────────────────────────────────────────────
+  const [targets, setTargets] = useState<UserTarget>({ steps: 10000, water: 2.5, sleep: 8.0 });
+  const [saved, setSaved] = useState(false);
 
-    const { data: dietPlanFiles } = useQuery<IdDietPlan | null>({
-        queryKey: ['dietPlan', selectedClient?.IdUser],
-        queryFn: async () => {
-            if (!selectedClient) return null;
+  // ── plans state ────────────────────────────────────────────────────────────
+  const [dietPlans, setDietPlans] = useState<PlanFile[]>([]);
+  const [workoutPlans, setWorkoutPlans] = useState<PlanFile[]>([]);
+  const [coachFeedback, setCoachFeedback] = useState("");
+  const [dietPlanName, setDietPlanName] = useState("");
+  const [workoutPlanName, setWorkoutPlanName] = useState("");
+  const [plansSaved, setPlansSaved] = useState(false);
 
-            const inputData = {
-                IdUser: selectedClient.IdUser
-            };
-            const res: ApiResponse<IdDietPlan[]> = await getDietPlan(inputData);
-            const data = res.data?.data?.map(element => ({
-                ...element,
-                FileName: JSON.parse(element.FileName.toString()),
-            }));
+  // ── PDF viewer state ───────────────────────────────────────────────────────
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [pdfType, setPdfType] = useState<"workout" | "diet">("workout");
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
+  // ── analytics state ────────────────────────────────────────────────────────
+  const [startDate, setStartDate] = useState(format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"));
+  const [endDate, setEndDate] = useState(format(endOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"));
+  const [selectedMetric, setSelectedMetric] = useState("Sleep_Percent");
 
-            return data.length > 0 ? data[0] : null;
-        },
-        enabled: !!selectedClient
-    });
+  useEffect(() => {
+    setBaseUrl(BASE_URL);
+  }, []);
 
+  // ── Queries ────────────────────────────────────────────────────────────────
 
-    useEffect(() => {
+  const { data: coach_client_list = [] } = useQuery<IUser[]>({
+    queryKey: ["target-userlist"],
+    queryFn: () => getUserListForACoach(null).then(res => res.data.data),
+  });
 
-        queryClient.invalidateQueries({ queryKey: ['dietPlan', selectedClient?.IdUser] })
+  const { data: UserList } = useQuery<IUpdatesForUser[]>({
+    queryKey: ["coach-userlist-targets"],
+    queryFn: () => getUserListWithUpdates_ForCoach({ Day: moment(startDate).format("DD-MM-YYYY") }).then(res => res.data.data),
+  });
 
-        if (selectedClient && dietPlanFiles?.FileName) {
-            // Parse the file names from the response
-            const dietFileName = dietPlanFiles.FileName.diet_plan;
-            const workoutFileName = dietPlanFiles.FileName.workout_plan;
+  // Auto-select first analytics client
+  const [analyticsClient, setAnalyticsClient] = useState("");
+  useEffect(() => {
+    const first = UserList?.[0]?.IdUser?.toString();
+    if (first && !analyticsClient) setAnalyticsClient(first);
+  }, [UserList]);
 
-            // Create plan objects for existing files
-            const newDietPlans = [];
-            const newWorkoutPlans = [];
+  const { data: dailyUpdatesForWeek = [] } = useQuery<IDailyStats[]>({
+    queryKey: ["daily-updates-forweek", analyticsClient, startDate],
+    queryFn: () =>
+      getDailyUpdateForAWeek({ Day: moment(startDate).format("DD-MM-YYYY"), IdUser: analyticsClient }).then(res => res.data.data),
+    enabled: !!analyticsClient,
+  });
 
-            if (dietFileName) {
-                newDietPlans.push({
-                    id: Date.now(),
-                    name: dietFileName.replace('.pdf', '').replace(/_/g, ' '),
-                    uploadDate: format(new Date(), 'yyyy-MM-dd'),
-                    url: `${BASE_URL}/uploads/dietplans/${dietFileName}`
-                });
-                setDietPlanName(dietFileName.replace('.pdf', '').replace(/_/g, ' '));
-            }
+  const { data: dietPlanFiles } = useQuery<IdDietPlan | null>({
+    queryKey: ["dietPlan", selectedClient?.IdUser],
+    queryFn: async () => {
+      if (!selectedClient) return null;
+      const res: ApiResponse<IdDietPlan[]> = await getDietPlan({ IdUser: selectedClient.IdUser });
+      const data = res.data?.data?.map(el => ({
+        ...el,
+        FileName: JSON.parse(el.FileName.toString()),
+      }));
+      return data.length > 0 ? data[0] : null;
+    },
+    enabled: !!selectedClient,
+  });
 
-            if (workoutFileName) {
-                newWorkoutPlans.push({
-                    id: Date.now() + 1,
-                    name: workoutFileName.replace('.pdf', '').replace(/_/g, ' '),
-                    uploadDate: format(new Date(), 'yyyy-MM-dd'),
-                    url: `${BASE_URL}/uploads/workplans/${workoutFileName}`
-                });
-                setWorkoutPlanName(workoutFileName.replace('.pdf', '').replace(/_/g, ' '));
-            }
-
-            setDietPlans(newDietPlans);
-            setWorkoutPlans(newWorkoutPlans);
-            setTargets(dietPlanFiles.Targets)
-            setCoachFeedback(dietPlanFiles.FeedBack);
-        }
-    }, [selectedClient, dietPlanFiles]);
-
-    // Fetch user's list 
-    const { data: coach_client_list = [] } = useQuery<IUser[]>({
-        queryKey: ["target-userlist"],
-        queryFn: () => getUserListForACoach(null).then(res => res.data.data)
-    });
-
-
-    // Mutation for updating targets and plans
-    const { mutate: updateTargets } = useMutation({
-        mutationFn: addDietPlan,
-        onSuccess: () => {
-            setSaved(true);
-            setTimeout(() => setSaved(false), 2000);
-        },
-        onError: (error) => {
-            console.error('Error updating targets:', error);
-            alert('Failed to save targets');
-        }
-    });
-
-    const handleSave = () => {
-        if (!selectedClient) return;
-
-        const formData = new FormData();
-        formData.append('IdUser', selectedClient!.IdUser!.toString());
-        formData.append('Target', JSON.stringify(targets));
-
-        // Add diet plan if exists
-        if (dietPlans.length > 0) {
-            const latestDietPlan = dietPlans[dietPlans.length - 1];
-            formData.append('DietName', dietPlanName || `Diet Plan ${format(new Date(), 'yyyy-MM-dd')}`);
-            if (latestDietPlan.file) {
-                formData.append('DietPlan', latestDietPlan.file);
-            }
-        }
-
-        // Add workout plan if exists
-        if (workoutPlans.length > 0) {
-            const latestWorkoutPlan = workoutPlans[workoutPlans.length - 1];
-            if (latestWorkoutPlan.file) {
-                formData.append('WorkOutPlan', latestWorkoutPlan.file);
-            }
-        }
-
-        // Add coach feedback if exists
-        if (coachFeedback) {
-            formData.append('Feedback', coachFeedback);
-        }
-
-        updateTargets(formData);
-    };
-
-    const handleInputChange = (field: keyof UserTarget, value: number) => {
-        setTargets(prev => ({
-            ...prev,
-            [field]: value
-        }));
-    };
-
-    const handleFileUpload = (type: 'diet' | 'workout') => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.pdf';
-        input.onchange = (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (file && file.type === 'application/pdf') {
-                const newPlan = {
-                    id: Date.now(),
-                    name: file.name.replace('.pdf', ''),
-                    uploadDate: format(new Date(), 'yyyy-MM-dd'),
-                    file: file
-                };
-
-                if (type === 'diet') {
-                    setDietPlans([...dietPlans, newPlan]);
-                    setDietPlanName(file.name.replace('.pdf', ''));
-                } else {
-                    setWorkoutPlans([...workoutPlans, newPlan]);
-                    setWorkoutPlanName(file.name.replace('.pdf', ''));
-                }
-            } else {
-                alert('Please select a PDF file');
-            }
-        };
-        input.click();
-    };
-
-    const handleViewPDF = (plan: { name: string, file?: File, url?: string }) => {
-        if (plan.file) {
-            const url = URL.createObjectURL(plan.file);
-            setPdfUrl(url);
-            setPdfType(plan.name.toLowerCase().includes('diet') ? 'diet' : 'workout');
-            setPdfViewerOpen(true);
-        } else if (plan.url) {
-            setPdfUrl(plan.url);
-            setPdfType(plan.name.toLowerCase().includes('diet') ? 'diet' : 'workout');
-            setPdfViewerOpen(true);
-        } else {
-            alert('PDF not available for viewing');
-        }
-    };
-
-    const handleDownloadPDF = (plan: { name: string, file?: File }) => {
-        if (plan.file) {
-            const url = URL.createObjectURL(plan.file);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${plan.name}.pdf`;
-            link.click();
-            URL.revokeObjectURL(url);
-        } else {
-            alert('PDF not available for download');
-        }
-    };
-
-    if (!selectedClient) {
-        return (
-            <div className="p-4 h-full w-full bg-gray-50">
-                {/* Header */}
-                <header className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-50 flex items-center justify-center px-4">
-                    <h1 className="font-bold text-lg text-gray-900 dark:text-white">FitwithPKAdmin</h1>
-                </header>
-
-                <div className="flex items-center mb-6 mt-14">
-                    <div className="bg-blue-100 p-3 rounded-full mr-4">
-                        <User className="text-blue-600" size={24} />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold">Select Client</h1>
-                        <p className="text-gray-500">Choose a client to set targets for</p>
-                    </div>
-                </div>
-
-                {/* Client List */}
-                <div className="space-y-3">
-                    {coach_client_list.map(client => (
-                        <div
-                            key={client.IdUser}
-                            className="bg-white p-4 rounded-lg border flex items-center justify-between cursor-pointer hover:bg-gray-50"
-                            onClick={() => setSelectedClient(client)}
-                        >
-                            <div className="flex items-center">
-                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
-                                    <span className="text-blue-600 font-semibold">{client.FirstName}</span>
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold">{client.FirstName} {client.LastName}</h3>
-                                    <p className="text-sm text-gray-500">Tap to set targets</p>
-                                </div>
-                            </div>
-                            <ArrowLeft className="rotate-180 text-gray-400" size={20} />
-                        </div>
-                    ))}
-                </div>
-
-                <MobileAdminNav />
-            </div>
-        );
+  // Populate targets + plans when client's data loads
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["dietPlan", selectedClient?.IdUser] });
+    if (selectedClient && dietPlanFiles?.FileName) {
+      const dietFileName = dietPlanFiles.FileName.diet_plan;
+      const workoutFileName = dietPlanFiles.FileName.workout_plan;
+      const newDiet: PlanFile[] = [];
+      const newWorkout: PlanFile[] = [];
+      if (dietFileName) {
+        newDiet.push({ id: Date.now(), name: dietFileName.replace(".pdf", "").replace(/_/g, " "), uploadDate: format(new Date(), "yyyy-MM-dd"), url: `${BASE_URL}/uploads/dietplans/${dietFileName}` });
+        setDietPlanName(dietFileName.replace(".pdf", "").replace(/_/g, " "));
+      }
+      if (workoutFileName) {
+        newWorkout.push({ id: Date.now() + 1, name: workoutFileName.replace(".pdf", "").replace(/_/g, " "), uploadDate: format(new Date(), "yyyy-MM-dd"), url: `${BASE_URL}/uploads/workplans/${workoutFileName}` });
+        setWorkoutPlanName(workoutFileName.replace(".pdf", "").replace(/_/g, " "));
+      }
+      setDietPlans(newDiet);
+      setWorkoutPlans(newWorkout);
+      setTargets(dietPlanFiles.Targets);
+      setCoachFeedback(dietPlanFiles.FeedBack);
     }
+  }, [selectedClient, dietPlanFiles]);
 
+  // ── Mutations ──────────────────────────────────────────────────────────────
+
+  const { mutate: updateTargets, isPending: isSaving } = useMutation({
+    mutationFn: addDietPlan,
+    onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2500); },
+    onError: () => alert("Failed to save. Please try again."),
+  });
+
+  const { mutate: savePlans, isPending: isSavingPlans } = useMutation({
+    mutationFn: addDietPlan,
+    onSuccess: () => { setPlansSaved(true); setTimeout(() => setPlansSaved(false), 2500); },
+    onError: () => alert("Failed to save plans. Please try again."),
+  });
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  const handleSaveTargets = () => {
+    if (!selectedClient) return;
+    const fd = new FormData();
+    fd.append("IdUser", selectedClient.IdUser!.toString());
+    fd.append("Target", JSON.stringify(targets));
+    if (coachFeedback) fd.append("Feedback", coachFeedback);
+    updateTargets(fd);
+  };
+
+  const handleSavePlans = () => {
+    if (!selectedClient) return;
+    const fd = new FormData();
+    fd.append("IdUser", selectedClient.IdUser!.toString());
+    fd.append("Target", JSON.stringify(targets));
+    if (dietPlans.length > 0) {
+      fd.append("DietName", dietPlanName || `Diet Plan ${format(new Date(), "yyyy-MM-dd")}`);
+      const lastDiet = dietPlans[dietPlans.length - 1];
+      if (lastDiet.file) fd.append("DietPlan", lastDiet.file);
+    }
+    if (workoutPlans.length > 0) {
+      const lastWorkout = workoutPlans[workoutPlans.length - 1];
+      if (lastWorkout.file) fd.append("WorkOutPlan", lastWorkout.file);
+    }
+    if (coachFeedback) fd.append("Feedback", coachFeedback);
+    savePlans(fd);
+  };
+
+  const handleFileUpload = (type: "diet" | "workout") => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".pdf";
+    input.onchange = e => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file || file.type !== "application/pdf") { alert("Please select a PDF file"); return; }
+      const plan: PlanFile = { id: Date.now(), name: file.name.replace(".pdf", ""), uploadDate: format(new Date(), "yyyy-MM-dd"), file };
+      if (type === "diet") { setDietPlans(prev => [...prev, plan]); setDietPlanName(plan.name); }
+      else { setWorkoutPlans(prev => [...prev, plan]); setWorkoutPlanName(plan.name); }
+    };
+    input.click();
+  };
+
+  const handleViewPDF = (plan: PlanFile) => {
+    const url = plan.file ? URL.createObjectURL(plan.file) : plan.url ?? null;
+    if (!url) { alert("PDF not available"); return; }
+    setPdfUrl(url);
+    setPdfType(plan.name.toLowerCase().includes("diet") ? "diet" : "workout");
+    setPdfViewerOpen(true);
+  };
+
+  const handleDownloadPDF = (plan: PlanFile) => {
+    if (!plan.file) { alert("PDF not available for download"); return; }
+    const url = URL.createObjectURL(plan.file);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${plan.name}.pdf`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── Analytics helpers ──────────────────────────────────────────────────────
+
+  const currentMetric = METRICS.find(m => m.key === selectedMetric) ?? METRICS[0];
+
+  const BASE_WEEK: WeeklyDay[] = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => ({
+    WeekDay: d, Steps_Percent: 0, Water_Percent: 0, Sleep_Percent: 0,
+  }));
+
+  const weeklyData: WeeklyDay[] = dailyUpdatesForWeek.map((el, i) => ({
+    ...BASE_WEEK[i],
+    ...el,
+    Steps_Percent: calculatePercentage(Number(el.Steps), USER_TARGET.DAILY_TARGET.STEPS),
+    Sleep_Percent: calculatePercentage(Number(el.Sleep), USER_TARGET.DAILY_TARGET.SLEEP),
+    Water_Percent: calculatePercentage(Number(el.Water), USER_TARGET.DAILY_TARGET.WATER),
+  }));
+
+  const weekTotals: WeeklyDay = {
+    WeekDay: "Total",
+    Steps: dailyUpdatesForWeek.reduce((s, d) => s + Number(d.Steps || 0), 0),
+    Water: dailyUpdatesForWeek.reduce((s, d) => s + Number(d.Water || 0), 0),
+    Sleep: dailyUpdatesForWeek.reduce((s, d) => s + Number(d.Sleep || 0), 0),
+    Steps_Percent: 0, Water_Percent: 0, Sleep_Percent: 0,
+  };
+  const chartData = [...weeklyData, weekTotals];
+
+  const shiftWeek = (dir: 1 | -1) => {
+    const ms = dir * 7 * 24 * 60 * 60 * 1000;
+    const ns = new Date(new Date(startDate).getTime() + ms);
+    const ne = new Date(ns.getTime() + 6 * 24 * 60 * 60 * 1000);
+    setStartDate(ns.toISOString().split("T")[0]);
+    setEndDate(ne.toISOString().split("T")[0]);
+  };
+
+  // ── Client selection screen ────────────────────────────────────────────────
+
+  if (!selectedClient) {
     return (
-        <>
-            {/* Header */}
-            <header className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-50 flex items-center justify-center px-4">
-                <h1 className="font-bold text-lg text-gray-900 dark:text-white">FitwithPKAdmin</h1>
-            </header>
-            <div className="p-4 h-full w-full bg-gray-50 mt-14">
-                {/* Header with back button */}
-                <div className="flex items-center mb-6">
-                    <button
-                        onClick={() => setSelectedClient(null)}
-                        className="mr-3 p-2 hover:bg-gray-100 rounded-full"
-                    >
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div className="bg-blue-100 p-3 rounded-full mr-4">
-                        <Target className="text-blue-600" size={24} />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold">Daily Targets</h1>
-                        <p className="text-gray-500">Set goals for {selectedClient.FirstName} {selectedClient.LastName}</p>
-                    </div>
-                </div>
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b z-50 flex items-center justify-center px-4">
+          <h1 className="font-bold text-lg text-gray-900">FitwithPKAdmin</h1>
+        </header>
 
-                {/* Target Cards */}
-                <div className="space-y-4 mb-8">
-                    {/* Steps Target */}
-                    <div className="bg-white p-6 rounded-lg border">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center">
-                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                                    <span className="text-blue-600 text-sm">👟</span>
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold">Daily Steps</h3>
-                                    <p className="text-sm text-gray-500">Steps per day</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-2xl font-bold">{targets.steps.toLocaleString()}</div>
-                                <div className="text-xs text-gray-500">steps</div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <input
-                                type="range"
-                                min="5000"
-                                max="20000"
-                                step="500"
-                                value={targets.steps}
-                                onChange={(e) => handleInputChange('steps', parseInt(e.target.value))}
-                                className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer slider"
-                            />
-                            <div className="flex justify-between text-xs text-gray-400">
-                                <span>5,000</span>
-                                <span>20,000</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Water Target */}
-                    <div className="bg-white p-6 rounded-lg border">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center">
-                                <div className="w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center mr-3">
-                                    <span className="text-cyan-600 text-sm">💧</span>
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold">Water Intake</h3>
-                                    <p className="text-sm text-gray-500">Liters per day</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-2xl font-bold">{targets.water.toFixed(1)}</div>
-                                <div className="text-xs text-gray-500">liters</div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <input
-                                type="range"
-                                min="1"
-                                max="5"
-                                step="0.1"
-                                value={targets.water}
-                                onChange={(e) => handleInputChange('water', parseFloat(e.target.value))}
-                                className="w-full h-2 bg-cyan-200 rounded-lg appearance-none cursor-pointer slider"
-                            />
-                            <div className="flex justify-between text-xs text-gray-400">
-                                <span>1.0L</span>
-                                <span>5.0L</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Sleep Target */}
-                    <div className="bg-white p-6 rounded-lg border">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center">
-                                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                                    <span className="text-purple-600 text-sm">😴</span>
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold">Sleep Goal</h3>
-                                    <p className="text-sm text-gray-500">Hours per night</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-2xl font-bold">{targets.sleep.toFixed(1)}</div>
-                                <div className="text-xs text-gray-500">hours</div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <input
-                                type="range"
-                                min="6"
-                                max="10"
-                                step="0.5"
-                                value={targets.sleep}
-                                onChange={(e) => handleInputChange('sleep', parseFloat(e.target.value))}
-                                className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer slider"
-                            />
-                            <div className="flex justify-between text-xs text-gray-400">
-                                <span>6h</span>
-                                <span>10h</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Diet & Workout Plans Section */}
-                <div className="bg-white p-6 rounded-lg border mb-8">
-                    <h3 className="text-lg font-semibold mb-6">Diet & Workout Plans for {selectedClient.FirstName} {selectedClient.LastName}</h3>
-
-                    <div className="space-y-6">
-                        {/* Diet Plans */}
-                        <div>
-                            <div className="flex items-center justify-between mb-4">
-                                <h4 className="font-medium text-gray-700 flex items-center gap-2">
-                                    <Utensils className="w-5 h-5 text-green-600" />
-                                    Diet Plans
-                                </h4>
-                                <button
-                                    onClick={() => handleFileUpload('diet')}
-                                    className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-                                >
-                                    <Upload className="w-4 h-4" />
-                                    Upload New
-                                </button>
-                            </div>
-
-                            {dietPlans.length > 0 && (
-                                <div className="mb-4">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Diet Plan Name</label>
-                                    <input
-                                        type="text"
-                                        value={dietPlanName}
-                                        disabled
-                                        onChange={(e) => setDietPlanName(e.target.value)}
-                                        className="w-full p-2 border rounded-lg"
-                                        placeholder="Enter diet plan name"
-                                    />
-                                </div>
-                            )}
-
-                            <div className="space-y-3">
-                                {dietPlans.map((plan) => (
-                                    <div key={plan.id} className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-100">
-                                        <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
-                                            <FileText className="w-5 h-5 text-green-600" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="font-medium text-gray-800 truncate">{plan.name}</div>
-                                            <div className="text-sm text-gray-500">Uploaded: {plan.uploadDate}</div>
-                                        </div>
-                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                            <button
-                                                onClick={() => handleViewPDF(plan)}
-                                                className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-100 rounded-lg transition-colors"
-                                            >
-                                                <Eye className="w-5 h-5" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDownloadPDF(plan)}
-                                                className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                                            >
-                                                <Download className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-
-
-                            </div>
-                        </div>
-
-                        {/* Workout Plans */}
-                        <div>
-                            <div className="flex items-center justify-between mb-4">
-                                <h4 className="font-medium text-gray-700 flex items-center gap-2">
-                                    <Dumbbell className="w-5 h-5 text-purple-600" />
-                                    Workout Plans
-                                </h4>
-                                <button
-                                    onClick={() => handleFileUpload('workout')}
-                                    className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
-                                >
-                                    <Upload className="w-4 h-4" />
-                                    Upload New
-                                </button>
-                            </div>
-
-                            {workoutPlans.length > 0 && (
-                                <div className="mb-4">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Workout Plan Name</label>
-                                    <input
-                                        type="text"
-                                        value={workoutPlanName}
-                                        disabled
-                                        onChange={(e) => setWorkoutPlanName(e.target.value)}
-                                        className="w-full p-2 border rounded-lg"
-                                        placeholder="Enter workout plan name"
-                                    />
-                                </div>
-                            )}
-
-                            <div className="space-y-3">
-
-
-                                {workoutPlans.map((plan) => (
-                                    <div key={plan.id} className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-100">
-                                        <div className="p-2 bg-purple-100 rounded-lg flex-shrink-0">
-                                            <FileText className="w-5 h-5 text-purple-600" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="font-medium text-gray-800 truncate">{plan.name}</div>
-                                            <div className="text-sm text-gray-500">Uploaded: {plan.uploadDate}</div>
-                                        </div>
-                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                            <button
-                                                onClick={() => handleViewPDF(plan)}
-                                                className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
-                                            >
-                                                <Eye className="w-5 h-5" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDownloadPDF(plan)}
-                                                className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                                            >
-                                                <Download className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Coach Feedback Section */}
-                <div className="bg-white p-6 rounded-lg border mb-8">
-                    <div className="flex items-center mb-4">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                            <span className="text-green-600 text-sm">💬</span>
-                        </div>
-                        <div>
-                            <h3 className="font-semibold">Coach Feedback</h3>
-                            <p className="text-sm text-gray-500">Add personalized notes for {selectedClient.FirstName} {selectedClient.LastName}</p>
-                        </div>
-                    </div>
-
-                    <textarea
-                        placeholder="Enter your feedback and recommendations for the client..."
-                        className="w-full p-3 border rounded-lg resize-none h-24 text-sm"
-                        value={coachFeedback}
-                        onChange={(e) => setCoachFeedback(e.target.value)}
-                    />
-                </div>
-
-                {/* Save Button */}
-                <div className="mb-4">
-                    <button
-                        onClick={handleSave}
-                        className={`w-full py-4 rounded-lg font-semibold transition-all duration-300 ${saved
-                            ? 'bg-green-600 text-white'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                            }`}
-                    >
-                        {saved ? (
-                            <div className="flex items-center justify-center">
-                                <Check size={20} className="mr-2" />
-                                Targets Saved!
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-center">
-                                <Save size={20} className="mr-2" />
-                                Save Targets
-                            </div>
-                        )}
-                    </button>
-                </div>
-
-                {/* Tips Section */}
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-20">
-                    <h4 className="font-semibold text-blue-900 mb-2">💡 Tips for Success</h4>
-                    <ul className="text-sm text-blue-800 space-y-1">
-                        <li>• Start with realistic goals and gradually increase them</li>
-                        <li>• Track your progress daily to stay motivated</li>
-                        <li>• Adjust targets based on your lifestyle and fitness level</li>
-                    </ul>
-                </div>
-
-
+        <div className="p-4 mt-14">
+          {/* Page header */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md">
+              <Target className="text-white" size={22} />
             </div>
-            <MobileAdminNav />
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Insights & Targets</h1>
+              <p className="text-sm text-gray-500">Select a client to manage</p>
+            </div>
+          </div>
 
+          {/* Analytics is available without a client */}
+          <button
+            onClick={() => setActiveTab("analytics")}
+            className="w-full mb-4 bg-white border rounded-xl p-4 flex items-center gap-4 hover:shadow-md transition-shadow text-left"
+          >
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+              <BarChart2 className="text-blue-600" size={20} />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-gray-800">View Analytics</p>
+              <p className="text-xs text-gray-500">Weekly progress charts for any client</p>
+            </div>
+            <ChevronRight size={18} className="text-gray-400" />
+          </button>
 
-            {/* PDF Viewer Dialog */}
-            <Dialog open={pdfViewerOpen} onOpenChange={setPdfViewerOpen}>
-                <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-hidden flex flex-col">
-                    <DialogHeader>
-                        <DialogTitle>{pdfType === 'workout' ? 'Workout Plan' : 'Diet Plan'}</DialogTitle>
-                        <DialogDescription>
-                            {pdfType === 'workout'
-                                ? 'Workout Program by Coach'
-                                : 'Nutrition Guide & Meal Plan by Coach'}
-                        </DialogDescription>
-                    </DialogHeader>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">Clients — Targets & Plans</p>
 
-                    {/* PDF Viewer Container */}
-                    <div className="flex-1 overflow-y-auto mt-2 mb-4">
-                        <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 w-full h-full flex flex-col">
-                            {pdfUrl ? (
-                                <Document
-                                    file={pdfUrl}
-                                    loading={
-                                        <div className="flex-1 flex items-center justify-center p-4">
-                                            <p>Loading {pdfType} plan...</p>
-                                        </div>
-                                    }
-                                    error={
-                                        <div className="flex-1 flex items-center justify-center p-4 text-red-500">
-                                            Failed to load {pdfType} plan PDF.
-                                        </div>
-                                    }
-                                    className="flex-1 flex flex-col min-h-0"
-                                >
-                                    <div className="flex-1 overflow-auto p-2">
-                                        <Page
-                                            pageNumber={1}
-                                            width={Math.min(750, window.innerWidth - 64)}
-                                            renderTextLayer={false}
-                                            renderAnnotationLayer={false}
-                                            className="mx-auto"
-                                        />
-                                    </div>
-                                </Document>
-                            ) : (
-                                <div className="flex-1 flex flex-col items-center justify-center p-4">
-                                    <FileText className="h-16 w-16 text-primary-500 mb-4" />
-                                    <h3 className="text-lg font-semibold mb-2">
-                                        {pdfType === 'workout' ? 'Workout' : 'Diet'} Plan PDF
-                                    </h3>
-                                    <p className="text-gray-600 dark:text-gray-400">
-                                        No {pdfType} plan available
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+          <div className="space-y-3">
+            {coach_client_list.map(client => (
+              <button
+                key={client.IdUser}
+                className="w-full bg-white p-4 rounded-xl border flex items-center gap-4 hover:shadow-md transition-shadow text-left"
+                onClick={() => { setSelectedClient(client); setActiveTab("targets"); }}
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-purple-100 rounded-full flex items-center justify-center">
+                  <span className="text-violet-700 font-bold text-sm">{client.FirstName?.[0]}{client.LastName?.[0]}</span>
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-800">{client.FirstName} {client.LastName}</p>
+                  <p className="text-xs text-gray-500">{client.EmailID}</p>
+                </div>
+                <ChevronRight size={18} className="text-gray-400" />
+              </button>
+            ))}
+          </div>
+        </div>
 
-                    <DialogFooter className="flex justify-between items-center">
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                            Last updated: {format(new Date(), 'MMMM d, yyyy')}
-                        </div>
-                        <Button onClick={() => setPdfViewerOpen(false)}>Close</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-
-
-        </>
+        <MobileAdminNav />
+      </div>
     );
+  }
+
+  // ── Main content ───────────────────────────────────────────────────────────
+
+  return (
+    <>
+      <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b z-50 flex items-center justify-center px-4">
+        <h1 className="font-bold text-lg text-gray-900">FitwithPKAdmin</h1>
+      </header>
+
+      <div className="min-h-screen bg-gray-50 pb-24 mt-14">
+        {/* Page header */}
+        <div className="bg-white border-b px-4 pt-4 pb-0">
+          <div className="flex items-center gap-3 mb-4">
+            <button onClick={() => setSelectedClient(null)} className="p-2 hover:bg-gray-100 rounded-full">
+              <ArrowLeft size={20} className="text-gray-600" />
+            </button>
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+              <Target className="text-white" size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-gray-900 truncate">{selectedClient.FirstName} {selectedClient.LastName}</p>
+              <p className="text-xs text-gray-500 truncate">{selectedClient.EmailID}</p>
+            </div>
+          </div>
+
+          {/* Tab bar */}
+          <div className="flex gap-1">
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? "border-violet-600 text-violet-700"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-4 space-y-4">
+
+          {/* ── Analytics Tab ─────────────────────────────────────────────── */}
+          {activeTab === "analytics" && (
+            <div className="space-y-4">
+              {/* Client selector for analytics */}
+              <div className="bg-white rounded-xl border p-4">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Client</label>
+                <select
+                  value={analyticsClient}
+                  onChange={e => setAnalyticsClient(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-violet-400"
+                >
+                  {UserList?.map(c => (
+                    <option key={c.IdUser} value={c.IdUser}>{c.FirstName} {c.LastName}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Week navigation */}
+              <div className="bg-white rounded-xl border p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-semibold text-gray-800">Weekly Progress</p>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => shiftWeek(-1)} className="p-1.5 hover:bg-gray-100 rounded-lg">
+                      <ChevronLeft size={18} className="text-gray-600" />
+                    </button>
+                    <span className="text-xs font-medium text-gray-700 min-w-[110px] text-center">
+                      {format(new Date(startDate), "MMM dd")} – {format(new Date(endDate), "dd, yyyy")}
+                    </span>
+                    <button onClick={() => shiftWeek(1)} className="p-1.5 hover:bg-gray-100 rounded-lg">
+                      <ChevronRight size={18} className="text-gray-600" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Date picker */}
+                <div className="flex items-center justify-center gap-2 py-1 mb-4">
+                  <Calendar size={14} className="text-gray-400" />
+                  <span className="text-xs text-gray-400">Pick a date:</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={e => {
+                      const d = new Date(e.target.value);
+                      const end = new Date(d.getTime() + 6 * 24 * 60 * 60 * 1000);
+                      setStartDate(e.target.value);
+                      setEndDate(end.toISOString().split("T")[0]);
+                    }}
+                    className="text-xs px-2 py-1 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-violet-400"
+                  />
+                </div>
+
+                {/* Metric pills */}
+                <div className="flex justify-center mb-4">
+                  <div className="flex bg-gray-100 rounded-lg p-1 gap-0.5">
+                    {METRICS.map(m => (
+                      <button
+                        key={m.key}
+                        onClick={() => setSelectedMetric(m.key)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                          selectedMetric === m.key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        {m.icon} {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Bar chart */}
+                <div className="h-64 relative bg-gray-50 rounded-lg overflow-hidden">
+                  {/* Grid lines */}
+                  {[25, 50, 75, 100].map(pct => (
+                    <div
+                      key={pct}
+                      className="absolute left-0 right-0 border-t border-gray-200"
+                      style={{ bottom: `calc(${pct * 0.8}% + 2.5rem)` }}
+                    >
+                      <span className="absolute -top-3 left-1 text-[10px] text-gray-300">{pct}%</span>
+                    </div>
+                  ))}
+
+                  {chartData.slice(0, 7).map((data, index) => {
+                    const pct = Number(data[selectedMetric]) || 0;
+                    return (
+                      <div
+                        key={data.WeekDay}
+                        className="absolute bottom-10"
+                        style={{ left: `${index * 12 + 5}%`, height: `${pct * 0.8}%`, width: "8%", backgroundColor: currentMetric.color, borderRadius: "4px 4px 0 0", transition: "height 0.3s ease" }}
+                      >
+                        <div className="absolute -bottom-7 text-center w-full text-[10px] text-gray-500">{data.WeekDay}</div>
+                        {pct > 0 && (
+                          <div className="absolute -top-5 text-center w-full text-[10px] font-semibold" style={{ color: currentMetric.color }}>
+                            {Math.round(pct)}%
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Weekly summary */}
+              <div className="bg-white rounded-xl border p-4">
+                <WeeklySummary
+                  selectedMetric={selectedMetric}
+                  weeklyData={chartData}
+                  currentMetric={currentMetric}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* ── Targets Tab ───────────────────────────────────────────────── */}
+          {activeTab === "targets" && (
+            <div className="space-y-4">
+              <TargetSlider
+                label="Daily Steps"
+                emoji="👟"
+                value={targets.steps}
+                min={5000} max={20000} step={500}
+                unit="steps"
+                color="#3B82F6"
+                bgColor="bg-blue-100"
+                onChange={v => setTargets(p => ({ ...p, steps: v }))}
+              />
+              <TargetSlider
+                label="Water Intake"
+                emoji="💧"
+                value={targets.water}
+                min={1} max={5} step={0.1}
+                unit="liters"
+                color="#06B6D4"
+                bgColor="bg-cyan-100"
+                onChange={v => setTargets(p => ({ ...p, water: v }))}
+                format={v => v.toFixed(1)}
+              />
+              <TargetSlider
+                label="Sleep Goal"
+                emoji="😴"
+                value={targets.sleep}
+                min={6} max={10} step={0.5}
+                unit="hours"
+                color="#8B5CF6"
+                bgColor="bg-purple-100"
+                onChange={v => setTargets(p => ({ ...p, sleep: v }))}
+                format={v => v.toFixed(1)}
+              />
+
+              {/* Coach notes in targets */}
+              <div className="bg-white rounded-xl border p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">💬</span>
+                  <p className="font-semibold text-gray-800">Coach Notes</p>
+                </div>
+                <textarea
+                  rows={3}
+                  value={coachFeedback}
+                  onChange={e => setCoachFeedback(e.target.value)}
+                  placeholder="Add feedback and recommendations…"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+              </div>
+
+              <button
+                onClick={handleSaveTargets}
+                disabled={isSaving}
+                className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
+                  saved
+                    ? "bg-green-500 text-white"
+                    : "bg-gradient-to-r from-violet-600 to-purple-600 text-white hover:from-violet-700 hover:to-purple-700"
+                }`}
+              >
+                {saved ? <><Check size={18} /> Saved!</> : isSaving ? <span className="animate-pulse">Saving…</span> : <><Save size={18} /> Save Targets</>}
+              </button>
+            </div>
+          )}
+
+          {/* ── Plans Tab ─────────────────────────────────────────────────── */}
+          {activeTab === "plans" && (
+            <div className="space-y-4">
+              <PlanSection
+                title="Diet Plans"
+                icon={<Utensils size={16} className="text-green-600" />}
+                accent="bg-green-600"
+                accentBg="bg-green-50"
+                accentBorder="border-green-200"
+                plans={dietPlans}
+                planName={dietPlanName}
+                onUpload={() => handleFileUpload("diet")}
+                onView={handleViewPDF}
+                onDownload={handleDownloadPDF}
+                onRemove={id => setDietPlans(p => p.filter(x => x.id !== id))}
+              />
+
+              <PlanSection
+                title="Workout Plans"
+                icon={<Dumbbell size={16} className="text-purple-600" />}
+                accent="bg-purple-600"
+                accentBg="bg-purple-50"
+                accentBorder="border-purple-200"
+                plans={workoutPlans}
+                planName={workoutPlanName}
+                onUpload={() => handleFileUpload("workout")}
+                onView={handleViewPDF}
+                onDownload={handleDownloadPDF}
+                onRemove={id => setWorkoutPlans(p => p.filter(x => x.id !== id))}
+              />
+
+              <button
+                onClick={handleSavePlans}
+                disabled={isSavingPlans}
+                className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
+                  plansSaved
+                    ? "bg-green-500 text-white"
+                    : "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700"
+                }`}
+              >
+                {plansSaved ? <><Check size={18} /> Saved!</> : isSavingPlans ? <span className="animate-pulse">Saving…</span> : <><Save size={18} /> Save Plans</>}
+              </button>
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      <MobileAdminNav />
+
+      {/* PDF Viewer Dialog */}
+      <Dialog open={pdfViewerOpen} onOpenChange={setPdfViewerOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{pdfType === "workout" ? "Workout Plan" : "Diet Plan"}</DialogTitle>
+            <DialogDescription>
+              {pdfType === "workout" ? "Workout Program by Coach" : "Nutrition Guide & Meal Plan by Coach"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto mt-2 mb-4">
+            <div className="rounded-md border border-gray-200 bg-gray-50 w-full h-full flex flex-col">
+              {pdfUrl ? (
+                <Document
+                  file={pdfUrl}
+                  loading={<div className="flex items-center justify-center p-8 text-gray-500">Loading PDF…</div>}
+                  error={<div className="flex items-center justify-center p-8 text-red-500">Failed to load PDF.</div>}
+                >
+                  <div className="overflow-auto p-2">
+                    <Page
+                      pageNumber={1}
+                      width={Math.min(750, window.innerWidth - 64)}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                      className="mx-auto"
+                    />
+                  </div>
+                </Document>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 text-gray-400">
+                  <FileText size={48} className="mb-3" />
+                  <p>No PDF available</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="flex justify-between items-center">
+            <span className="text-xs text-gray-400">Last updated: {format(new Date(), "MMMM d, yyyy")}</span>
+            <Button onClick={() => setPdfViewerOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }

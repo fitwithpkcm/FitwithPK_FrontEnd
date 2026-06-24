@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, BarChart, Calendar, FileText, Settings, Plus, Apple, Dumbbell, Clipboard } from "lucide-react";
+import { Home, BarChart, Calendar, FileText, Settings, Plus, Apple, Dumbbell, Clipboard, UtensilsCrossed } from "lucide-react";
 import { RENDER_URL } from "../../common/Urls";
 import React from "react";
 
@@ -41,6 +41,12 @@ export function MobileNav() {
             href="/diet-workout"
             isActive={location === "/diet-workout"}
           /> */}
+          <NavItem
+            icon={<UtensilsCrossed className="h-6 w-6" />}
+            label="Meals"
+            href={RENDER_URL.STUDENT_MEAL_TRACKING}
+            isActive={location === RENDER_URL.STUDENT_MEAL_TRACKING}
+          />
           <NavItem
             icon={<Settings className="h-6 w-6" />}
             label="Profile"

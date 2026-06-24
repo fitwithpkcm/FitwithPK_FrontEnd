@@ -174,6 +174,14 @@ export const getAllPricingPlans = (params: unknown): Promise<ApiResponse<ISubscr
 };
 
 
+export const sendReminderNotification = (params: { IdUser: number }): Promise<ApiResponse<unknown>> => {
+    return httpCall({
+        url: API_URL.SEND_REMINDER,
+        method: 'post',
+        data: params,
+    });
+};
+
 export const getAllSubscriptionAssigned = (params: unknown): Promise<ApiResponse<IUser[]>> => {
     return httpCall({
         url: API_URL.GET_ASSIGNED_SUBSCRIPTION,

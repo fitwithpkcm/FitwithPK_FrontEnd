@@ -37,6 +37,8 @@ export const RENDER_URL = {
     ADMIN_NUTRISWAP: '/admin-nutriswap',
     ADMIN_SETTINGS: '/admin-settings',
     ADMIN_CLIENT_MANAGEMENT: '/admin-client-manage',
+    ADMIN_MEAL_PLAN: '/admin-meal-plan',
+    STUDENT_MEAL_TRACKING: '/student-meal-plan',
     VIEW_STUDENT: '/student',
     DATA_MANAGEMENT: '/data-management',
     STAFFS: '/staffs',
@@ -124,5 +126,23 @@ export const API_URL = {
     ADD_NEW_DOCUMENTS: '/student/getAllRelatedDocuments',
     UPLOAD_DOCUMENT: '/student/uploaddocuments',
 
+    // ── Meal Plan (Admin) ─────────────────────────────────────────
+    GET_MEAL_PLANS_FOR_CLIENT: '/mealplan/getForClient',
+    CREATE_MEAL_PLAN: '/mealplan/create',
+    UPDATE_MEAL_PLAN: '/mealplan/update',
+    DELETE_MEAL_PLAN: '/mealplan/delete',
+    COPY_MEAL_PLAN: '/mealplan/copy',
 
+    // ── Meal Plan (Client) ────────────────────────────────────────
+    GET_MY_MEAL_PLANS: '/mealplan/getMyPlans',
+    LOG_FOOD_CONSUMPTION: '/mealplan/logFood',
+    BATCH_LOG_FOOD_CONSUMPTION: '/mealplan/batchLogFood',
+    GET_MY_MEAL_LOGS: '/mealplan/getMyLogs',
+
+    // ── Meal Plan (Admin — view client adherence) ─────────────────
+    GET_MEAL_LOGS_FOR_CLIENT: '/mealplan/getClientLogs',
+
+    // ── Push Notifications ────────────────────────────────────────
+    SAVE_PUSH_SUBSCRIPTION: '/notification/saveSubscription',
+    SEND_REMINDER: '/notification/sendReminder',
 }

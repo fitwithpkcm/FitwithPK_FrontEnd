@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, BarChart, Calendar, FileText, Settings, Plus, Apple, Dumbbell, Clipboard, ClipboardCheck, BarChart2, Target, ArrowRightLeft, Cog } from "lucide-react";
+import { Home, BarChart, Calendar, FileText, Settings, Plus, Apple, Dumbbell, Clipboard, ClipboardCheck, BarChart2, Target, ArrowRightLeft, Cog, UtensilsCrossed } from "lucide-react";
 import { RENDER_URL } from "../../common/Urls";
 import React from "react";
 
@@ -26,17 +26,10 @@ export function MobileAdminNav() {
           />
 
           <NavItem
-            icon={<BarChart2 className="h-6 w-6" />}
-            label="Analytics"
-            href={RENDER_URL.ADMIN_ANALYTICS}
-            isActive={location === RENDER_URL.ADMIN_ANALYTICS}
-          />
-
-          <NavItem
             icon={<Target className="h-6 w-6" />}
-            label="Targets"
+            label="Insights"
             href={RENDER_URL.ADMIN_TARGETS}
-            isActive={location === RENDER_URL.ADMIN_TARGETS}
+            isActive={location === RENDER_URL.ADMIN_TARGETS || location === RENDER_URL.ADMIN_ANALYTICS}
           />
 
           <NavItem
@@ -44,6 +37,12 @@ export function MobileAdminNav() {
             label="NutriSwap"
             href={RENDER_URL.ADMIN_NUTRISWAP}
             isActive={location === RENDER_URL.ADMIN_NUTRISWAP}
+          />
+          <NavItem
+            icon={<UtensilsCrossed className="h-6 w-6" />}
+            label="Meal Plans"
+            href={RENDER_URL.ADMIN_MEAL_PLAN}
+            isActive={location === RENDER_URL.ADMIN_MEAL_PLAN}
           />
 
           <NavItem

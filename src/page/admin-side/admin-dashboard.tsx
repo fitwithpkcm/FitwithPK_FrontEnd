@@ -35,15 +35,16 @@ export default function AdminDashboard() {
     setTheme('light')
   }, []);
 
-  // Fetch user's list 
+  // NOTE: the backend MUST filter by the authenticated coach using the JWT token it receives.
+  // Using user.info.EmailID in the query key ensures each coach gets their own cache slot.
   const { data: coach_client_list } = useQuery<IUser[]>({
-    queryKey: ["coach-userlist-dashboard"],
+    queryKey: ["coach-userlist-dashboard", user?.info?.EmailID],
     queryFn: () => getUserListForACoach(null).then(res => res.data.data)
   });
 
-  // Fetch user's list 
+  // Fetch user's list with daily updates
   const { data: UserListWithUpdates } = useQuery<IUpdatesForUser[]>({
-    queryKey: ["coach-userlist-dashboard"],
+    queryKey: ["coach-userlist-updates-dashboard", user?.info?.EmailID],
     queryFn: () => getUserListWithUpdates_ForCoach({ Day: moment(currentDate).format("DD-MM-YYYY") }).then(res => res.data.data)
   });
 
