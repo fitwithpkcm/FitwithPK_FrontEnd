@@ -12,6 +12,7 @@ import { IUser } from "../../interface/models/User";
 import { IDailyStats, IUpdatesForUser } from "../../interface/IDailyUpdates";
 import { addDietPlan, getUserListForACoach, getUserListWithUpdates_ForCoach } from "../../services/AdminServices";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
+import { AdminPageHeader } from "../../components/layout/page-header";
 import { getDietPlan, getDailyUpdateForAWeek } from "../../services/UpdateServices";
 import { IdDietPlan } from "../../interface/IDietPlan";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../components/ui/dialog";
@@ -391,11 +392,9 @@ export default function UserTargetsScreen() {
   if (!selectedClient) {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
-        <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b z-50 flex items-center justify-center px-4">
-          <h1 className="font-bold text-lg text-gray-900">FitwithPKAdmin</h1>
-        </header>
+        <AdminPageHeader title="Targets & Plans" subtitle="FitwithPK Admin" />
 
-        <div className="p-4 mt-14">
+        <div className="p-4">
           {/* Page header */}
           <div className="flex items-center gap-4 mb-6">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md">
@@ -453,11 +452,9 @@ export default function UserTargetsScreen() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b z-50 flex items-center justify-center px-4">
-        <h1 className="font-bold text-lg text-gray-900">FitwithPKAdmin</h1>
-      </header>
+      <AdminPageHeader title="Targets & Plans" subtitle="FitwithPK Admin" />
 
-      <div className="min-h-screen bg-gray-50 pb-24 mt-14">
+      <div className="min-h-screen bg-gray-50 pb-24">
         {/* Page header */}
         <div className="bg-white border-b px-4 pt-4 pb-0">
           <div className="flex items-center gap-3 mb-4">

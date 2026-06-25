@@ -555,18 +555,18 @@ export default function HomePage() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      <header className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 py-4 px-4 sm:px-6">
+      <header className="bg-gradient-to-r from-blue-700 to-blue-600 py-4 px-4 sm:px-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">FitwithPK</h1>
-            <div className="flex items-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(currentDate)}</p>
-            </div>
+            <p className="text-blue-200 text-xs font-medium">{formatDate(currentDate)}</p>
+            <h1 className="text-xl font-bold text-white mt-0.5">
+              Hey, {user?.info?.FirstName} 👋
+            </h1>
           </div>
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center mr-1">
-              <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-gray-500" />
-              <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-gray-400" />
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center">
+              <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-blue-200" />
+              <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-blue-200" />
               <Switch
                 className="ml-1"
                 checked={theme === "dark"}
@@ -575,17 +575,13 @@ export default function HomePage() {
             </div>
 
             <Link href={RENDER_URL.STUDENT_ONBOARD}>
-              <Button variant="outline" size="sm" className="mr-2 text-xs">
-                Update Profile
+              <Button variant="outline" size="sm" className="text-xs bg-white/15 border-white/30 text-white hover:bg-white/25 backdrop-blur-sm">
+                Profile
               </Button>
             </Link>
 
-            <div className="h-9 w-9 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center"
-              onClick={() => {
-
-              }}
-            >
-              <span className="text-primary-700 dark:text-primary-300 font-medium text-sm">
+            <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/30">
+              <span className="text-white font-semibold text-sm">
                 {user?.info?.FirstName.charAt(0)}{user?.info?.LastName.charAt(0)}
               </span>
             </div>
@@ -593,7 +589,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto px-4 py-6 pb-20 sm:px-6 bg-gray-50 dark:bg-gray-950">
+      <main className="flex-1 overflow-y-auto px-4 py-5 pb-24 sm:px-6 bg-gray-50 dark:bg-gray-950">
 
         {/* Notification banner — visible until subscribed */}
         {pushStatus !== 'subscribed' && (

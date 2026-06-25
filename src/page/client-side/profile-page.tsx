@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../hooks/use-auth";
 import { MobileNav } from "../../components/layout/mobile-nav";
+import { PageHeader } from "../../components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Progress } from "../../components/ui/progress";
 import { Button } from "../../components/ui/button";
@@ -175,25 +176,17 @@ export default function ProfilePage() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      <header className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 py-4 px-4 sm:px-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Profile</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "profile" | "coach")} className="w-[200px]">
-              <TabsList className="grid grid-cols-2">
-                <TabsTrigger value="profile">My Profile</TabsTrigger>
-                <TabsTrigger value="coach">Coach</TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            <button className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-              <Settings className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="My Profile"
+        right={
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "profile" | "coach")} className="w-[180px]">
+            <TabsList className="grid grid-cols-2 bg-white/20 rounded-lg">
+              <TabsTrigger value="profile" className="text-white data-[state=active]:bg-white data-[state=active]:text-blue-700 text-xs">Me</TabsTrigger>
+              <TabsTrigger value="coach" className="text-white data-[state=active]:bg-white data-[state=active]:text-blue-700 text-xs">Coach</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        }
+      />
 
       <main className="flex-1 overflow-y-auto px-4 py-6 pb-28 sm:px-6 bg-gray-50 dark:bg-gray-950">
         <Tabs value={activeTab} className="w-full">

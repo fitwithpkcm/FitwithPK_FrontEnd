@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../hooks/use-auth";
 import { MobileNav } from "../../components/layout/mobile-nav";
+import { PageHeader } from "../../components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -199,14 +200,7 @@ export default function NutritionPage() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      <header className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 py-4 px-4 sm:px-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">NutriSwap</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">One-tap healthy food alternatives</p>
-          </div>
-        </div>
-      </header>
+      <PageHeader title="NutriSwap" subtitle="One-tap healthy food alternatives" />
 
       <main className="flex-1 overflow-y-auto px-4 py-6 pb-28 sm:px-6 bg-gray-50 dark:bg-gray-950">
         <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 mb-6">

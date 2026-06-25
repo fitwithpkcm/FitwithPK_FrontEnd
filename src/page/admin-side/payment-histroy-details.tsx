@@ -19,11 +19,12 @@ import {
 } from "../../services/ProfileService";
 import moment from "moment";
 import { setUpdatePaymentHistory } from "../../services/AdminServices";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { AdminPageHeader } from "../../components/layout/page-header";
 
 export default function PaymentHistoryScreen() {
 
-
+  const navigate = useNavigate();
   const location = useLocation();
   const selectedUserID = location.state?.selectedUserID;
 
@@ -253,30 +254,13 @@ export default function PaymentHistoryScreen() {
   );
 
   return (
-    <div className="p-4 md:p-6 h-full w-full bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center mb-8">
-        <button
-          onClick={() => { }}
-          className="mr-3 p-2 hover:bg-gray-100 rounded-full"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
-          <span className="text-blue-600 font-semibold text-lg">
-            {`${profileData?.FirstName?.charAt(0)}${profileData?.LastName?.charAt(0)}`}
-          </span>
-        </div>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-800">
-            {`${profileData?.FirstName} ${profileData?.LastName}`}
-          </h1>
-          <div className="flex items-center text-sm text-gray-500">
-            <Mail size={14} className="mr-1" />
-            {profileData?.EmailID}
-          </div>
-        </div>
-      </div>
+    <div className="h-full w-full bg-gray-50 min-h-screen flex flex-col">
+      <AdminPageHeader
+        title="Payment History"
+        subtitle={profileData ? `${profileData.FirstName} ${profileData.LastName}` : undefined}
+        onBack={() => navigate(-1)}
+      />
+      <div className="p-4 md:p-6">
 
       <div>
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center">
@@ -289,6 +273,7 @@ export default function PaymentHistoryScreen() {
         </div>
 
         {renderPaymentDetail()}
+      </div>
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { setBaseUrl } from '../../services/HttpService';
 import { BASE_URL } from '../../common/Constant';
 import { MobileAdminNav } from '../../components/layout/mobile-admin-nav';
+import { AdminPageHeader } from '../../components/layout/page-header';
 import { deletePricingPlans, getAllPricingPlans, getAllSubscriptionAssigned, insertPricingPlans, removeSubscriptionFromUser, setSubscriptionToUser } from '../../services/AdminServices';
 import { ISubscriptionHistory, IUser } from '../../interface/models/User';
 import toast from 'react-hot-toast';
@@ -421,21 +422,15 @@ export default function PricingPlanManagementScreen() {
 
     return (
         <div className="p-4 pb-20">
-            <header className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-50 flex items-center justify-center px-4">
-                <h1 className="font-bold text-lg text-gray-900 dark:text-white">FitwithPKAdmin</h1>
-            </header>
-
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6 mt-14">
-                <h1 className="text-xl font-bold">Pricing Plans</h1>
+            <AdminPageHeader title="Pricing Plans" subtitle="FitwithPK Admin" right={
                 <button
                     onClick={() => setShowAddForm(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    className="px-3 py-1.5 bg-white/20 text-white rounded-lg hover:bg-white/30 flex items-center gap-1.5 text-sm font-medium"
                 >
-                    <Plus size={20} />
+                    <Plus size={16} />
                     Add Plan
                 </button>
-            </div>
+            } />
 
             {/* Pricing Plans Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

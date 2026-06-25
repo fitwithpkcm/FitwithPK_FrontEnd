@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link, useLocation } from "wouter";
+import { PageHeader } from "../../components/layout/page-header";
 import { MobileNav } from "../../components/layout/mobile-nav";
 import {
   Form,
@@ -345,56 +346,39 @@ export default function IntakeFormPage() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      <header className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 py-4 px-4 sm:px-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mb-2"
-              onClick={() => setLocation(RENDER_URL.STUDENT_DASHBOARD)}
+      <PageHeader
+        title="Update Profile"
+        subtitle="Tell us about yourself"
+        onBack={() => setLocation(RENDER_URL.STUDENT_DASHBOARD)}
+        right={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ["onboarduser-attributes"] });
+            }}
+            className="flex items-center gap-1"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-            <div className="w-full flex">
-              <div className="">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Client Intake Form</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Update your profile information</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  queryClient.invalidateQueries({ queryKey: ["onboarduser-attributes"] });
-                }
-                }
-                className="flex items-center gap-1"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                  <path d="M3 3v5h5" />
-                  <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                  <path d="M16 16h5v5" />
-                </svg>
-                Refresh
-              </Button>
-            </div>
-
-
-          </div>
-        </div>
-      </header>
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+              <path d="M16 16h5v5" />
+            </svg>
+            Refresh
+          </Button>
+        }
+      />
 
       <main className="flex-1 overflow-y-auto pb-20 bg-gray-50 dark:bg-gray-950">
         <div className="max-w-3xl mx-auto p-4 sm:p-6">

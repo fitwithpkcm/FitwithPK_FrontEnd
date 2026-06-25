@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Plus, Check, X, FileText, Save, Edit, Trash, ArrowLeft, ImageIcon, Minus, CircleX, XIcon } from "lucide-react";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
+import { AdminPageHeader } from "../../components/layout/page-header";
 import { Button } from "../../components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../../components/ui/dialog";
 import { BASE_URL } from "../../common/Constant";
@@ -197,12 +198,9 @@ export default function NutriSwapScreen() {
     return (
         <>
             {/* Header */}
-            <header className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-50 flex items-center justify-center px-4">
-                <h1 className="font-bold text-lg text-gray-900 dark:text-white">FitwithPKAdmin</h1>
-            </header>
+            <AdminPageHeader title="NutriSwap" subtitle="Manage food alternatives" />
 
-            <div className="p-4 mt-14">
-                <h1 className="text-xl font-bold mb-2">NutriSwap</h1>
+            <div className="p-4">
                 <Button
                     onClick={() => setAddNewFoodUI(!addNewFoodUI)}
                     className="fixed bottom-20 right-5 w-14 h-14 rounded-full shadow-lg flex items-center justify-center to-primary-600 hover:from-rose-600 hover:to-primary-700 text-white transition-all dark:shadow-lg dark:shadow-rose-500/20 border-2 border-white dark:border-gray-800"

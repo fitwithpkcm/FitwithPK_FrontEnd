@@ -1,5 +1,6 @@
 import React from "react";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
+import { AdminPageHeader } from "../../components/layout/page-header";
 import { Button } from "../../components/ui/button";
 import { useAuth } from "../../hooks/use-auth";
 import { BASE_URL } from "../../common/Constant";
@@ -21,13 +22,9 @@ export default function SettingsScreen() {
 
     return (
         <>
-            {/* Header */}
-            <header className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-50 flex items-center justify-center px-4">
-                <h1 className="font-bold text-lg text-gray-900 dark:text-white">FitwithPKAdmin</h1>
-            </header>
+            <AdminPageHeader title="Settings" subtitle="FitwithPK Admin" />
 
-            <div className="p-4 mt-14">
-                <h1 className="text-xl font-bold mb-6">Settings</h1>
+            <div className="p-4 pb-20">
 
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 max-w-md mx-auto">
                     <h2 className="text-lg font-semibold mb-4">User Profile</h2>

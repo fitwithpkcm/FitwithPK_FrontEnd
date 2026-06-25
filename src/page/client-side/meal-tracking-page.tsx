@@ -19,6 +19,7 @@ import {
   DialogDescription, DialogFooter,
 } from "../../components/ui/dialog";
 import { MobileNav } from "../../components/layout/mobile-nav";
+import { PageHeader } from "../../components/layout/page-header";
 import { useAuth } from "../../hooks/use-auth";
 import { queryClient } from "../../lib/queryClient";
 import { BASE_URL } from "../../common/Constant";
@@ -359,39 +360,30 @@ export default function MealTrackingPage() {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* ── header ─────────────────────────────────────────────── */}
-      <header className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 py-3 px-4">
+      <header className="flex-shrink-0 bg-gradient-to-r from-blue-700 to-blue-600 px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <UtensilsCrossed className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Meal Plan</span>
+            <UtensilsCrossed className="h-5 w-5 text-white" />
+            <span className="text-lg font-bold text-white">Meal Plan</span>
           </div>
           {mergedPlan && (
             <AdherenceBadge pct={mergedPlan.overallAdherence} />
           )}
         </div>
-
         {/* date navigation */}
-        <div className="flex items-center justify-between mt-2">
-          <Button
-            size="sm" variant="ghost"
-            className="h-8 w-8 p-0"
-            onClick={() => goDay(-1)}
-          >
+        <div className="flex items-center justify-between mt-3">
+          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-white hover:bg-white/20" onClick={() => goDay(-1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          <span className="text-sm font-semibold text-white">
             {fmtDate(selectedDate)}
             {selectedDate === moment().format("DD-MM-YYYY") && (
-              <Badge className="ml-2 text-[10px] h-4 bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300 border-0">
+              <Badge className="ml-2 text-[10px] h-4 bg-white/20 text-white border-0">
                 Today
               </Badge>
             )}
           </span>
-          <Button
-            size="sm" variant="ghost"
-            className="h-8 w-8 p-0"
-            onClick={() => goDay(1)}
-          >
+          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-white hover:bg-white/20" onClick={() => goDay(1)}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

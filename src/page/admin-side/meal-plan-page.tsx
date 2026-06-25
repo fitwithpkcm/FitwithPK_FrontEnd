@@ -20,6 +20,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "../../components/ui/dialog";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
+import { AdminPageHeader } from "../../components/layout/page-header";
 import { useAuth } from "../../hooks/use-auth";
 import { queryClient } from "../../lib/queryClient";
 import { BASE_URL } from "../../common/Constant";
@@ -810,44 +811,31 @@ export default function AdminMealPlanPage() {
       {/* ══════════════════════════════════════════════════════════
           HEADER
       ══════════════════════════════════════════════════════════ */}
-      <header className="bg-white border-b border-gray-100 px-4 pt-3 pb-0">
-
-        {/* top row: title + actions */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-sm">
-              <UtensilsCrossed className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <h1 className="text-base font-extrabold text-gray-900 leading-none">Meal Plans</h1>
-              <p className="text-[11px] text-gray-400 leading-none mt-0.5">
-                {selectedClient ? selectedClient.FirstName + " " + selectedClient.LastName : "Select a client"}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            {plan && !isNewPlan && (
-              <button
-                onClick={() => setViewMode(v => !v)}
-                className={`flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
-                  viewMode ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-gray-50 border-gray-200 text-gray-500"
-                }`}
-              >
-                {viewMode ? <><Edit3 className="h-3 w-3" />Edit</> : <><Eye className="h-3 w-3" />Progress</>}
-              </button>
-            )}
-            {plan && !viewMode && (
-              <button
-                onClick={() => setSettingsOpen(s => !s)}
-                className={`p-2 rounded-full transition-colors ${settingsOpen ? "bg-orange-50 text-orange-500" : "bg-gray-50 text-gray-400 hover:text-gray-600"}`}
-              >
-                <Settings2 className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+      <AdminPageHeader title="Meal Plans" subtitle="FitwithPK Admin" right={
+        <div className="flex items-center gap-1.5">
+          {plan && !isNewPlan && (
+            <button
+              onClick={() => setViewMode(v => !v)}
+              className={`flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+                viewMode ? "bg-white/30 border-white/40 text-white" : "bg-white/10 border-white/20 text-white/80"
+              }`}
+            >
+              {viewMode ? <><Edit3 className="h-3 w-3" />Edit</> : <><Eye className="h-3 w-3" />Progress</>}
+            </button>
+          )}
+          {plan && !viewMode && (
+            <button
+              onClick={() => setSettingsOpen(s => !s)}
+              className={`p-2 rounded-full transition-colors ${settingsOpen ? "bg-white/30 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+            >
+              <Settings2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
+      } />
 
+      {/* client selector + date navigation */}
+      <div className="bg-white border-b border-gray-100 px-4 pt-3 pb-0">
         {/* client selector */}
         <select
           className="w-full h-9 rounded-xl border border-gray-200 bg-gray-50 text-sm px-3 text-gray-800 font-medium mb-3"
@@ -880,7 +868,7 @@ export default function AdminMealPlanPage() {
             </button>
           )}
         </div>
-      </header>
+      </div>
 
       {/* ══════════════════════════════════════════════════════════
           SETTINGS PANEL (collapsible, slides in below header)

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { AdminPageHeader } from "../../components/layout/page-header";
 import { format, parse, parseISO } from 'date-fns';
 import PhotoViewer from './photo-viewer';
 import { ProgressPhoto } from './weekly-track-view';
@@ -117,13 +118,11 @@ export default function AllPhotosView({ userId, allPhotos, onBack }: AllPhotosVi
   };
 
   return (
-    <div className="h-full w-full">
-      {/* Header (no back button needed since it's in a popup) */}
-      <div className="mb-4">
-        <div>
-          {<p className="text-sm text-gray-400 mb-2">Basil</p>}
-        </div>
-      </div>
+    <div className="h-full w-full flex flex-col">
+      <AdminPageHeader
+        title="Progress Photos"
+        onBack={onBack}
+      />
 
       {/* Photos by month */}
       <div className="space-y-8">

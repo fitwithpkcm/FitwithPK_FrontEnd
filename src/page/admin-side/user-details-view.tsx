@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { format, subDays } from "date-fns";
 import { ActivityIcon, ArrowLeft, Check, Clock, Droplet, X } from "lucide-react";
+import { AdminPageHeader } from "../../components/layout/page-header";
 import { useQuery } from "@tanstack/react-query";
 import { IDailyStats, IUpdatesForUser } from "../../interface/IDailyUpdates";
 import { getUserListWithUpdates_ForCoach } from "../../services/AdminServices";
@@ -231,13 +232,11 @@ export default function UserDailyDetailView({ userId, onBack }: UserDetailViewPr
 
   return (
     <div className="p-0">
-      {/* Header */}
-      <div className="flex items-center mb-3 px-2">
-        <div>
-          <h1 className="text-xl font-bold">{user.name}</h1>
-          <p className="text-sm text-gray-500">Tracking History</p>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Client Details"
+        subtitle="Tracking History"
+        onBack={onBack}
+      />
 
       {/* Daily tracking cards */}
 

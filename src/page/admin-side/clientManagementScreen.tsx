@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Users, Play, Pause, X, Search } from "lucide-react";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
+import { AdminPageHeader } from "../../components/layout/page-header";
 import { IUpdatesForUser } from "../../interface/IDailyUpdates";
 import { IUser } from "../../interface/models/User";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -107,12 +108,9 @@ export default function ClientManagementScreen() {
   return (
 
     <>
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-50 flex items-center justify-center px-4">
-        <h1 className="font-bold text-lg text-gray-900 dark:text-white">FitwithPKAdmin</h1>
-      </header>
+      <AdminPageHeader title="Client Management" subtitle="FitwithPK Admin" right={<div className="text-xs text-white/80">{filteredClients?.length ?? 0} clients</div>} />
 
-      <div className="p-4 mt-14 h-full w-full bg-gray-50">
+      <div className="p-4 h-full w-full bg-gray-50">
         {/* Header */}
         <div className="flex items-center mb-6">
           <div className="bg-blue-100 p-3 rounded-full mr-4">

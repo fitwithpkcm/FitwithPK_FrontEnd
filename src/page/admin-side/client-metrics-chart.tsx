@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Calendar, ArrowLeft, ChevronLeft, ChevronRight, User } from "lucide-react";
+import { AdminPageHeader } from "../../components/layout/page-header";
 import { format, subDays } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { IDailyStats, IUpdatesForUser } from "../../interface/IDailyUpdates";
@@ -183,26 +184,12 @@ const [endDate, setEndDate] = useState(format(endOfWeek(new Date(), { weekStarts
   };
 
   return (
-    <div className="p-4 h-full w-full bg-gray-50">
+    <div className="h-full w-full bg-gray-50 flex flex-col">
 
-      <header className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-50 flex items-center justify-center px-4">
-        <h1 className="font-bold text-lg text-gray-900 dark:text-white">FitwithPKAdmin</h1>
-      </header>
+      <AdminPageHeader title="Client Analytics" subtitle="FitwithPK Admin" />
 
-      {/* Header with Back Button */}
-      {/* {onBack && (
-        <div className="flex items-center mb-6">
-          <button
-            onClick={onBack}
-            className="mr-3 p-2 hover:bg-gray-100 rounded-full flex items-center gap-2 text-gray-600"
-          >
-            <ArrowLeft size={20} />
-            <span>Back</span>
-          </button>
-        </div>
-      )} */}
-
-      <div className="bg-white rounded-lg border p-6">
+      <div className="p-4 flex-1 overflow-y-auto">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         {/* Client Selection - Scalable Design */}
         <div className="mb-6">
           <div className="text-sm text-gray-600 mb-3">Select Client</div>
@@ -309,6 +296,8 @@ const [endDate, setEndDate] = useState(format(endOfWeek(new Date(), { weekStarts
         <div className="mt-4 text-center text-xs text-gray-400">
           {selectedClient} • {format(new Date(startDate), 'MMM dd')} - {format(new Date(endDate), 'MMM dd, yyyy')}
         </div>
+      </div>
+
       </div>
 
       {/* Bottom Navigation */}

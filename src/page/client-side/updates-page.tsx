@@ -805,37 +805,36 @@ export default function UpdatesPage() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      <header className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 py-4 px-4 sm:px-6">
+      <header className="flex-shrink-0 bg-gradient-to-r from-blue-700 to-blue-600 px-4 py-4 sm:px-6">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Updates</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{selectedDate!.toDateString()}</p>
+              <h1 className="text-xl font-bold text-white">Updates</h1>
+              <p className="text-xs text-blue-200">{selectedDate!.toDateString()}</p>
             </div>
             <Button
               onClick={() => {
                 setIsEditing(false);
                 setEditingItemId(null);
-                //form showed based on tab selected daily/weekly
                 addUpdateShowView();
-
               }}
-              variant="outline" size="sm" className="mr-2 text-xs"
+              variant="outline" size="sm"
+              className="bg-white/15 border-white/30 text-white hover:bg-white/25 text-xs backdrop-blur-sm"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4 mr-1" />
               Add Update
             </Button>
           </div>
           <div className="flex items-center justify-between">
             <Tabs value={activeView} onValueChange={(val) => setActiveView(val as "daily" | "weekly")}>
-              <TabsList className="grid w-40 grid-cols-2">
-                <TabsTrigger value="daily">Daily</TabsTrigger>
-                <TabsTrigger value="weekly">Weekly</TabsTrigger>
+              <TabsList className="grid w-40 grid-cols-2 bg-white/20">
+                <TabsTrigger value="daily" className="text-white data-[state=active]:bg-white data-[state=active]:text-blue-700 text-xs">Daily</TabsTrigger>
+                <TabsTrigger value="weekly" className="text-white data-[state=active]:bg-white data-[state=active]:text-blue-700 text-xs">Weekly</TabsTrigger>
               </TabsList>
             </Tabs>
             <button
               onClick={() => setShowCalendar(true)}
-              className="flex items-center justify-center rounded-full w-9 h-9 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+              className="flex items-center justify-center rounded-full w-9 h-9 bg-white/20 hover:bg-white/30 text-white transition-colors"
             >
               <CalendarIcon className="h-5 w-5" />
             </button>

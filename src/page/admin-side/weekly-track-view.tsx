@@ -20,6 +20,7 @@ import { IWeeklyStatsExtended, IWeeklyUpdatesForUser } from "../../interface/IWe
 import { getUserListWithWeeklyUpdates_ForCoach } from "../../services/AdminServices";
 import { useQuery } from "@tanstack/react-query";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
+import { AdminPageHeader } from "../../components/layout/page-header";
 import GraphDataChart from "./AdminProgressWeeklyChart";
 import { IBodyMeasurement } from "../../interface/IBodyMeasurement";
 import { getProgressGallery, getWeeklyUpdate } from "../../services/UpdateServices";
@@ -317,16 +318,11 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
   return (
     <div className="p-0 h-full w-full">
 
-      {/* Header */}
-      <div className="flex items-center mb-4 px-2">
-        <div className="flex-1">
-          <h1 className="text-xl font-bold">Updates</h1>
-          <h3>{`${user?.FirstName} ${user?.LastName}`}</h3>
-          <p className="text-sm text-gray-500">
-            {format(new Date(), "EEEE, MMMM d")}
-          </p>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Weekly Tracking"
+        subtitle={user ? `${user.FirstName} ${user.LastName}` : undefined}
+        onBack={onBack}
+      />
 
       {/* View Tabs */}
       <div className="flex bg-gray-100 mb-4 p-1 mx-0">
