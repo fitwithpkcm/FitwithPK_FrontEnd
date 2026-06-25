@@ -53,14 +53,25 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
-  // Check localStorage for existing session
+  // Read existing session synchronously so user is available on first render
+  // (avoids the redirect loop caused by staleTime:Infinity + initialData:null)
+  const storedSession = (() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? (JSON.parse(raw) as ILoginUserData) : null;
+    } catch {
+      return null;
+    }
+  })();
+
   const { data: user, error, isLoading, refetch } = useQuery<ILoginUserData | null, Error>({
     queryKey: ["userData"],
     queryFn: async () => {
       const storedUser = localStorage.getItem("userData");
       return storedUser ? JSON.parse(storedUser) : null;
     },
-    initialData: null
+    initialData: storedSession,
+    staleTime: Infinity,
   });
 
   useEffect(() => {

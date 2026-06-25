@@ -61,6 +61,7 @@ export const API_URL = {
     USER_LIST_DUPDATES_FOR_COACH: "/user/getAllUserListWithUpdates",
     USER_LIST_WUPDATES_FOR_COACH: "/user/getAllUserListWithWeeklyUpdates",
     APPROVE_USER: "/user/approveuser",
+    ADD_CLIENT_BY_ADMIN: "/user/addClientByAdmin",
     DAILY_UPADTE: "/student/dailyStudentUpdates",
     WEEKLY_UPDATES: '/student/weeklyStudentUpdates',
     GET_WEEKLY_UPDATES: "/student/getStudentWeeklyUpdate",

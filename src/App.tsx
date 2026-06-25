@@ -15,6 +15,7 @@ import HomePage from './page/client-side/home-page'
 import UpdatesPage from './page/client-side/updates-page';
 import NutritionPage from './page/client-side/nutrition-page';
 import OnBoardPage from './page/client-side/intake-form-page';
+import { ClientRoute } from './lib/protected-route';
 import ProfilePage from './page/client-side/profile-page';
 import AdminDashboard from './page/admin-side/admin-dashboard';
 import SimpleTrackingView from './page/admin-side/simple-tracking-view';
@@ -36,11 +37,11 @@ function Router() {
     <Switch>
       <Route path="/" component={AuthPage} />
       <Route path="/auth" component={AuthPage} />
-      <Route path={RENDER_URL.STUDENT_DASHBOARD} component={HomePage} />
-      <Route path={RENDER_URL.STUDENT_ONBOARD} component={OnBoardPage} />
-      <Route path={RENDER_URL.STUDENT_UPDATES} component={UpdatesPage} />
-      <Route path={RENDER_URL.STUDENT_NUTRI_SWAP} component={NutritionPage} />
-      <Route path={RENDER_URL.STUDENT_PROFILE} component={ProfilePage} />
+      <ClientRoute path={RENDER_URL.STUDENT_ONBOARD} component={OnBoardPage} />
+      <ClientRoute path={RENDER_URL.STUDENT_DASHBOARD} component={HomePage} />
+      <ClientRoute path={RENDER_URL.STUDENT_UPDATES} component={UpdatesPage} />
+      <ClientRoute path={RENDER_URL.STUDENT_NUTRI_SWAP} component={NutritionPage} />
+      <ClientRoute path={RENDER_URL.STUDENT_PROFILE} component={ProfilePage} />
 
 
       {/* admin pages */}

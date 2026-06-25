@@ -134,8 +134,15 @@ export default function IntakeFormPage() {
   // Fetch existing profile data
   const { data: profileData, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: ["onboarduser-attributes"],
-    queryFn: () => fetchOnBoardUserAttributes(null).then((res: ApiResponse<UserProfile>) => res.data.data)
+    queryFn: () => fetchOnBoardUserAttributes(null).then((res: ApiResponse<UserProfile>) => res.data.data),
+    staleTime: 5 * 60 * 1000,
   });
+
+  // Profile is considered complete once the user has filled the key fields
+  // (age from Basic Info, height/weight from Measurements, fitnessGoals from Goals)
+  const isProfileComplete = !!(profileData?.age && profileData?.height && profileData?.weight && profileData?.fitnessGoals);
+  // Show onboarding/locked UI whenever profile is not yet complete
+  const isOnboarding = profileData != null && !isProfileComplete;
 
   // Form setup
   const form = useForm<IntakeFormValues>({
@@ -245,15 +252,13 @@ export default function IntakeFormPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["onboarduser-attributes"] });
-      // Clear the saved form data from localStorage after successful submission
       localStorage.removeItem(LOCAL_STORAGE_KEY);
       toast({
         title: "Profile Updated",
         description: "Your information has been saved successfully.",
       });
-      /* if (activeTab == 'goals') {
-        setLocation(RENDER_URL.STUDENT_DASHBOARD);
-      } */
+      // Always go to dashboard after saving the final tab
+      setLocation(RENDER_URL.STUDENT_DASHBOARD);
     },
     onError: (error) => {
       toast({
@@ -279,8 +284,20 @@ export default function IntakeFormPage() {
     { id: "goals", label: "Goals" },
   ];
 
-  const nextTab = (e?: React.MouseEvent) => {
-    e?.preventDefault(); // Prevent default form submission
+  const [isSavingTab, setIsSavingTab] = useState(false);
+
+  /** Silently save the current form state to the DB, then advance the tab */
+  const nextTab = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    setIsSavingTab(true);
+    try {
+      await onBoardProfileAttributeUpdates(form.getValues());
+      queryClient.invalidateQueries({ queryKey: ["onboarduser-attributes"] });
+    } catch {
+      // Non-blocking — still advance so the user isn't stuck
+    } finally {
+      setIsSavingTab(false);
+    }
     const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
     if (currentIndex < tabs.length - 1) {
       setActiveTab(tabs[currentIndex + 1].id);
@@ -292,7 +309,8 @@ export default function IntakeFormPage() {
     const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
     if (currentIndex > 0) {
       setActiveTab(tabs[currentIndex - 1].id);
-    } else {
+    } else if (!isOnboarding) {
+      // Only allow going back to dashboard if profile is already complete
       setLocation(RENDER_URL.STUDENT_DASHBOARD);
     }
   };
@@ -346,39 +364,47 @@ export default function IntakeFormPage() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      <PageHeader
-        title="Update Profile"
-        subtitle="Tell us about yourself"
-        onBack={() => setLocation(RENDER_URL.STUDENT_DASHBOARD)}
-        right={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ["onboarduser-attributes"] });
-            }}
-            className="flex items-center gap-1"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+      {isOnboarding ? (
+        <header className="flex-shrink-0 bg-gradient-to-r from-blue-700 to-blue-600 px-4 py-5 sm:px-6">
+          <p className="text-blue-200 text-xs font-semibold uppercase tracking-wide">Welcome to FitwithPK</p>
+          <h1 className="text-white text-xl font-bold mt-1">Let's set up your profile</h1>
+          <p className="text-blue-100 text-sm mt-1">Complete all sections so your coach can personalise your plan.</p>
+        </header>
+      ) : (
+        <PageHeader
+          title="Update Profile"
+          subtitle="Tell us about yourself"
+          onBack={() => setLocation(RENDER_URL.STUDENT_DASHBOARD)}
+          right={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ["onboarduser-attributes"] });
+              }}
+              className="flex items-center gap-1"
             >
-              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-              <path d="M16 16h5v5" />
-            </svg>
-            Refresh
-          </Button>
-        }
-      />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                <path d="M16 16h5v5" />
+              </svg>
+              Refresh
+            </Button>
+          }
+        />
+      )}
 
       <main className="flex-1 overflow-y-auto pb-20 bg-gray-50 dark:bg-gray-950">
         <div className="max-w-3xl mx-auto p-4 sm:p-6">
@@ -1183,28 +1209,35 @@ export default function IntakeFormPage() {
                 </TabsContent>
               </Tabs>
 
-              {/* // Update your navigation buttons */}
               <div className="flex justify-between pt-4">
-                <Button type="button" variant="outline" onClick={prevTab}>
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  {activeTab === "basic-info" ? "Cancel" : "Previous"}
-                </Button>
+                {/* Hide back/cancel on the first tab during onboarding */}
+                {!(isOnboarding && activeTab === "basic-info") ? (
+                  <Button type="button" variant="outline" onClick={prevTab}>
+                    <ChevronLeft className="h-4 w-4 mr-2" />
+                    {activeTab === "basic-info" ? "Cancel" : "Previous"}
+                  </Button>
+                ) : (
+                  <div /> /* spacer so Next stays right-aligned */
+                )}
 
                 {activeTab === "goals" ? (
                   <Button
-                    type="submit" // Only this button submits the form
+                    type="submit"
                     disabled={updateProfileMutation.isPending}
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    {updateProfileMutation.isPending ? "Saving..." : "Save Profile"}
+                    {updateProfileMutation.isPending
+                      ? "Saving..."
+                      : isOnboarding ? "Complete Setup" : "Save Profile"}
                   </Button>
                 ) : (
                   <Button
-                    type="button" // Important: Must be type="button"
-                    onClick={(e) => nextTab(e)} // Pass the event to prevent default
+                    type="button"
+                    onClick={(e) => nextTab(e)}
+                    disabled={isSavingTab}
                   >
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-2" />
+                    {isSavingTab ? "Saving…" : "Next"}
+                    {!isSavingTab && <ChevronRight className="h-4 w-4 ml-2" />}
                   </Button>
                 )}
               </div>
@@ -1313,7 +1346,7 @@ export default function IntakeFormPage() {
         </DialogContent>
       </Dialog>
 
-      <MobileNav />
+      {!isOnboarding && <MobileNav />}
     </div>
   );
 }

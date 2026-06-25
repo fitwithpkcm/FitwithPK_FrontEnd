@@ -609,11 +609,16 @@ export default function HomePage() {
                 : pushStatus === 'subscribing' ? 'text-blue-700'
                 : 'text-orange-800'
               }>
-                {pushStatus === 'denied'
-                  ? 'Notifications blocked — allow them in browser settings to receive coach reminders.'
-                  : pushStatus === 'subscribing'
-                  ? 'Enabling notifications…'
-                  : 'Tap Enable so your coach can send you reminders.'}
+                {pushStatus === 'denied' ? (
+                  <span>
+                    Notifications blocked.{' '}
+                    <strong>To fix:</strong> open your browser Settings → Site Settings → Notifications → find this site → set to <strong>Allow</strong>, then reload the app.
+                  </span>
+                ) : pushStatus === 'subscribing' ? (
+                  'Enabling notifications…'
+                ) : (
+                  'Enable notifications so your coach can send you reminders.'
+                )}
               </span>
             </div>
             {(pushStatus === 'idle' || pushStatus === 'error') && (

@@ -22,17 +22,33 @@ async function saveSubscription(subscription: PushSubscription): Promise<void> {
 }
 
 async function doSubscribe(): Promise<PushStatus> {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported';
-  if (VAPID_PUBLIC_KEY === 'YOUR_VAPID_PUBLIC_KEY_HERE') return 'error';
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.log('[Push] Push notifications not supported on this browser/device');
+    return 'unsupported';
+  }
 
-  // Request permission — must be called in response to a user gesture in Firefox
+  if (VAPID_PUBLIC_KEY === 'YOUR_VAPID_PUBLIC_KEY_HERE') {
+    console.error('[Push] VAPID public key not configured');
+    return 'error';
+  }
+
+  // If already denied, the browser will NOT show a dialog — inform the user
+  if (Notification.permission === 'denied') {
+    console.log('[Push] Permission already denied — user must enable from browser settings');
+    return 'denied';
+  }
+
+  console.log('[Push] Requesting notification permission, current state:', Notification.permission);
   const permission = await Notification.requestPermission();
+  console.log('[Push] Permission result:', permission);
+
   if (permission === 'denied') return 'denied';
   if (permission !== 'granted') return 'idle';
 
   const registration = await navigator.serviceWorker.ready;
+  console.log('[Push] Service worker ready:', registration);
 
-  // Reuse existing subscription
+  // Reuse existing subscription if present
   let sub = await registration.pushManager.getSubscription();
   if (!sub) {
     sub = await registration.pushManager.subscribe({
@@ -45,14 +61,6 @@ async function doSubscribe(): Promise<PushStatus> {
   return 'subscribed';
 }
 
-/**
- * Returns { status, subscribe }
- *  - status: current push subscription state
- *  - subscribe: call this from a button click to trigger subscription (works in all browsers)
- *
- * The hook also attempts auto-subscribe on mount (works in Chrome, may be silently
- * skipped in Firefox — in that case the user must click the Enable Notifications button).
- */
 export function usePushNotification(): { status: PushStatus; subscribe: () => void } {
   const [status, setStatus] = useState<PushStatus>('idle');
 
@@ -61,26 +69,30 @@ export function usePushNotification(): { status: PushStatus; subscribe: () => vo
     setStatus('subscribing');
     try {
       const result = await doSubscribe();
-      console.log('[Push] status →', result);
+      console.log('[Push] Final status →', result);
       setStatus(result);
     } catch (err) {
-      console.warn('[Push] Subscribe error:', err);
+      console.error('[Push] Subscribe error:', err);
       setStatus('error');
     }
   };
 
   useEffect(() => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      console.log('[Push] status → unsupported');
       setStatus('unsupported');
       return;
     }
-    console.log('[Push] Notification.permission =', Notification.permission);
-    // Only auto-run if permission is already granted (no popup needed)
+
+    // Sync the UI with the actual browser permission state on mount
+    if (Notification.permission === 'denied') {
+      setStatus('denied');
+      return;
+    }
+
+    // Auto-subscribe if permission already granted (no popup needed)
     if (Notification.permission === 'granted') {
       subscribe();
     }
-    // If permission is 'default' or 'denied', wait for the user to click Enable
   }, []);
 
   return { status, subscribe };

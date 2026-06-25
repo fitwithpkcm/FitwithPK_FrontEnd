@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Users, Play, Pause, X, Search } from "lucide-react";
+import { Users, Play, Pause, X, Search, UserPlus } from "lucide-react";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
 import { AdminPageHeader } from "../../components/layout/page-header";
 import { IUpdatesForUser } from "../../interface/IDailyUpdates";
 import { IUser } from "../../interface/models/User";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { getUserListForACoach, setUpdateActiveStatus } from "../../services/AdminServices";
+import { getUserListForACoach, setUpdateActiveStatus, addClientByAdmin } from "../../services/AdminServices";
 import { useAuth } from "../../hooks/use-auth";
 import { ACCESS_STATUS, AccessStatusType } from "../../common/Constant";
+import toast from "react-hot-toast";
 
 import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
@@ -20,6 +21,12 @@ export default function ClientManagementScreen() {
   const { user } = useAuth();
   const [clientList, setClientList] = useState<IUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Add Client modal state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newFirstName, setNewFirstName] = useState("");
+  const [newLastName, setNewLastName] = useState("");
 
   const handleStatusChange = (clientId: number, newStatus: number) => {
     setClientList(prev =>
@@ -72,6 +79,21 @@ export default function ClientManagementScreen() {
     }
   });
 
+  const { mutate: addClient, isPending: addingClient } = useMutation({
+    mutationFn: () => addClientByAdmin({ EmailID: newEmail, FirstName: newFirstName, LastName: newLastName }),
+    onSuccess: (res: any) => {
+      if (res.data?.success) {
+        toast.success("Client added! They can now log in with their email and set their password.");
+        setShowAddModal(false);
+        setNewEmail(""); setNewFirstName(""); setNewLastName("");
+        queryClient.invalidateQueries({ queryKey: ["coach-userlist"] });
+      } else {
+        toast.error(res.data?.message || "Failed to add client");
+      }
+    },
+    onError: () => toast.error("Failed to add client"),
+  });
+
 
   const filteredClients = coach_client_list?.filter(client =>
     client.FirstName!.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -108,7 +130,19 @@ export default function ClientManagementScreen() {
   return (
 
     <>
-      <AdminPageHeader title="Client Management" subtitle="FitwithPK Admin" right={<div className="text-xs text-white/80">{filteredClients?.length ?? 0} clients</div>} />
+      <AdminPageHeader
+        title="Client Management"
+        subtitle="FitwithPK Admin"
+        right={
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-xl transition-colors"
+          >
+            <UserPlus size={15} />
+            Add Client
+          </button>
+        }
+      />
 
       <div className="p-4 h-full w-full bg-gray-50">
         {/* Header */}
@@ -228,6 +262,73 @@ export default function ClientManagementScreen() {
 
       {/* Bottom Navigation */}
       <MobileAdminNav />
+
+      {/* Add Client Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-gray-900">Add New Client</h2>
+              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-500 mb-5 leading-relaxed">
+              Enter the client's details. They will log in with this email and set their own password on first login.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Email Address *</label>
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                  placeholder="client@example.com"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">First Name *</label>
+                <input
+                  type="text"
+                  value={newFirstName}
+                  onChange={e => setNewFirstName(e.target.value)}
+                  placeholder="First name"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Last Name</label>
+                <input
+                  type="text"
+                  value={newLastName}
+                  onChange={e => setNewLastName(e.target.value)}
+                  placeholder="Last name (optional)"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => addClient()}
+                disabled={!newEmail || !newFirstName || addingClient}
+                className="flex-1 py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {addingClient ? "Adding…" : "Add Client"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
 
   );

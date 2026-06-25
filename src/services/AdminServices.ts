@@ -47,6 +47,14 @@ export const getUserListWithWeeklyUpdates_ForCoach = (params: unknown) => {
 };
 
 
+export const addClientByAdmin = (params: { EmailID: string; FirstName: string; LastName?: string }) => {
+    return httpCall({
+        url: API_URL.ADD_CLIENT_BY_ADMIN,
+        method: "post",
+        data: params,
+    });
+};
+
 export const setUpdateActiveStatus = (params: unknown) => {
     return httpCall({
         url: API_URL.APPROVE_USER,
