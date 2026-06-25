@@ -506,8 +506,18 @@ export default function ProfilePage() {
           </TabsContent>
 
 
+          {/* Coach portfolio */}
+          {<TabsContent value="coach" className="mt-0 p-0" style={{ height: "calc(100vh - 130px)" }}>
+              <iframe
+                src="https://portfolio.fitwithpk.com/"
+                className="w-full h-full border-0"
+                title="Coach Portfolio"
+                allow="fullscreen"
+              />
+            </TabsContent>}
+
           {/* {coach basil details } */}
-          {myCoachDetails &&
+          {false && myCoachDetails &&
             <TabsContent value="coach" className="mt-0 space-y-6">
               {/* Coach Info */}
               <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
