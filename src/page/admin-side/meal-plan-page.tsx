@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useImperativeHandle, forwardRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Plus, Trash2, Pencil, Copy, Check, X, ChevronDown, ChevronUp,
   GripVertical, Save, CalendarDays, User, UtensilsCrossed, AlertCircle,
   Search, Eye, Edit3, ShoppingBasket, ChevronLeft, ChevronRight,
-  Settings2, Flame, Repeat2,
+  Settings2, Flame, Repeat2, HelpCircle, Send, MessageCircle, RefreshCw,
 } from "lucide-react";
 import moment from "moment";
 import toast from "react-hot-toast";
@@ -19,7 +19,10 @@ import { Progress } from "../../components/ui/progress";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "../../components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
+import { Calendar } from "../../components/ui/calendar";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
+import { useLocation } from "wouter";
 import { AdminPageHeader } from "../../components/layout/page-header";
 import { useAuth } from "../../hooks/use-auth";
 import { queryClient } from "../../lib/queryClient";
@@ -31,6 +34,9 @@ import {
   getMealPlansForClient, createMealPlan, updateMealPlan,
   deleteMealPlan, copyMealPlan, getMealLogsForClient,
 } from "../../services/MealPlanService";
+import {
+  IMealQuery, getMealQueriesForClient, replyMealQuery,
+} from "../../services/MealQueryService";
 import {
   IMealPlan, IMealFoodItem, IMealLog, MealType,
   MEAL_TYPES, MEAL_META, COMMON_UNITS, createBlankPlan,
@@ -158,7 +164,7 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
         key={food.name}
         className={`rounded-xl border transition-all duration-150 ${
           inCart
-            ? "border-primary-300 bg-primary-50 dark:border-primary-700 dark:bg-primary-950/30"
+            ? "border-orange-300 bg-orange-50 dark:border-orange-700 dark:bg-orange-950/30"
             : "border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900 hover:border-gray-200"
         }`}
       >
@@ -167,15 +173,15 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
             onClick={() => toggleFood(food)}
             className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
               inCart
-                ? "bg-primary-600 border-primary-600"
-                : "border-gray-300 dark:border-gray-600 hover:border-primary-400"
+                ? "bg-orange-600 border-orange-600"
+                : "border-gray-300 dark:border-gray-600 hover:border-orange-400"
             }`}
           >
             {inCart && <Check className="h-3.5 w-3.5 text-white" />}
           </button>
           <div className="flex-1 min-w-0" onClick={() => toggleFood(food)}>
             <p className={`text-sm font-semibold truncate cursor-pointer ${
-              inCart ? "text-primary-800 dark:text-primary-200" : "text-gray-800 dark:text-gray-200"
+              inCart ? "text-orange-800 dark:text-orange-200" : "text-gray-800 dark:text-gray-200"
             }`}>
               {food.name}
             </p>
@@ -191,9 +197,9 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
           {!inCart ? (
             <button
               onClick={() => toggleFood(food)}
-              className="flex-shrink-0 w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center hover:bg-primary-200 transition-colors"
+              className="flex-shrink-0 w-7 h-7 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center hover:bg-orange-200 transition-colors"
             >
-              <Plus className="h-4 w-4 text-primary-600 dark:text-primary-400" />
+              <Plus className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             </button>
           ) : (
             <button
@@ -214,13 +220,13 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
               onClick={e => e.stopPropagation()}
               min="0"
               step="any"
-              className="w-20 h-7 text-sm text-center px-1 bg-white dark:bg-gray-800 border-primary-200 dark:border-primary-700"
+              className="w-20 h-7 text-sm text-center px-1 bg-white dark:bg-gray-800 border-orange-200 dark:border-orange-700"
             />
             <select
               value={entry.unit}
               onChange={e => updateUnit(food.name, e.target.value)}
               onClick={e => e.stopPropagation()}
-              className="flex-1 h-7 rounded-md border border-primary-200 dark:border-primary-700 bg-white dark:bg-gray-800 text-xs px-1.5 text-gray-900 dark:text-gray-100"
+              className="flex-1 h-7 rounded-md border border-orange-200 dark:border-orange-700 bg-white dark:bg-gray-800 text-xs px-1.5 text-gray-900 dark:text-gray-100"
             >
               {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
             </select>
@@ -241,7 +247,7 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
               <span className="text-xl">{meta.emoji}</span>
               Add foods to <span className={`font-bold ${meta.badgeText}`}>{meta.label}</span>
               {cartCount > 0 && (
-                <span className="ml-auto flex-shrink-0 bg-primary-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+                <span className="ml-auto flex-shrink-0 bg-orange-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
                   {cartCount} selected
                 </span>
               )}
@@ -308,7 +314,7 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
           {/* ── selected foods pinned at top (always visible regardless of search) ── */}
           {cartCount > 0 && (
             <>
-              <p className="text-[10px] font-bold text-primary-600 dark:text-primary-400 uppercase tracking-wide px-1 pt-1">
+              <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wide px-1 pt-1">
                 ✓ Selected ({cartCount}) — search more to add
               </p>
               {Array.from(cart.values()).map(entry => renderFoodRow(entry.food, entry))}
@@ -333,14 +339,14 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
         <div className={`border-t px-4 py-3 bg-white dark:bg-gray-900 ${meta.borderColor}`}>
           {cartCount > 0 && (
             <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-              <ShoppingBasket className="h-3.5 w-3.5 text-primary-600 flex-shrink-0" />
-              <span className="text-xs font-semibold text-primary-700 dark:text-primary-300">
+              <ShoppingBasket className="h-3.5 w-3.5 text-orange-600 flex-shrink-0" />
+              <span className="text-xs font-semibold text-orange-700 dark:text-orange-300">
                 {cartCount} food{cartCount !== 1 ? "s" : ""} selected:
               </span>
               {Array.from(cart.values()).map(e => (
                 <span
                   key={e.food.name}
-                  className="text-[10px] bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded-full"
+                  className="text-[10px] bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded-full"
                 >
                   {e.food.name} · {e.qty} {e.unit}
                 </span>
@@ -376,63 +382,74 @@ interface FoodItemFormProps {
   initial?: IMealFoodItem;
   onSave: (item: Omit<IMealFoodItem, "IdFoodItem" | "IdMeal">) => void;
   onCancel: () => void;
+  onDataChange?: (hasData: boolean) => void;
 }
+interface FoodItemFormHandle { submit: () => void; }
 
-function FoodItemForm({ initial, onSave, onCancel }: FoodItemFormProps) {
-  const [name, setName] = useState(initial?.FoodName ?? "");
-  const [qty,  setQty]  = useState<string>(initial?.PlannedQty?.toString() ?? "");
-  const [unit, setUnit] = useState(initial?.Unit ?? "g");
-  const nameRef = useRef<HTMLInputElement>(null);
+const FoodItemForm = forwardRef<FoodItemFormHandle, FoodItemFormProps>(
+  function FoodItemForm({ initial, onSave, onCancel, onDataChange }, ref) {
+    const [name, setName] = useState(initial?.FoodName ?? "");
+    const [qty,  setQty]  = useState<string>(initial?.PlannedQty?.toString() ?? "");
+    const [unit, setUnit] = useState(initial?.Unit ?? "g");
+    const nameRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { nameRef.current?.focus(); }, []);
+    useEffect(() => { nameRef.current?.focus(); }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) { toast.error("Food name is required"); return; }
-    const parsed = parseFloat(qty);
-    if (isNaN(parsed) || parsed <= 0) { toast.error("Enter a valid quantity"); return; }
-    onSave({ FoodName: name.trim(), PlannedQty: parsed, Unit: unit, SortOrder: initial?.SortOrder ?? 0, Notes: initial?.Notes });
-  };
+    useEffect(() => {
+      onDataChange?.(name.trim().length > 0 || qty.length > 0);
+    }, [name, qty]);
 
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-200 dark:border-blue-800"
-    >
-      <Input
-        ref={nameRef}
-        placeholder="Food name (e.g. Oats, Egg white…)"
-        value={name}
-        onChange={e => setName(e.target.value)}
-        className="h-8 text-sm bg-white dark:bg-gray-800"
-      />
-      <div className="flex gap-2">
+    const doSave = () => {
+      if (!name.trim()) { toast.error("Food name is required"); return; }
+      const parsed = parseFloat(qty);
+      if (isNaN(parsed) || parsed <= 0) { toast.error("Enter a valid quantity"); return; }
+      onSave({ FoodName: name.trim(), PlannedQty: parsed, Unit: unit, SortOrder: initial?.SortOrder ?? 0, Notes: initial?.Notes });
+    };
+
+    useImperativeHandle(ref, () => ({ submit: doSave }));
+
+    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); doSave(); };
+
+    return (
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-200 dark:border-blue-800"
+      >
         <Input
-          type="number"
-          placeholder="Qty"
-          value={qty}
-          onChange={e => setQty(e.target.value)}
-          min="0"
-          step="any"
-          className="w-20 h-8 text-sm bg-white dark:bg-gray-800"
+          ref={nameRef}
+          placeholder="Food name (e.g. Oats, Egg white…)"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          className="h-8 text-sm bg-white dark:bg-gray-800"
         />
-        <select
-          value={unit}
-          onChange={e => setUnit(e.target.value)}
-          className="flex-1 h-8 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-900 dark:text-gray-100"
-        >
-          {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-        </select>
-        <Button type="submit" size="sm" className="h-8 px-3 flex-shrink-0">
-          <Check className="h-3.5 w-3.5" />
-        </Button>
-        <Button type="button" size="sm" variant="ghost" className="h-8 px-2 flex-shrink-0" onClick={onCancel}>
-          <X className="h-3.5 w-3.5" />
-        </Button>
-      </div>
-    </form>
-  );
-}
+        <div className="flex gap-2">
+          <Input
+            type="number"
+            placeholder="Qty"
+            value={qty}
+            onChange={e => setQty(e.target.value)}
+            min="0"
+            step="any"
+            className="w-20 h-8 text-sm bg-white dark:bg-gray-800"
+          />
+          <select
+            value={unit}
+            onChange={e => setUnit(e.target.value)}
+            className="flex-1 h-8 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-900 dark:text-gray-100"
+          >
+            {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+          </select>
+          <Button type="submit" size="sm" className="h-8 px-3 flex-shrink-0">
+            <Check className="h-3.5 w-3.5" />
+          </Button>
+          <Button type="button" size="sm" variant="ghost" className="h-8 px-2 flex-shrink-0" onClick={onCancel}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </form>
+    );
+  }
+);
 
 // ─────────────────────────────────────────────────────────────────
 // Macro helper
@@ -484,8 +501,21 @@ interface MealCardProps {
 function MealCard({ mealType, foodItems, logs, viewMode, onBrowse, onAddManual, onEditFood, onDeleteFood }: MealCardProps) {
   const meta   = MEAL_META[mealType];
   const accent = MEAL_ACCENT[mealType];
-  const [showManual, setShowManual] = useState(false);
-  const [editingSO, setEditingSO]   = useState<number | null>(null);
+  const [showManual,     setShowManual]     = useState(false);
+  const [editingSO,      setEditingSO]      = useState<number | null>(null);
+  const [manualHasData,  setManualHasData]  = useState(false);
+  const [browseConflict, setBrowseConflict] = useState(false);
+  const manualFormRef = useRef<FoodItemFormHandle>(null);
+
+  const handleBrowseClick = () => {
+    if (showManual && manualHasData) {
+      setBrowseConflict(true);
+      return;
+    }
+    setShowManual(false);
+    setBrowseConflict(false);
+    onBrowse();
+  };
 
   const logMap      = new Map(logs.map(l => [l.IdFoodItem, l]));
   const macros      = computeMacros(foodItems);
@@ -520,7 +550,7 @@ function MealCard({ mealType, foodItems, logs, viewMode, onBrowse, onAddManual, 
           )}
           {!viewMode && (
             <button
-              onClick={onBrowse}
+              onClick={handleBrowseClick}
               className={`flex items-center gap-1 text-[11px] font-bold text-white px-3 py-1.5 rounded-full transition-colors ${accent.btn}`}
             >
               <Plus className="h-3 w-3" /> Add
@@ -588,10 +618,42 @@ function MealCard({ mealType, foodItems, logs, viewMode, onBrowse, onAddManual, 
 
           {/* manual add form */}
           {showManual && (
-            <div className="px-4 py-3">
+            <div className="px-4 py-3 space-y-2">
+              {/* conflict banner — shown when user clicks Add while form has data */}
+              {browseConflict && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 flex items-start gap-2">
+                  <span className="text-amber-500 text-base leading-none mt-0.5">⚠</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-amber-800">You have an unsaved custom entry</p>
+                    <p className="text-[11px] text-amber-700 mt-0.5">Save it first or clear it to open the food browser.</p>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => { manualFormRef.current?.submit(); setBrowseConflict(false); }}
+                        className="px-3 py-1 rounded-lg bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-colors"
+                      >
+                        Save it
+                      </button>
+                      <button
+                        onClick={() => { setShowManual(false); setManualHasData(false); setBrowseConflict(false); onBrowse(); }}
+                        className="px-3 py-1 rounded-lg border border-amber-300 text-amber-700 text-xs font-semibold hover:bg-amber-100 transition-colors"
+                      >
+                        Clear &amp; Browse
+                      </button>
+                      <button
+                        onClick={() => setBrowseConflict(false)}
+                        className="ml-auto px-2 py-1 text-amber-400 text-xs hover:text-amber-600 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               <FoodItemForm
-                onSave={item => { onAddManual(item); setShowManual(false); }}
-                onCancel={() => setShowManual(false)}
+                ref={manualFormRef}
+                onSave={item => { onAddManual(item); setShowManual(false); setManualHasData(false); setBrowseConflict(false); }}
+                onCancel={() => { setShowManual(false); setManualHasData(false); setBrowseConflict(false); }}
+                onDataChange={setManualHasData}
               />
             </div>
           )}
@@ -603,7 +665,7 @@ function MealCard({ mealType, foodItems, logs, viewMode, onBrowse, onAddManual, 
         <div className={`px-4 py-3 flex items-center gap-2 ${foodItems.length > 0 ? "border-t border-gray-50" : ""}`}>
           {foodItems.length === 0 && !showManual ? (
             <>
-              <button onClick={onBrowse}
+              <button onClick={handleBrowseClick}
                 className="flex-1 h-9 rounded-xl border-2 border-dashed border-gray-200 text-xs text-gray-400 font-medium hover:border-gray-300 hover:text-gray-500 transition-colors flex items-center justify-center gap-1">
                 <Search className="h-3.5 w-3.5" /> Browse foods
               </button>
@@ -622,6 +684,29 @@ function MealCard({ mealType, foodItems, logs, viewMode, onBrowse, onAddManual, 
       )}
     </div>
   );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Plan dirty-check helper — only compares user-editable fields
+// ─────────────────────────────────────────────────────────────────
+function planSnapshot(p: IMealPlan): string {
+  return JSON.stringify({
+    PlanName: p.PlanName,
+    Notes:    p.Notes ?? "",
+    EndDate:  p.EndDate ?? "",
+    Meals: MEAL_TYPES.map(mt => {
+      const meal = p.Meals.find(m => m.MealType === mt);
+      return {
+        MealType: mt,
+        FoodItems: (meal?.FoodItems ?? []).map(f => ({
+          FoodName:   f.FoodName,
+          PlannedQty: f.PlannedQty,
+          Unit:       f.Unit,
+          SortOrder:  f.SortOrder,
+        })),
+      };
+    }),
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -647,6 +732,16 @@ export default function AdminMealPlanPage() {
 
   // delete confirm
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // snapshot of the last-saved plan for dirty detection
+  const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
+
+  // date calendar popover
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  // range-plan save scope dialog
+  const [saveRangeOpen, setSaveRangeOpen] = useState(false);
+  const [isRangePlan,   setIsRangePlan]   = useState(false);
 
   useEffect(() => { setBaseUrl(BASE_URL); }, []);
 
@@ -683,6 +778,16 @@ export default function AdminMealPlanPage() {
     }),
   });
 
+  // ── TEST: default to Devu Mani ───────────────────────────────
+  useEffect(() => {
+    if (clientList.length > 0 && selectedUserId === null) {
+      const devu = clientList.find(c =>
+        `${c.FirstName} ${c.LastName}`.toLowerCase().includes("devu")
+      );
+      if (devu?.IdUser) { setSelectedUserId(devu.IdUser); setCopyTargetUserId(devu.IdUser); }
+    }
+  }, [clientList]);
+
   // ── plan for selected client + date ──────────────────────────
   const { data: fetchedPlan, isLoading: planLoading } = useQuery({
     queryKey: ["meal-plan-admin", selectedUserId, selectedDate],
@@ -698,6 +803,8 @@ export default function AdminMealPlanPage() {
   const { data: clientLogs = [] } = useQuery<IMealLog[]>({
     queryKey: ["client-meal-logs-admin", selectedUserId, selectedDate],
     enabled: !!selectedUserId && !!selectedDate,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const res = await getMealLogsForClient({ IdUser: selectedUserId!, LogDate: selectedDate }) as { data: { data: IMealLog[] } };
       return res.data?.data ?? [];
@@ -719,28 +826,68 @@ export default function AdminMealPlanPage() {
 
   const planMacros = React.useMemo(() => plan ? computeMacros(plan.Meals.flatMap(m => m.FoodItems)) : null, [plan]);
 
+  // ── client queries ────────────────────────────────────────────
+  const { data: clientQueries = [], refetch: refetchQueries, isFetching: queriesFetching } = useQuery<IMealQuery[]>({
+    queryKey: ["client-meal-queries", selectedUserId, selectedDate],
+    enabled: !!selectedUserId && !!selectedDate,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 30000,
+    queryFn: async () => {
+      const res = await getMealQueriesForClient({ IdUser: selectedUserId!, QueryDate: selectedDate }) as any;
+      const d = res.data?.data;
+      return Array.isArray(d) ? d : [];
+    },
+  });
+
+  const [replyText, setReplyText] = useState<Record<number, string>>({});
+  const [qaOpen, setQaOpen] = useState(false);
+
+  const replyMutation = useMutation({
+    mutationFn: (params: { IdQuery: number; Answer: string }) => replyMealQuery(params),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["client-meal-queries", selectedUserId, selectedDate] });
+      setReplyText(prev => { const n = { ...prev }; delete n[vars.IdQuery]; return n; });
+      toast.success("Reply sent");
+    },
+    onError: (e: Error) => toast.error(`Failed: ${e.message}`),
+  });
+
   // ── sync fetched plan ─────────────────────────────────────────
   useEffect(() => {
     if (!selectedUserId || !selectedDate) { setPlan(null); return; }
     if (fetchedPlan) {
       const meals = MEAL_TYPES.map(mt => fetchedPlan.Meals?.find(m => m.MealType === mt) ?? { MealType: mt, FoodItems: [] });
-      setPlan({ ...fetchedPlan, Meals: meals });
+      const loaded = { ...fetchedPlan, Meals: meals };
+      setPlan(loaded);
+      setSavedSnapshot(planSnapshot(loaded));
       setIsNewPlan(false);
       setViewMode(clientLogs.length > 0);
+      // True when this date is covered by a range plan, not directly assigned to it
+      setIsRangePlan(fetchedPlan.AssignedDate !== selectedDate);
     } else {
       setPlan(createBlankPlan(selectedUserId, selectedDate));
+      setSavedSnapshot(null);
       setIsNewPlan(true);
+      setIsRangePlan(false);
       setViewMode(false);
     }
   }, [fetchedPlan, selectedUserId, selectedDate]);
 
+  // Auto-switch to progress view when logs arrive (clientLogs loads async after fetchedPlan)
+  useEffect(() => {
+    if (clientLogs.length > 0) setViewMode(true);
+  }, [clientLogs]);
+
   // ── mutations ─────────────────────────────────────────────────
   const saveMutation = useMutation({
     mutationFn: (p: IMealPlan) => isNewPlan ? createMealPlan(p) : updateMealPlan(p),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["meal-plan-admin", selectedUserId, selectedDate] });
+    onSuccess: (_, savedPlan) => {
+      queryClient.invalidateQueries({ queryKey: ["meal-plan-admin", selectedUserId] });
       toast.success(isNewPlan ? "Meal plan created!" : "Meal plan updated!");
+      setSavedSnapshot(planSnapshot(savedPlan));
       setIsNewPlan(false);
+      setSaveRangeOpen(false);
       setSettingsOpen(false);
     },
     onError: (e: Error) => toast.error(`Failed to save: ${e.message}`),
@@ -758,8 +905,28 @@ export default function AdminMealPlanPage() {
 
   const copyMutation = useMutation({
     mutationFn: () => copyMealPlan({ IdMealPlan: plan!.IdMealPlan!, TargetDate: copyTargetDate, IdUser: copyTargetUserId ?? selectedUserId! }),
-    onSuccess: () => { setCopyOpen(false); toast.success("Plan copied!"); },
-    onError:   (e: Error) => toast.error(`Failed to copy: ${e.message}`),
+    onSuccess: () => {
+      const targetUserId = copyTargetUserId ?? selectedUserId!;
+      // Invalidate all date queries for the target user so navigating to any copied date shows fresh data
+      queryClient.invalidateQueries({ queryKey: ["meal-plan-admin", targetUserId] });
+      setCopyOpen(false);
+      toast.success("Plan copied!");
+    },
+    onError: (e: Error) => toast.error(`Failed to copy: ${e.message}`),
+  });
+
+  const createSingleDayMutation = useMutation({
+    mutationFn: (p: IMealPlan) => createMealPlan(p),
+    onSuccess: (_, savedPlan) => {
+      queryClient.invalidateQueries({ queryKey: ["meal-plan-admin", selectedUserId, selectedDate] });
+      toast.success("Plan created for this day only!");
+      setSavedSnapshot(planSnapshot(savedPlan));
+      setIsNewPlan(false);
+      setIsRangePlan(false);
+      setSaveRangeOpen(false);
+      setSettingsOpen(false);
+    },
+    onError: (e: Error) => toast.error(`Failed to save: ${e.message}`),
   });
 
   // ── plan editing helpers ──────────────────────────────────────
@@ -787,6 +954,10 @@ export default function AdminMealPlanPage() {
     if (plan.Meals.reduce((s, m) => s + m.FoodItems.length, 0) === 0) {
       toast.error("Add at least one food item before saving"); return;
     }
+    if (isRangePlan) {
+      setSaveRangeOpen(true);
+      return;
+    }
     saveMutation.mutate(plan);
   };
 
@@ -797,12 +968,36 @@ export default function AdminMealPlanPage() {
     return meal.FoodItems.filter(f => f.IdFoodItem != null && logMap.has(f.IdFoodItem)).map(f => logMap.get(f.IdFoodItem!)!);
   };
 
+  const hasChanges = React.useMemo(() => {
+    if (!plan) return false;
+    if (isNewPlan) return plan.Meals.some(m => m.FoodItems.length > 0);
+    if (!savedSnapshot) return true;
+    return planSnapshot(plan) !== savedSnapshot;
+  }, [plan, isNewPlan, savedSnapshot]);
+
   const selectedClient = clientList.find(c => c.IdUser === selectedUserId);
   const hasEndDate     = !!plan?.EndDate;
 
+  // unsaved-changes guard
+  const [unsavedGuard, setUnsavedGuard] = useState<{ action: () => void } | null>(null);
+  const [, navigate] = useLocation();
+
+  const guardedNavigate = (action: () => void) => {
+    if (hasChanges && !isNewPlan) { setUnsavedGuard({ action }); return; }
+    action();
+  };
+
+  const handleNavAttempt = (href: string): boolean => {
+    if (hasChanges && !isNewPlan) {
+      setUnsavedGuard({ action: () => navigate(href) });
+      return false; // block the Link
+    }
+    return true; // allow navigation
+  };
+
   // date navigation helpers
   const shiftDate = (days: number) =>
-    setSelectedDate(moment(selectedDate, "DD-MM-YYYY").add(days, "days").format("DD-MM-YYYY"));
+    guardedNavigate(() => setSelectedDate(moment(selectedDate, "DD-MM-YYYY").add(days, "days").format("DD-MM-YYYY")));
   const isToday = selectedDate === todayStr();
 
   return (
@@ -815,7 +1010,7 @@ export default function AdminMealPlanPage() {
         <div className="flex items-center gap-1.5">
           {plan && !isNewPlan && (
             <button
-              onClick={() => setViewMode(v => !v)}
+              onClick={() => guardedNavigate(() => setViewMode(v => !v))}
               className={`flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
                 viewMode ? "bg-white/30 border-white/40 text-white" : "bg-white/10 border-white/20 text-white/80"
               }`}
@@ -837,34 +1032,58 @@ export default function AdminMealPlanPage() {
       {/* client selector + date navigation */}
       <div className="bg-white border-b border-gray-100 px-4 pt-3 pb-0">
         {/* client selector */}
-        <select
-          className="w-full h-9 rounded-xl border border-gray-200 bg-gray-50 text-sm px-3 text-gray-800 font-medium mb-3"
-          value={selectedUserId ?? ""}
-          onChange={e => { const id = e.target.value ? Number(e.target.value) : null; setSelectedUserId(id); setCopyTargetUserId(id); }}
-        >
-          <option value="">— Select a client —</option>
-          {clientList.map(c => <option key={c.IdUser} value={c.IdUser}>{c.FirstName} {c.LastName}</option>)}
-        </select>
+        <div className="relative mb-3">
+          <select
+            className="w-full h-9 rounded-xl border border-gray-200 bg-gray-50 text-sm pl-3 pr-10 text-gray-800 font-medium appearance-none"
+            value={selectedUserId ?? ""}
+            onChange={e => { const id = e.target.value ? Number(e.target.value) : null; setSelectedUserId(id); setCopyTargetUserId(id); }}
+          >
+            <option value="">— Select a client —</option>
+            {clientList.map(c => <option key={c.IdUser} value={c.IdUser}>{c.FirstName} {c.LastName}</option>)}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        </div>
 
         {/* date navigation strip */}
-        <div className="flex items-center gap-2 pb-3">
-          <button onClick={() => shiftDate(-1)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors flex-shrink-0">
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <div className="flex-1 relative">
-            <input
-              type="date"
-              className="w-full h-9 rounded-xl border border-gray-200 bg-gray-50 text-sm text-center font-semibold text-gray-800 px-3"
-              value={fmtToDateInput(selectedDate)}
-              onChange={e => setSelectedDate(dateInputToFmt(e.target.value))}
-            />
+        <div className="pb-3">
+          <div className="flex items-center gap-2">
+            <button onClick={() => shiftDate(-1)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors flex-shrink-0">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div className="flex-1">
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <button className="w-full h-9 rounded-xl border border-gray-200 bg-gray-50 text-sm text-center font-semibold text-gray-800 px-3 flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors">
+                    <CalendarDays className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
+                    {moment(selectedDate, "DD-MM-YYYY").format("ddd, MMM D YYYY")}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="center">
+                  <Calendar
+                    mode="single"
+                    selected={moment(selectedDate, "DD-MM-YYYY").toDate()}
+                    onSelect={date => {
+                      if (date) {
+                        const newDate = moment(date).format("DD-MM-YYYY");
+                        setCalendarOpen(false);
+                        guardedNavigate(() => setSelectedDate(newDate));
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <button onClick={() => shiftDate(1)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors flex-shrink-0">
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
-          <button onClick={() => shiftDate(1)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors flex-shrink-0">
-            <ChevronRight className="h-4 w-4" />
-          </button>
           {!isToday && (
-            <button onClick={() => setSelectedDate(todayStr())} className="text-[11px] font-bold text-orange-500 bg-orange-50 px-2.5 py-1.5 rounded-full flex-shrink-0">
-              Today
+            <button
+              onClick={() => guardedNavigate(() => setSelectedDate(todayStr()))}
+              className="mt-1.5 w-full text-[11px] font-semibold text-orange-500 hover:text-orange-600 flex items-center justify-center gap-1 py-1 transition-colors"
+            >
+              ↩ Jump to today
             </button>
           )}
         </div>
@@ -957,7 +1176,7 @@ export default function AdminMealPlanPage() {
       {/* ══════════════════════════════════════════════════════════
           MAIN SCROLLABLE CONTENT
       ══════════════════════════════════════════════════════════ */}
-      <main className="flex-1 overflow-y-auto pb-28">
+      <main className="flex-1 overflow-y-auto pb-36">
 
         {!selectedUserId ? (
           /* ── no client selected ── */
@@ -1043,24 +1262,112 @@ export default function AdminMealPlanPage() {
               />
             ))}
 
-            {/* ── save button ── */}
-            {!viewMode && (
-              <button
-                onClick={handleSave}
-                disabled={saveMutation.isPending}
-                className="w-full h-13 py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-60 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-200 transition-all active:scale-[0.98]"
-              >
-                {saveMutation.isPending
-                  ? <><span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Saving…</>
-                  : <><Save className="h-4 w-4" /> {isNewPlan ? "Create Meal Plan" : "Save Changes"}</>
-                }
-              </button>
-            )}
           </div>
         ) : null}
+
+        {/* ── Client Q&A section ───────────────────────────────────── */}
+        {selectedUserId && selectedDate && (
+          <div className="mx-4 mb-4 rounded-xl border border-blue-100 dark:border-blue-900 overflow-hidden">
+            <div className="flex items-center bg-blue-50 dark:bg-blue-950/30">
+              <button
+                className="flex-1 flex items-center justify-between px-4 py-3"
+                onClick={() => setQaOpen(o => !o)}
+              >
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                    Client Questions
+                  </span>
+                  {clientQueries.filter(q => !q.Answer).length > 0 && (
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                      {clientQueries.filter(q => !q.Answer).length}
+                    </span>
+                  )}
+                </div>
+                {qaOpen
+                  ? <ChevronUp className="h-4 w-4 text-blue-500" />
+                  : <ChevronDown className="h-4 w-4 text-blue-500" />}
+              </button>
+              <button
+                onClick={() => refetchQueries()}
+                className="px-3 py-3 text-blue-500 hover:text-blue-700"
+                title="Refresh"
+              >
+                <RefreshCw className={`h-4 w-4 ${queriesFetching ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+
+            {qaOpen && (
+              <div className="bg-white dark:bg-gray-900 p-3 space-y-4">
+                {clientQueries.length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-3">
+                    No questions from client for this day.
+                  </p>
+                ) : (
+                  clientQueries.map(q => (
+                    <div key={q.IdQuery} className="space-y-2">
+                      {/* Client question */}
+                      <div className="flex justify-end">
+                        <div className="max-w-[85%] bg-blue-600 text-white text-sm px-3 py-2 rounded-2xl rounded-tr-sm">
+                          {q.Question}
+                          <p className="text-[10px] opacity-60 mt-0.5 text-right">
+                            {q.CreatedAt ? moment(q.CreatedAt).format("MMM D, h:mm a") : ""}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Reply or reply box */}
+                      {q.Answer ? (
+                        <div className="flex justify-start">
+                          <div className="max-w-[85%] bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 py-2 rounded-2xl rounded-tl-sm">
+                            {q.Answer}
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                              {q.AnsweredAt ? moment(q.AnsweredAt).format("MMM D, h:mm a") : ""}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2 items-end pl-1">
+                          <textarea
+                            className="flex-1 min-h-[60px] p-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none focus:ring-2 focus:ring-blue-300 outline-none"
+                            placeholder="Type your reply…"
+                            value={replyText[q.IdQuery!] ?? ""}
+                            onChange={e => setReplyText(prev => ({ ...prev, [q.IdQuery!]: e.target.value }))}
+                          />
+                          <button
+                            disabled={!replyText[q.IdQuery!]?.trim() || replyMutation.isPending}
+                            onClick={() => replyMutation.mutate({ IdQuery: q.IdQuery!, Answer: replyText[q.IdQuery!] })}
+                            className="mb-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white transition-colors"
+                          >
+                            <Send className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
-      <MobileAdminNav />
+      {/* ── Sticky save bar (fixed above mobile nav) ─────────────── */}
+      {plan && !viewMode && (
+        <div className="fixed bottom-16 left-0 right-0 z-10 bg-white border-t border-gray-100 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+          <button
+            onClick={handleSave}
+            disabled={saveMutation.isPending || createSingleDayMutation.isPending || !hasChanges}
+            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-200 transition-all active:scale-[0.98]"
+          >
+            {saveMutation.isPending
+              ? <><span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Saving…</>
+              : <><Save className="h-4 w-4" /> {isNewPlan ? "Create Meal Plan" : "Save Changes"}</>
+            }
+          </button>
+        </div>
+      )}
+
+      <MobileAdminNav onNavAttempt={handleNavAttempt} />
 
       {/* ── Food Browser Dialog ───────────────────────────────────── */}
       <FoodBrowserDialog
@@ -1123,6 +1430,76 @@ export default function AdminMealPlanPage() {
               disabled={deleteMutation.isPending}>
               {deleteMutation.isPending ? "Deleting…" : "Delete"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Unsaved changes guard ─────────────────────────────────── */}
+      <Dialog open={!!unsavedGuard} onOpenChange={open => { if (!open) setUnsavedGuard(null); }}>
+        <DialogContent className="sm:max-w-[340px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertCircle className="h-5 w-5" /> Unsaved Changes
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 dark:text-gray-400 px-1">
+            You have unsaved changes on this date. If you navigate away they will be lost.
+          </p>
+          <DialogFooter className="flex-row gap-2 sm:justify-between">
+            <Button variant="outline" className="flex-1" onClick={() => setUnsavedGuard(null)}>
+              Stay &amp; Save
+            </Button>
+            <Button variant="destructive" className="flex-1" onClick={() => { unsavedGuard?.action(); setUnsavedGuard(null); }}>
+              Discard &amp; Leave
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Save scope dialog (range plan) ────────────────────────── */}
+      <Dialog open={saveRangeOpen} onOpenChange={setSaveRangeOpen}>
+        <DialogContent className="sm:max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Repeat2 className="h-5 w-5 text-orange-500" /> Save Changes
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 dark:text-gray-400 px-1">
+            This date is part of a repeating plan
+            {plan?.AssignedDate && plan?.EndDate
+              ? ` (${moment(plan.AssignedDate, "DD-MM-YYYY").format("MMM D")} – ${moment(plan.EndDate, "DD-MM-YYYY").format("MMM D")})`
+              : ""
+            }.
+            How would you like to apply your changes?
+          </p>
+          <div className="flex flex-col gap-2 pt-1">
+            <button
+              onClick={() => {
+                if (!plan) return;
+                createSingleDayMutation.mutate({
+                  ...plan,
+                  IdMealPlan: undefined,
+                  AssignedDate: selectedDate,
+                  EndDate: undefined,
+                });
+              }}
+              disabled={createSingleDayMutation.isPending}
+              className="w-full flex flex-col items-start gap-0.5 px-4 py-3 rounded-xl border-2 border-orange-300 bg-orange-50 hover:bg-orange-100 transition-colors text-left disabled:opacity-60"
+            >
+              <span className="text-sm font-bold text-orange-700">Only {moment(selectedDate, "DD-MM-YYYY").format("ddd, MMM D")}</span>
+              <span className="text-xs text-orange-600">Creates a separate plan for this day only. Other dates in the series stay unchanged.</span>
+            </button>
+            <button
+              onClick={() => { setSaveRangeOpen(false); saveMutation.mutate(plan!); }}
+              disabled={saveMutation.isPending}
+              className="w-full flex flex-col items-start gap-0.5 px-4 py-3 rounded-xl border-2 border-gray-200 bg-white hover:bg-gray-50 transition-colors text-left disabled:opacity-60"
+            >
+              <span className="text-sm font-bold text-gray-700">Entire series</span>
+              <span className="text-xs text-gray-500">Updates the plan for all dates in the repeating range.</span>
+            </button>
+          </div>
+          <DialogFooter className="pt-1">
+            <Button variant="ghost" size="sm" onClick={() => setSaveRangeOpen(false)}>Cancel</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -145,6 +145,12 @@ export const API_URL = {
     // ── Meal Plan (Admin — view client adherence) ─────────────────
     GET_MEAL_LOGS_FOR_CLIENT: '/mealplan/getClientLogs',
 
+    // ── Meal Queries (client asks, coach replies) ─────────────────
+    ASK_MEAL_QUERY: '/mealquery/ask',
+    GET_MY_MEAL_QUERIES: '/mealquery/getMyQ',
+    GET_MEAL_QUERIES_FOR_CLIENT: '/mealquery/getForClient',
+    REPLY_MEAL_QUERY: '/mealquery/reply',
+
     // ── Workout Plan (Admin) ──────────────────────────────────────
     GET_WORKOUTS_FOR_CLIENT: '/workout/getForClient',
     CREATE_WORKOUT: '/workout/create',

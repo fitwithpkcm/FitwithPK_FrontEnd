@@ -27,6 +27,148 @@ import { BASE_URL, UNITS, USER_TARGET } from "../../common/Constant";
 import GraphDataChart from "../admin-side/AdminProgressWeeklyChart";
 
 import { IBodyMeasurement } from '../../interface/IBodyMeasurement'
+
+// ─── Sleep Clock ────────────────────────────────────────────────────────────
+function SleepClock({ value, onChange }: { value: number; onChange: (h: number) => void }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const dragging = useRef(false);
+  const cx = 100, cy = 100, R = 80;
+
+  const snap = (h: number) => Math.round(h * 2) / 2;
+
+  const polarToXY = (angleDeg: number) => {
+    const a = ((angleDeg - 90) * Math.PI) / 180;
+    return { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) };
+  };
+
+  const buildArc = (h: number) => {
+    if (h <= 0) return '';
+    const deg = (h / 12) * 360;
+    if (deg >= 359.9) {
+      return `M ${cx} ${cy - R} A ${R} ${R} 0 1 1 ${cx - 0.001} ${cy - R}`;
+    }
+    const end = polarToXY(deg);
+    return `M ${cx} ${cy - R} A ${R} ${R} 0 ${deg > 180 ? 1 : 0} 1 ${end.x} ${end.y}`;
+  };
+
+  const qualityInfo = (h: number) => {
+    if (h === 0) return { label: '—', cls: 'text-gray-400' };
+    if (h < 5)  return { label: 'Too little', cls: 'text-red-500' };
+    if (h < 7)  return { label: 'Below avg',  cls: 'text-amber-500' };
+    if (h <= 9) return { label: 'Good sleep', cls: 'text-indigo-500' };
+    return { label: 'Extra rest', cls: 'text-green-600' };
+  };
+
+  const angleFromSVG = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
+    const svg = svgRef.current;
+    if (!svg) return 0;
+    const rect = svg.getBoundingClientRect();
+    const pt = 'touches' in e ? e.touches[0] : (e as MouseEvent);
+    const mx = (pt.clientX - rect.left) * (200 / rect.width) - cx;
+    const my = (pt.clientY - rect.top) * (200 / rect.height) - cy;
+    let deg = (Math.atan2(my, mx) * 180) / Math.PI + 90;
+    if (deg < 0) deg += 360;
+    return deg;
+  };
+
+  const handleDrag = (e: MouseEvent | TouchEvent) => {
+    if (!dragging.current) return;
+    e.preventDefault();
+    onChange(snap((angleFromSVG(e) / 360) * 12));
+  };
+
+  const startDrag = (e: React.MouseEvent | React.TouchEvent) => {
+    dragging.current = true;
+    onChange(snap((angleFromSVG(e) / 360) * 12));
+  };
+
+  useEffect(() => {
+    const stop = () => { dragging.current = false; };
+    window.addEventListener('mousemove', handleDrag);
+    window.addEventListener('mouseup', stop);
+    window.addEventListener('touchmove', handleDrag, { passive: false });
+    window.addEventListener('touchend', stop);
+    return () => {
+      window.removeEventListener('mousemove', handleDrag);
+      window.removeEventListener('mouseup', stop);
+      window.removeEventListener('touchmove', handleDrag);
+      window.removeEventListener('touchend', stop);
+    };
+  });
+
+  const handlePos = polarToXY((value / 12) * 360);
+  const { label, cls } = qualityInfo(value);
+  const displayVal = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
+
+  const ticks = Array.from({ length: 13 }, (_, i) => {
+    const deg = (i / 12) * 360;
+    const a = ((deg - 90) * Math.PI) / 180;
+    const isMajor = i % 3 === 0;
+    const inner = isMajor ? 66 : 70;
+    return {
+      x1: cx + 76 * Math.cos(a), y1: cy + 76 * Math.sin(a),
+      x2: cx + inner * Math.cos(a), y2: cy + inner * Math.sin(a),
+      label: isMajor && i > 0 ? i : null,
+      lx: cx + 57 * Math.cos(a), ly: cy + 57 * Math.sin(a),
+      isMajor,
+    };
+  });
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <svg
+        ref={svgRef}
+        viewBox="0 0 200 200"
+        width={200}
+        height={200}
+        className="cursor-pointer touch-none select-none"
+        onMouseDown={startDrag}
+        onTouchStart={startDrag}
+      >
+        {/* Track */}
+        <circle cx={cx} cy={cy} r={R} fill="none" stroke="#e5e7eb" strokeWidth={14} className="dark:stroke-gray-700" />
+        {/* Filled arc */}
+        {value > 0 && (
+          <path d={buildArc(value)} fill="none" stroke="#6366f1" strokeWidth={14} strokeLinecap="round" />
+        )}
+        {/* Ticks */}
+        {ticks.map((t, i) => (
+          <g key={i}>
+            <line x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
+              stroke={t.isMajor ? '#9ca3af' : '#d1d5db'} strokeWidth={t.isMajor ? 2 : 1} />
+            {t.label && (
+              <text x={t.lx} y={t.ly} textAnchor="middle" dominantBaseline="middle"
+                fontSize={9} fill="#9ca3af">{t.label}h</text>
+            )}
+          </g>
+        ))}
+        {/* Handle */}
+        <circle cx={handlePos.x} cy={handlePos.y} r={9} fill="#6366f1" stroke="white" strokeWidth={2.5} />
+        {/* Center display */}
+        <text x={cx} y={cy - 10} textAnchor="middle" fontSize={28} fontWeight={500} fill="currentColor" className="text-gray-800">{displayVal}</text>
+        <text x={cx} y={cy + 16} textAnchor="middle" fontSize={11} fill="#9ca3af">hours</text>
+      </svg>
+      <span className={`text-xs font-semibold ${cls}`}>{label}</span>
+      {/* Preset buttons */}
+      <div className="grid grid-cols-4 gap-2 w-full max-w-xs">
+        {[5, 6, 7, 8].map(h => (
+          <button
+            key={h}
+            type="button"
+            onClick={() => onChange(h)}
+            className={`py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+              value === h
+                ? 'bg-indigo-50 border-indigo-400 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-400 dark:text-indigo-300'
+                : 'border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-400'
+            }`}
+          >
+            {h} hrs
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 import moment from 'moment';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../../components/ui/dialog";
@@ -608,12 +750,11 @@ export default function UpdatesPage() {
                       <p className="text-sm text-gray-500 dark:text-gray-400">Day {dayNumber}</p>
                     </div>
                     <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" onClick={() => {
-                      // Set the selected date from the update's DayDate
                       if (update.DayDate) {
                         const dateParts = update.DayDate.split('-');
                         if (dateParts.length === 3) {
                           const day = parseInt(dateParts[0], 10);
-                          const month = parseInt(dateParts[1], 10) - 1; // Months are 0-indexed
+                          const month = parseInt(dateParts[1], 10) - 1;
                           const year = parseInt(dateParts[2], 10);
                           const date = new Date(year, month, day);
                           setSelectedDate(date);
@@ -628,7 +769,7 @@ export default function UpdatesPage() {
                         WorkOut: update.WorkOut ?? undefined,
                       });
                       setShowForm(true);
-                    }}  >
+                    }}>
                       <PencilIcon className="h-4 w-4" />
                     </Button>
                   </div>
@@ -706,7 +847,6 @@ export default function UpdatesPage() {
                       <div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Workout</p>
                         <div className={`font-medium ${update.WorkOut ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-
                           {typeof update.WorkOut === 'number' && update.WorkOut > 0 && (
                             <RatingSmiley rating={update.WorkOut} />
                           )}
@@ -714,7 +854,7 @@ export default function UpdatesPage() {
                       </div>
                     </div>
                   </div>
-                  {/* Notes section - only show if notes exist */}
+
                   {update.Notes && update.Notes.trim() !== "" && (
                     <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                       <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</h4>
@@ -1467,21 +1607,12 @@ export default function UpdatesPage() {
                       name="Sleep"
                       render={({ field }) => (
                         <FormItem>
-                          <div className="flex items-center">
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="Hours of sleep"
-                                min="0"
-                                max="24"
-                                step="0.5"
-                                className="flex-1"
-                                {...field}
-                                value={field.value ?? ""}
-                              />
-                            </FormControl>
-                            <span className="ml-3 text-gray-500 dark:text-gray-400">hours</span>
-                          </div>
+                          <FormControl>
+                            <SleepClock
+                              value={Number(field.value) || 0}
+                              onChange={(h) => field.onChange(h)}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}

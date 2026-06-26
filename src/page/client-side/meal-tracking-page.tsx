@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ChevronLeft, ChevronRight, Check, MessageSquare, X,
-  Loader2, UtensilsCrossed, TrendingUp, Save,
+  Loader2, UtensilsCrossed, TrendingUp, Save, HelpCircle, Send, ChevronDown, ChevronUp, RefreshCw,
 } from "lucide-react";
 import moment from "moment";
 import toast from "react-hot-toast";
@@ -28,6 +28,9 @@ import {
   getMyMealPlans, getMyMealLogs,
   logFoodConsumption, batchLogFoodConsumption,
 } from "../../services/MealPlanService";
+import {
+  IMealQuery, askMealQuery, getMyMealQueries,
+} from "../../services/MealQueryService";
 import {
   IMealPlan, IMealLog, IMealFoodItemWithLog, MealType,
   MEAL_TYPES, MEAL_META, mergePlanWithLogs, IMealPlanWithLogs,
@@ -59,12 +62,13 @@ function AdherenceBadge({ pct }: { pct: number }) {
 interface FoodItemRowProps {
   item: IMealFoodItemWithLog;
   isSaving: boolean;
+  readOnly?: boolean;
   onToggle: () => void;
   onQtyChange: (qty: number) => void;
   onNotesClick: () => void;
 }
 
-function FoodItemRow({ item, isSaving, onToggle, onQtyChange, onNotesClick }: FoodItemRowProps) {
+function FoodItemRow({ item, isSaving, readOnly, onToggle, onQtyChange, onNotesClick }: FoodItemRowProps) {
   const [localQty, setLocalQty] = useState(item.consumedQty.toString());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -86,22 +90,24 @@ function FoodItemRow({ item, isSaving, onToggle, onQtyChange, onNotesClick }: Fo
         ? "bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800"
         : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
     }`}>
-      {/* Checkbox */}
-      <button
-        onClick={onToggle}
-        disabled={isSaving}
-        className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-          item.isConsumed
-            ? "bg-green-500 border-green-500 scale-110"
-            : "border-gray-300 dark:border-gray-600 hover:border-green-400"
-        }`}
-      >
-        {isSaving ? (
-          <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
-        ) : item.isConsumed ? (
-          <Check className="h-3.5 w-3.5 text-white" />
-        ) : null}
-      </button>
+      {/* Checkbox — hidden on future dates */}
+      {!readOnly && (
+        <button
+          onClick={onToggle}
+          disabled={isSaving}
+          className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+            item.isConsumed
+              ? "bg-green-500 border-green-500 scale-110"
+              : "border-gray-300 dark:border-gray-600 hover:border-green-400"
+          }`}
+        >
+          {isSaving ? (
+            <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+          ) : item.isConsumed ? (
+            <Check className="h-3.5 w-3.5 text-white" />
+          ) : null}
+        </button>
+      )}
 
       {/* Food details */}
       <div className="flex-1 min-w-0">
@@ -158,6 +164,7 @@ interface MealSectionProps {
   totalCount: number;
   completionPercent: number;
   savingIds: Set<number>;
+  readOnly?: boolean;
   onToggle: (item: IMealFoodItemWithLog) => void;
   onQtyChange: (item: IMealFoodItemWithLog, qty: number) => void;
   onNotesClick: (item: IMealFoodItemWithLog) => void;
@@ -165,7 +172,7 @@ interface MealSectionProps {
 
 function MealSection({
   mealType, items, completedCount, totalCount, completionPercent,
-  savingIds, onToggle, onQtyChange, onNotesClick,
+  savingIds, readOnly, onToggle, onQtyChange, onNotesClick,
 }: MealSectionProps) {
   const meta = MEAL_META[mealType];
   const [collapsed, setCollapsed] = useState(false);
@@ -205,6 +212,7 @@ function MealSection({
               key={item.IdFoodItem ?? item.SortOrder}
               item={item}
               isSaving={item.IdFoodItem != null && savingIds.has(item.IdFoodItem)}
+              readOnly={readOnly}
               onToggle={() => onToggle(item)}
               onQtyChange={qty => onQtyChange(item, qty)}
               onNotesClick={() => onNotesClick(item)}
@@ -229,6 +237,10 @@ export default function MealTrackingPage() {
   // notes dialog
   const [notesItem, setNotesItem] = useState<IMealFoodItemWithLog | null>(null);
   const [notesText, setNotesText] = useState("");
+
+  // Q&A
+  const [questionText, setQuestionText] = useState("");
+  const [qaOpen, setQaOpen] = useState(false);
 
   useEffect(() => { setBaseUrl(BASE_URL); }, []);
 
@@ -271,6 +283,30 @@ export default function MealTrackingPage() {
       ? mergePlanWithLogs(rawPlan, Array.from(localLogs.values()))
       : null;
 
+  // ── Q&A queries ───────────────────────────────────────────────
+
+  const { data: myQueries = [], refetch: refetchQueries, isFetching: queriesFetching } = useQuery<IMealQuery[]>({
+    queryKey: ["my-meal-queries", selectedDate],
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 30000,
+    queryFn: async () => {
+      const res = await getMyMealQueries({ QueryDate: selectedDate }) as any;
+      const d = res.data?.data;
+      return Array.isArray(d) ? d : [];
+    },
+  });
+
+  const askMutation = useMutation({
+    mutationFn: (question: string) => askMealQuery({ QueryDate: selectedDate, Question: question }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-meal-queries", selectedDate] });
+      setQuestionText("");
+      toast.success("Question sent to your coach!");
+    },
+    onError: (e: Error) => toast.error(`Failed: ${e.message}`),
+  });
+
   // ── mutation ──────────────────────────────────────────────────
 
   const logMutation = useMutation({
@@ -285,6 +321,10 @@ export default function MealTrackingPage() {
 
   const handleToggle = useCallback((item: IMealFoodItemWithLog) => {
     if (!rawPlan?.IdMealPlan || item.IdFoodItem == null) return;
+    if (moment(selectedDate, "DD-MM-YYYY").isAfter(moment().startOf("day"), "day")) {
+      toast.error("You can't mark meals for future days");
+      return;
+    }
 
     const newIsConsumed: 0 | 1 = item.isConsumed ? 0 : 1;
     const existingLog = localLogs.get(item.IdFoodItem);
@@ -349,6 +389,9 @@ export default function MealTrackingPage() {
   };
 
   // date navigation
+  const today = moment().startOf("day");
+  const isFuture = moment(selectedDate, "DD-MM-YYYY").isAfter(today, "day");
+
   const goDay = (delta: number) => {
     const next = moment(selectedDate, "DD-MM-YYYY").add(delta, "days");
     setSelectedDate(next.format("DD-MM-YYYY"));
@@ -411,6 +454,14 @@ export default function MealTrackingPage() {
           </div>
         )}
 
+        {/* future date banner */}
+        {isFuture && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-xs font-medium">
+            <span>📅</span>
+            <span>You're viewing a future day — meal logging is disabled.</span>
+          </div>
+        )}
+
         {/* meal plan */}
         {!isLoading && mergedPlan && (
           <>
@@ -453,6 +504,7 @@ export default function MealTrackingPage() {
                   totalCount={meal.totalCount}
                   completionPercent={meal.completionPercent}
                   savingIds={savingIds}
+                  readOnly={isFuture}
                   onToggle={handleToggle}
                   onQtyChange={handleQtyChange}
                   onNotesClick={handleNotesOpen}
@@ -468,6 +520,104 @@ export default function MealTrackingPage() {
             </p>
           </>
         )}
+
+        {/* ── Ask Coach Q&A section ──────────────────────────────── */}
+        <div className="rounded-xl border border-blue-100 dark:border-blue-900 overflow-hidden">
+          <div className="flex items-center bg-blue-50 dark:bg-blue-950/30">
+            <button
+              className="flex-1 flex items-center justify-between px-4 py-3"
+              onClick={() => setQaOpen(o => !o)}
+            >
+              <div className="flex items-center gap-2">
+                <HelpCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                  Ask Your Coach
+                </span>
+                {myQueries.filter(q => !q.Answer).length > 0 && (
+                  <Badge className="text-[10px] h-5 bg-blue-600 text-white border-0">
+                    {myQueries.filter(q => !q.Answer).length} pending
+                  </Badge>
+                )}
+              </div>
+              {qaOpen
+                ? <ChevronUp className="h-4 w-4 text-blue-500" />
+                : <ChevronDown className="h-4 w-4 text-blue-500" />}
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); refetchQueries(); }}
+              className="px-3 py-3 text-blue-500 hover:text-blue-700"
+              title="Refresh"
+            >
+              <RefreshCw className={`h-4 w-4 ${queriesFetching ? "animate-spin" : ""}`} />
+            </button>
+          </div>
+
+          {qaOpen && (
+            <div className="bg-white dark:bg-gray-900 p-3 space-y-3">
+              {/* Ask input */}
+              {!isFuture && (
+                <div className="flex gap-2">
+                  <textarea
+                    className="flex-1 min-h-[72px] p-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none focus:ring-2 focus:ring-blue-300 outline-none"
+                    placeholder="Ask your coach about this meal plan…"
+                    value={questionText}
+                    onChange={e => setQuestionText(e.target.value)}
+                  />
+                  <Button
+                    size="sm"
+                    className="self-end h-9 px-3 bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={!questionText.trim() || askMutation.isPending}
+                    onClick={() => askMutation.mutate(questionText)}
+                  >
+                    {askMutation.isPending
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <Send className="h-4 w-4" />}
+                  </Button>
+                </div>
+              )}
+
+              {/* Q&A thread */}
+              {myQueries.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-2">
+                  No questions yet for this day.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {myQueries.map(q => (
+                    <div key={q.IdQuery} className="space-y-1.5">
+                      {/* Question bubble */}
+                      <div className="flex justify-end">
+                        <div className="max-w-[85%] bg-blue-600 text-white text-sm px-3 py-2 rounded-2xl rounded-tr-sm">
+                          {q.Question}
+                          <p className="text-[10px] opacity-60 mt-0.5 text-right">
+                            {q.CreatedAt ? moment(q.CreatedAt).format("MMM D, h:mm a") : ""}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Answer bubble or waiting */}
+                      {q.Answer ? (
+                        <div className="flex justify-start">
+                          <div className="max-w-[85%] bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 py-2 rounded-2xl rounded-tl-sm">
+                            {q.Answer}
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                              {q.AnsweredAt ? moment(q.AnsweredAt).format("MMM D, h:mm a") : ""}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-start">
+                          <span className="text-[11px] text-gray-400 italic px-1">
+                            Waiting for coach reply…
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </main>
 
       <MobileNav />

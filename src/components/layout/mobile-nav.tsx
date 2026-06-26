@@ -31,25 +31,23 @@ interface NavItemProps {
 
 function NavItem({ icon, label, href, isActive }: NavItemProps) {
   return (
-    <Link href={href}>
-      <a className="flex flex-col items-center py-2 px-3 gap-0.5">
-        <div
-          className={`flex items-center justify-center w-10 h-7 rounded-full transition-all duration-200 ${
-            isActive
-              ? "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400"
-              : "text-gray-400 dark:text-gray-500"
-          }`}
-        >
-          {icon}
-        </div>
-        <span
-          className={`text-[10px] font-semibold transition-colors duration-200 ${
-            isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"
-          }`}
-        >
-          {label}
-        </span>
-      </a>
+    <Link href={href} className="flex flex-col items-center py-2 px-3 gap-0.5">
+      <div
+        className={`flex items-center justify-center w-10 h-7 rounded-full transition-all duration-200 ${
+          isActive
+            ? "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400"
+            : "text-gray-400 dark:text-gray-500"
+        }`}
+      >
+        {icon}
+      </div>
+      <span
+        className={`text-[10px] font-semibold transition-colors duration-200 ${
+          isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"
+        }`}
+      >
+        {label}
+      </span>
     </Link>
   );
 }

@@ -18,7 +18,25 @@
       "Bash(npx tsc *)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3202/)",
       "Bash(Remove-Item -Recurse -Force \"D:\\\\PK\\\\Git\\\\FitwithPK_FrontEnd\\\\dev-dist\" -ErrorAction SilentlyContinue)",
-      "Bash(Write-Host \"done\")"
+      "Bash(Write-Host \"done\")",
+      "Bash(npx eslint *)",
+      "PowerShell(\"SHOW TABLES LIKE 'tbl_meal%';\" | & \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -u root -proot db_promod_fit_app 2>&1 | Where-Object { $_ -notmatch \"Warning\" })",
+      "PowerShell(cd \"D:\\\\PK\\\\Git\\\\FitwithPK_FrontEnd\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch \"sw\\\\.ts|use-push-notification\" } | Select-Object -First 20)",
+      "Bash(mysql -u root -proot db_promod_fit_app)",
+      "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -u root -proot db_promod_fit_app -e \"SOURCE D:/PK/Git/PK-FIT-API-main/PK-FIT-API-main/setup_workout_tables.sql\" 2>&1)",
+      "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -u root -proot db_promod_fit_app -e \"SHOW TABLES LIKE 'tbl_workout%'; SHOW TABLES LIKE 'tbl_exercise%';\" 2>&1 | Where-Object { $_ -notmatch 'Warning' })",
+      "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -u root -proot db_promod_fit_app -e \"DESCRIBE tbl_workouts; DESCRIBE tbl_exercises; DESCRIBE tbl_exercise_logs;\" 2>&1 | Where-Object { $_ -notmatch 'Warning' })",
+      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:3202/workout/getMyWorkouts\" -Method POST -ContentType \"application/json\" -Body '{\"ScheduledDate\":\"26-06-2025\"}' -ErrorAction SilentlyContinue 2>&1)",
+      "Bash(ls \"D:\\\\Users\\\\promod.kumar\\\\Downloads\\\\OneDrive_2026-06-26\\\\Set graph\")",
+      "Bash(xargs grep -l \"workout\\\\|Workout\")",
+      "Bash(ls D:/PK/Git/PK-FIT-API-main/ 2>/dev/null || ls D:/PK/Git/ 2>/dev/null)",
+      "PowerShell(cd D:\\\\PK\\\\Git\\\\FitwithPK_FrontEnd; npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch \"use-push-notification|profile-page|sw\\\\.ts\" })",
+      "Bash(xargs cat)",
+      "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -u root -proot db_promod_fit_app -e \"SHOW TABLES LIKE 'tbl_workout%';\" 2>&1)",
+      "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -u root -proot db_promod_fit_app -e \"SHOW TABLES LIKE 'tbl_%template%'; SHOW TABLES LIKE 'tbl_template%';\" 2>&1 | Where-Object { $_ -notmatch \"Warning\" })",
+      "PowerShell(& \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -u root -proot db_promod_fit_app -e \"DESCRIBE tbl_workout_templates; DESCRIBE tbl_template_exercises;\" 2>&1 | Where-Object { $_ -notmatch \"Warning\" })",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/wouter/package.json'\\).version\\)\")"
     ]
   }
 }
