@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueries } from "@tanstack/react-query";
 import {
   Plus, Trash2, Pencil, Check, Dumbbell, Video,
   ChevronLeft, ChevronRight, ArrowRightLeft, Eye,
   AlertCircle, ChevronDown, ChevronUp, Loader2, User, X,
-  MessageSquare, BookOpen, Search,
+  MessageSquare, BookOpen, Search, CalendarDays, Copy, LayoutGrid,
 } from "lucide-react";
 import moment from "moment";
 import toast from "react-hot-toast";
@@ -27,14 +27,29 @@ import {
   getWorkoutsForClient, createWorkout, updateWorkout,
   deleteWorkout, rescheduleWorkout, getWorkoutLogsForClient,
   getExerciseLibrary, createLibraryItem, updateLibraryItem, deleteLibraryItem,
+  bulkCreateWorkouts,
+  getWorkoutTemplates, createWorkoutTemplate, updateWorkoutTemplate, deleteWorkoutTemplate,
 } from "../../services/WorkoutService";
 import {
   IWorkout, IExercise, IExerciseLog, IExerciseLibraryItem,
-  createBlankWorkout, createBlankExercise, mergeWorkoutWithLogs, WEIGHT_UNITS,
+  createBlankWorkout, createBlankExercise, mergeWorkoutWithLogs, WEIGHT_UNITS, WORKOUT_TYPES,
+  IWorkoutTemplate, ITemplateExercise, createBlankTemplate, createBlankTemplateExercise,
 } from "../../interface/IWorkout";
 import { IUser } from "../../interface/models/User";
 
 // ── helpers ───────────────────────────────────────────────────────
+
+const TYPE_COLORS: Record<string, string> = {
+  'Upper Body': 'bg-blue-500 text-white',
+  'Lower Body': 'bg-purple-500 text-white',
+  'Push':       'bg-orange-500 text-white',
+  'Pull':       'bg-cyan-500 text-white',
+  'Legs':       'bg-indigo-500 text-white',
+  'Full Body':  'bg-emerald-500 text-white',
+  'Cardio':     'bg-red-500 text-white',
+  'Mobility':   'bg-amber-500 text-white',
+  'Rest Day':   'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400',
+};
 
 function ddmmyyyy(m: moment.Moment) { return m.format("DD-MM-YYYY"); }
 function dateInputToFmt(v: string) {
@@ -745,12 +760,680 @@ function RescheduleDialog({ open, workout, saving, onClose, onConfirm }: {
   );
 }
 
+// ── Manage Workout Types Dialog ───────────────────────────────────
+
+const TYPES_STORAGE_KEY = 'fitwithpk_workout_types';
+
+function loadStoredTypes(): string[] {
+  try {
+    const v = localStorage.getItem(TYPES_STORAGE_KEY);
+    return v ? JSON.parse(v) : [...WORKOUT_TYPES];
+  } catch {
+    return [...WORKOUT_TYPES];
+  }
+}
+
+function saveStoredTypes(types: string[]) {
+  localStorage.setItem(TYPES_STORAGE_KEY, JSON.stringify(types));
+}
+
+function ManageTypesDialog({ open, types, onClose, onChange }: {
+  open: boolean; types: string[];
+  onClose: () => void; onChange: (types: string[]) => void;
+}) {
+  const [draft, setDraft] = useState<string[]>([]);
+  const [newType, setNewType] = useState('');
+
+  useEffect(() => { if (open) setDraft([...types]); }, [open]);
+
+  const remove = (i: number) => setDraft(d => d.filter((_, idx) => idx !== i));
+  const add = () => {
+    const v = newType.trim();
+    if (!v || draft.includes(v)) return;
+    setDraft(d => [...d, v]);
+    setNewType('');
+  };
+  const reset = () => setDraft([...WORKOUT_TYPES]);
+
+  const handleSave = () => {
+    if (draft.length === 0) { toast.error('Keep at least one type'); return; }
+    saveStoredTypes(draft);
+    onChange(draft);
+    onClose();
+    toast.success('Workout types updated');
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-sm max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="h-4 w-4 text-blue-500" /> Manage Workout Types
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto space-y-3 py-1">
+          <div className="space-y-1.5">
+            {draft.map((type, i) => (
+              <div key={i} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2 border border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${(TYPE_COLORS[type] ?? 'bg-blue-500').split(' ')[0]}`} />
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{type}</span>
+                </div>
+                <button onClick={() => remove(i)}
+                  className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <Input placeholder="Add new type…" value={newType}
+              onChange={e => setNewType(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') add(); }}
+              className="flex-1 h-9 text-sm" />
+            <button onClick={add} disabled={!newType.trim()}
+              className="px-3 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-40 transition-colors">
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+
+          <button onClick={reset}
+            className="w-full text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline underline-offset-2 py-1 transition-colors">
+            Reset to defaults
+          </button>
+        </div>
+
+        <DialogFooter className="gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white border-0">Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Template Editor Drawer ────────────────────────────────────────
+
+const TEMPLATE_CATEGORIES = [
+  'Upper Body', 'Lower Body', 'Push', 'Pull', 'Legs',
+  'Full Body', 'Cardio', 'Mobility', 'Flexibility', 'Other',
+];
+
+function TemplateEditorDrawer({ open, initial, saving, library, onClose, onSave }: {
+  open: boolean; initial: IWorkoutTemplate | null; saving: boolean;
+  library: IExerciseLibraryItem[];
+  onClose: () => void; onSave: (t: IWorkoutTemplate) => void;
+}) {
+  const [tpl, setTpl] = useState<IWorkoutTemplate | null>(null);
+  useEffect(() => { if (open && initial) setTpl(JSON.parse(JSON.stringify(initial))); }, [open, initial]);
+  if (!tpl) return null;
+
+  const setField = (f: keyof IWorkoutTemplate, v: string) => setTpl(t => t ? { ...t, [f]: v } : t);
+
+  // Convert ITemplateExercise ↔ IExercise for reuse of ExerciseEditorRow
+  const exAsIExercise = (ex: ITemplateExercise): IExercise => ({
+    IdExercise: ex.IdTemplateExercise,
+    ExerciseName: ex.ExerciseName,
+    VideoUrl: ex.VideoUrl,
+    Sets: ex.Sets,
+    TargetReps: ex.TargetReps,
+    TargetWeight: ex.TargetWeight,
+    WeightUnit: ex.WeightUnit,
+    RestSeconds: ex.RestSeconds,
+    Notes: ex.Notes,
+    SortOrder: ex.SortOrder,
+  });
+
+  const addEx = () => setTpl(t => t ? { ...t, Exercises: [...t.Exercises, createBlankTemplateExercise(t.Exercises.length)] } : t);
+  const removeEx = (i: number) => setTpl(t => t ? { ...t, Exercises: t.Exercises.filter((_, idx) => idx !== i) } : t);
+  const changeEx = (i: number, f: keyof IExercise, v: string | number) =>
+    setTpl(t => { if (!t) return t; const exs = [...t.Exercises]; exs[i] = { ...exs[i], [f]: v }; return { ...t, Exercises: exs }; });
+
+  const handleSave = () => {
+    if (!tpl.TemplateName.trim()) { toast.error("Template name required"); return; }
+    if (tpl.Exercises.length === 0) { toast.error("Add at least one exercise"); return; }
+    for (const ex of tpl.Exercises) if (!ex.ExerciseName.trim()) { toast.error("All exercises need a name"); return; }
+    onSave(tpl);
+  };
+
+  return (
+    <Drawer open={open} onOpenChange={v => { if (!v) onClose(); }}>
+      <DrawerContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 max-h-[90vh]">
+        <div className="flex items-center justify-between px-5 pb-3">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">
+            {tpl.IdTemplate ? "Edit Template" : "New Template"}
+          </h2>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="overflow-y-auto px-5 space-y-3 pb-6">
+          <div>
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">Template Name *</label>
+            <Input placeholder="e.g. Upper Body A" value={tpl.TemplateName} onChange={e => setField("TemplateName", e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">Category</label>
+            <select value={tpl.Category ?? ""}
+              onChange={e => setField("Category", e.target.value)}
+              className="w-full h-9 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-2 text-gray-800 dark:text-gray-200">
+              <option value="">— Select category —</option>
+              {TEMPLATE_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">Notes</label>
+            <Input placeholder="Optional notes for this template..." value={tpl.Notes ?? ""} onChange={e => setField("Notes", e.target.value)} />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                Exercises <span className="text-gray-400">({tpl.Exercises.length})</span>
+              </label>
+              <button onClick={addEx}
+                className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full transition-colors">
+                <Plus className="h-3 w-3" /> Add
+              </button>
+            </div>
+            <div className="space-y-2">
+              {tpl.Exercises.length === 0 ? (
+                <button onClick={addEx}
+                  className="w-full py-8 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 text-gray-400 hover:border-blue-300 hover:text-blue-500 flex flex-col items-center gap-2 transition-colors">
+                  <Plus className="h-6 w-6" />
+                  <span className="text-sm">Add your first exercise</span>
+                </button>
+              ) : tpl.Exercises.map((ex, i) => (
+                <ExerciseEditorRow key={i} ex={exAsIExercise(ex)} index={i} library={library} onChange={changeEx} onRemove={removeEx} />
+              ))}
+            </div>
+          </div>
+          <button onClick={handleSave} disabled={saving}
+            className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50 shadow-md">
+            {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : <><Check className="h-4 w-4" strokeWidth={3} /> Save Template</>}
+          </button>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+// ── Template Manager ──────────────────────────────────────────────
+
+function TemplateManager({ templates, library, onRefresh }: {
+  templates: IWorkoutTemplate[];
+  library: IExerciseLibraryItem[];
+  onRefresh: () => void;
+}) {
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editing, setEditing] = useState<IWorkoutTemplate | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const createMut = useMutation({
+    mutationFn: createWorkoutTemplate,
+    onSuccess: () => { toast.success("Template created"); onRefresh(); setEditorOpen(false); },
+    onError: () => toast.error("Failed to create"),
+  });
+  const updateMut = useMutation({
+    mutationFn: updateWorkoutTemplate,
+    onSuccess: () => { toast.success("Template updated"); onRefresh(); setEditorOpen(false); },
+    onError: () => toast.error("Failed to update"),
+  });
+  const deleteMut = useMutation({
+    mutationFn: deleteWorkoutTemplate,
+    onSuccess: () => { toast.success("Deleted"); onRefresh(); },
+    onError: () => toast.error("Failed to delete"),
+  });
+
+  const saving = createMut.isPending || updateMut.isPending;
+
+  const grouped: Record<string, IWorkoutTemplate[]> = {};
+  templates.forEach(t => {
+    const cat = t.Category || 'Uncategorised';
+    (grouped[cat] = grouped[cat] ?? []).push(t);
+  });
+
+  return (
+    <>
+      <div className="space-y-3">
+        <button
+          onClick={() => { setEditing(createBlankTemplate()); setEditorOpen(true); }}
+          className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-colors shadow-sm">
+          <Plus className="h-4 w-4" /> New Template
+        </button>
+
+        {templates.length === 0 ? (
+          <div className="flex flex-col items-center py-16 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+            <LayoutGrid className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
+            <p className="text-sm font-semibold text-gray-500">No templates yet</p>
+            <p className="text-xs text-gray-400 mt-1">Create reusable workout templates to quickly assign to clients.</p>
+          </div>
+        ) : Object.entries(grouped).map(([cat, tpls]) => (
+          <div key={cat}>
+            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1.5 px-1">{cat}</p>
+            <Card className="bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 overflow-hidden">
+              {tpls.map(tpl => (
+                <div key={tpl.IdTemplate} className="border-b border-gray-50 dark:border-gray-700/50 last:border-0">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      TYPE_COLORS[tpl.Category ?? '']
+                        ? (TYPE_COLORS[tpl.Category ?? ''].split(' ')[0]) + ' bg-opacity-20'
+                        : 'bg-blue-100 dark:bg-blue-900/30'
+                    }`}>
+                      <Dumbbell className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{tpl.TemplateName}</p>
+                      <p className="text-[11px] text-gray-400">{tpl.Exercises.length} exercise{tpl.Exercises.length !== 1 ? 's' : ''}</p>
+                    </div>
+                    <button onClick={() => setExpandedId(expandedId === tpl.IdTemplate ? null : tpl.IdTemplate ?? null)}
+                      className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors">
+                      {expandedId === tpl.IdTemplate ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </button>
+                    <button onClick={() => { setEditing({ ...tpl }); setEditorOpen(true); }}
+                      className="p-1.5 text-gray-400 hover:text-blue-500 transition-colors">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => { if (!confirm(`Delete "${tpl.TemplateName}"?`)) return; deleteMut.mutate({ IdTemplate: tpl.IdTemplate! }); }}
+                      className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 transition-colors">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {expandedId === tpl.IdTemplate && tpl.Exercises.length > 0 && (
+                    <div className="border-t border-gray-50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-700/20">
+                      {tpl.Exercises.map((ex, i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-2 border-b border-gray-50 dark:border-gray-700/50 last:border-0">
+                          <span className="text-[10px] font-bold text-gray-400 w-4">{i + 1}</span>
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300 flex-1 truncate">{ex.ExerciseName}</span>
+                          <span className="text-[10px] text-gray-400 flex-shrink-0">
+                            {ex.Sets}×{ex.TargetReps}{ex.TargetWeight ? ` @ ${ex.TargetWeight}${ex.WeightUnit ?? 'kg'}` : ''}
+                          </span>
+                          {ex.VideoUrl && (
+                            <a href={ex.VideoUrl} target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-blue-500">
+                              <Video className="h-3 w-3" />
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </Card>
+          </div>
+        ))}
+      </div>
+
+      <TemplateEditorDrawer
+        open={editorOpen}
+        initial={editing}
+        saving={saving}
+        library={library}
+        onClose={() => setEditorOpen(false)}
+        onSave={t => t.IdTemplate ? updateMut.mutate(t) : createMut.mutate(t)}
+      />
+    </>
+  );
+}
+
+// ── Day Assign Drawer ─────────────────────────────────────────────
+
+function DayAssignDrawer({ open, date, existingWorkouts, saving, templates, onClose, onAddFromTemplate, onRemove }: {
+  open: boolean; date: string; existingWorkouts: IWorkout[];
+  saving: boolean; templates: IWorkoutTemplate[]; onClose: () => void;
+  onAddFromTemplate: (template: IWorkoutTemplate) => void;
+  onRemove: (id: number) => void;
+}) {
+  return (
+    <Drawer open={open} onOpenChange={v => { if (!v) onClose(); }}>
+      <DrawerContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 max-h-[85vh]">
+        <div className="flex items-center justify-between px-5 pb-3">
+          <div>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white">
+              {moment(date, 'DD-MM-YYYY').format('ddd, D MMM')}
+            </h2>
+            {existingWorkouts.length > 0 && (
+              <p className="text-xs text-gray-400 mt-0.5">{existingWorkouts.length} assigned</p>
+            )}
+          </div>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto px-5 pb-8 space-y-4">
+          {/* Assigned workouts */}
+          {existingWorkouts.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Assigned — tap Remove to change</p>
+              {existingWorkouts.map(w => (
+                <div key={w.IdWorkout}
+                  className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 border border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${(TYPE_COLORS[w.WorkoutName] ?? 'bg-blue-500').split(' ')[0]}`} />
+                    <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{w.WorkoutName}</span>
+                  </div>
+                  <button onClick={() => onRemove(w.IdWorkout!)} disabled={saving}
+                    className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-semibold px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-40">
+                    <Trash2 className="h-3.5 w-3.5" /> Remove
+                  </button>
+                </div>
+              ))}
+              <div className="border-t border-gray-100 dark:border-gray-700 pt-2" />
+            </div>
+          )}
+
+          {/* Templates as colored grid */}
+          {templates.length > 0 ? (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+                {existingWorkouts.length > 0 ? 'Add another workout' : 'Select Workout'}
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {templates.map(tpl => (
+                  <button key={tpl.IdTemplate} disabled={saving}
+                    onClick={() => { onAddFromTemplate(tpl); onClose(); }}
+                    className={`py-2.5 px-2 rounded-xl text-xs font-bold text-center transition-all active:scale-95 hover:opacity-90 ${
+                      TYPE_COLORS[tpl.Category ?? ''] ?? TYPE_COLORS[tpl.TemplateName] ?? 'bg-blue-500 text-white'
+                    } ${existingWorkouts.some(w => w.WorkoutName === tpl.TemplateName) ? 'opacity-40' : ''}`}>
+                    {tpl.TemplateName}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center py-10 text-center">
+              <LayoutGrid className="h-8 w-8 text-gray-300 dark:text-gray-600 mb-2" />
+              <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">No templates yet</p>
+              <p className="text-xs text-gray-400 mt-1">Go to the Templates tab to create reusable workout templates.</p>
+            </div>
+          )}
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+// ── Copy Week Dialog ──────────────────────────────────────────────
+
+const COPY_WEEK_OPTIONS = [1, 2, 4, 8, 12];
+
+function CopyWeekDialog({ open, weekStart, dayWorkouts, selectedClient, onClose, onDone }: {
+  open: boolean; weekStart: string; dayWorkouts: IWorkout[][];
+  selectedClient: number; onClose: () => void; onDone: () => void;
+}) {
+  const [weeks, setWeeks] = useState(4);
+  const [copying, setCopying] = useState(false);
+
+  const totalWorkouts = dayWorkouts.flat().filter(w => w.WorkoutName !== 'Rest Day').length;
+
+  const handleCopy = async () => {
+    const assignments: { dayOffset: number; name: string }[] = [];
+    dayWorkouts.forEach((dws, i) => {
+      dws.filter(w => w.WorkoutName !== 'Rest Day').forEach(w => {
+        assignments.push({ dayOffset: i, name: w.WorkoutName });
+      });
+    });
+    if (assignments.length === 0) { toast.error('No workouts to copy'); return; }
+
+    setCopying(true);
+    try {
+      const toCreate: IWorkout[] = [];
+      for (let w = 1; w <= weeks; w++) {
+        const weekMon = moment(weekStart, 'DD-MM-YYYY').add(w * 7, 'days');
+        assignments.forEach(({ dayOffset, name }) => {
+          toCreate.push({
+            WorkoutName: name,
+            IdUser: selectedClient,
+            ScheduledDate: ddmmyyyy(weekMon.clone().add(dayOffset, 'days')),
+            Status: 'Planned',
+            Exercises: [],
+          });
+        });
+      }
+      await bulkCreateWorkouts({ Workouts: toCreate });
+      toast.success(`Copied ${assignments.length} workout${assignments.length !== 1 ? 's' : ''} × ${weeks} week${weeks > 1 ? 's' : ''}`);
+      onDone();
+      onClose();
+    } catch {
+      toast.error('Failed to copy workouts');
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Copy className="h-4 w-4 text-blue-500" /> Copy Weekly Plan
+          </DialogTitle>
+        </DialogHeader>
+        <div className="py-2 space-y-4">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              Week of {moment(weekStart, 'DD-MM-YYYY').format('D MMM YYYY')}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {totalWorkouts} workout{totalWorkouts !== 1 ? 's' : ''} assigned this week
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Repeat for</p>
+            <div className="flex flex-wrap gap-2">
+              {COPY_WEEK_OPTIONS.map(n => (
+                <button key={n} onClick={() => setWeeks(n)}
+                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+                    weeks === n
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}>
+                  {n} week{n > 1 ? 's' : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose} disabled={copying}>Cancel</Button>
+          <Button onClick={handleCopy} disabled={copying || totalWorkouts === 0} className="bg-blue-600 hover:bg-blue-700 text-white border-0">
+            {copying
+              ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Copying…</>
+              : `Copy ${weeks} week${weeks > 1 ? 's' : ''}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Weekly Planner Tab ────────────────────────────────────────────
+
+const DAY_LABELS_PLANNER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+function WeeklyPlannerTab({ selectedClient, library }: {
+  selectedClient: number | null;
+  library: IExerciseLibraryItem[];
+}) {
+  const [plannerWeek, setPlannerWeek] = useState(ddmmyyyy(moment().startOf('isoWeek')));
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignDate, setAssignDate] = useState('');
+  const [copyOpen, setCopyOpen] = useState(false);
+
+  const weekDays = buildWeek(plannerWeek);
+  const weekLabel = `${moment(weekDays[0], 'DD-MM-YYYY').format('D MMM')} – ${moment(weekDays[6], 'DD-MM-YYYY').format('D MMM YYYY')}`;
+  const shiftWeek = (dir: -1 | 1) => setPlannerWeek(ddmmyyyy(moment(plannerWeek, 'DD-MM-YYYY').add(dir * 7, 'days')));
+
+  const weekQueries = useQueries({
+    queries: weekDays.map(date => ({
+      queryKey: ['workouts', selectedClient, date],
+      queryFn: () => getWorkoutsForClient({ IdUser: selectedClient!, ScheduledDate: date }),
+      enabled: !!selectedClient,
+      staleTime: 30_000,
+    })),
+  });
+
+  const { data: templatesRes, refetch: refetchTemplates } = useQuery({
+    queryKey: ['workout-templates'],
+    queryFn: () => getWorkoutTemplates(),
+    staleTime: 300_000,
+  });
+  const templates: IWorkoutTemplate[] = (templatesRes as any)?.data?.data ?? [];
+
+  const dayWorkouts: IWorkout[][] = weekQueries.map(q => (q.data as any)?.data?.data ?? []);
+  const isLoadingWeek = weekQueries.some(q => q.isFetching && !q.data);
+
+  const invalidateWeek = () => weekQueries.forEach(q => q.refetch());
+
+  const createMut = useMutation({
+    mutationFn: createWorkout,
+    onSuccess: () => { toast.success('Assigned!'); invalidateWeek(); },
+    onError: () => toast.error('Failed to assign'),
+  });
+  const deleteMut = useMutation({
+    mutationFn: deleteWorkout,
+    onSuccess: () => invalidateWeek(),
+    onError: () => toast.error('Failed to remove'),
+  });
+
+  const handleAddFromTemplate = (tpl: IWorkoutTemplate) => {
+    if (!selectedClient || !assignDate) return;
+    createMut.mutate({
+      WorkoutName: tpl.TemplateName,
+      IdUser: selectedClient,
+      ScheduledDate: assignDate,
+      Status: 'Planned',
+      Exercises: tpl.Exercises.map((ex, i) => ({
+        ExerciseName: ex.ExerciseName,
+        VideoUrl: ex.VideoUrl,
+        Sets: ex.Sets,
+        TargetReps: ex.TargetReps,
+        TargetWeight: ex.TargetWeight,
+        WeightUnit: ex.WeightUnit,
+        RestSeconds: ex.RestSeconds,
+        Notes: ex.Notes,
+        SortOrder: i,
+      })),
+    });
+  };
+
+  // Keep refetchTemplates available (used to refresh template data if needed)
+  void refetchTemplates;
+
+  const assignDayIdx = weekDays.indexOf(assignDate);
+  const assignDayWorkouts = assignDayIdx >= 0 ? dayWorkouts[assignDayIdx] : [];
+
+  if (!selectedClient) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
+          <User className="h-7 w-7 text-gray-400 dark:text-gray-600" />
+        </div>
+        <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">Select a client</p>
+        <p className="text-xs text-gray-400 mt-1">Choose a client above to plan their weekly schedule.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl px-3 py-2.5 border border-gray-100 dark:border-gray-700">
+        <button onClick={() => shiftWeek(-1)} className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{weekLabel}</span>
+        <button onClick={() => shiftWeek(1)} className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
+
+      <Card className="bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 overflow-hidden">
+        {isLoadingWeek ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+          </div>
+        ) : weekDays.map((date, i) => {
+          const dws = dayWorkouts[i];
+          const isWeekend = i >= 5;
+          const todayDay = isToday(date);
+
+          return (
+            <div key={date} className={`flex items-center gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-700/50 last:border-0 ${
+              todayDay ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
+            }`}>
+              <div className="w-12 flex-shrink-0">
+                <p className={`text-xs font-bold ${isWeekend ? 'text-gray-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                  {DAY_LABELS_PLANNER[i]}
+                </p>
+                <p className={`text-[11px] ${todayDay ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-400'}`}>
+                  {moment(date, 'DD-MM-YYYY').format('D MMM')}
+                </p>
+              </div>
+
+              <button
+                className="flex-1 flex flex-wrap gap-1.5 min-w-0 text-left"
+                onClick={() => { setAssignDate(date); setAssignOpen(true); }}>
+                {dws.length > 0 ? (
+                  dws.map(w => (
+                    <span key={w.IdWorkout}
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                        TYPE_COLORS[w.WorkoutName] ?? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                      }`}>
+                      {w.WorkoutName}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-gray-300 dark:text-gray-600 italic">Tap to assign</span>
+                )}
+              </button>
+
+              <button
+                onClick={() => { setAssignDate(date); setAssignOpen(true); }}
+                className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+          );
+        })}
+      </Card>
+
+      <button
+        onClick={() => setCopyOpen(true)}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:border-blue-300 hover:text-blue-600 dark:hover:border-blue-700 dark:hover:text-blue-400 transition-colors">
+        <Copy className="h-4 w-4" /> Copy to Future Weeks
+      </button>
+
+      <DayAssignDrawer
+        open={assignOpen}
+        date={assignDate}
+        existingWorkouts={assignDayWorkouts}
+        saving={createMut.isPending}
+        templates={templates}
+        onClose={() => setAssignOpen(false)}
+        onAddFromTemplate={handleAddFromTemplate}
+        onRemove={id => deleteMut.mutate({ IdWorkout: id })}
+      />
+      {copyOpen && (
+        <CopyWeekDialog
+          open={copyOpen}
+          weekStart={plannerWeek}
+          dayWorkouts={dayWorkouts}
+          selectedClient={selectedClient}
+          onClose={() => setCopyOpen(false)}
+          onDone={invalidateWeek}
+        />
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────
 
 export default function AdminWorkoutPlanPage() {
   useEffect(() => { setBaseUrl(BASE_URL); }, []);
 
-  const [pageTab, setPageTab]               = useState<"workouts"|"library">("workouts");
+  const [pageTab, setPageTab]               = useState<"workouts"|"templates"|"library"|"weekly">("workouts");
   const [selectedClient, setSelectedClient] = useState<number|null>(null);
   const [selectedDate, setSelectedDate]     = useState(ddmmyyyy(moment()));
   const [editorOpen, setEditorOpen]         = useState(false);
@@ -776,6 +1459,13 @@ export default function AdminWorkoutPlanPage() {
     staleTime: 300_000,
   });
   const library: IExerciseLibraryItem[] = libraryRes?.data?.data ?? [];
+
+  const { data: templatesRes, refetch: refetchTemplates } = useQuery({
+    queryKey: ["workout-templates"],
+    queryFn: () => getWorkoutTemplates(),
+    staleTime: 300_000,
+  });
+  const templates: IWorkoutTemplate[] = (templatesRes as any)?.data?.data ?? [];
 
   const { data: workoutsRes, isLoading: workoutsLoading, isError } = useQuery({
     queryKey: ["workouts", selectedClient, selectedDate],
@@ -840,28 +1530,31 @@ export default function AdminWorkoutPlanPage() {
           )}
         </div>
 
-        {/* Only show client + date pickers on workouts tab */}
+        {/* Show client picker on workouts and weekly tabs */}
+        {pageTab !== "library" && pageTab !== "templates" && (
+          <div className="mt-3">
+            {clientsLoading ? (
+              <div className="h-10 bg-white/20 rounded-xl animate-pulse" />
+            ) : (
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-200" />
+                <select value={selectedClient ?? ""} onChange={e => setSelectedClient(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full h-10 text-sm bg-white/15 border border-white/20 rounded-xl pl-9 pr-3 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-white/40">
+                  <option value="" className="bg-blue-700 text-white">Select a client…</option>
+                  {clients.map(c => (
+                    <option key={c.IdUser} value={c.IdUser} className="bg-blue-700 text-white">
+                      {c.FirstName} {c.LastName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Date nav + week strip only for workouts tab */}
         {pageTab === "workouts" && (
           <>
-            <div className="mt-3">
-              {clientsLoading ? (
-                <div className="h-10 bg-white/20 rounded-xl animate-pulse" />
-              ) : (
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-200" />
-                  <select value={selectedClient ?? ""} onChange={e => setSelectedClient(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full h-10 text-sm bg-white/15 border border-white/20 rounded-xl pl-9 pr-3 text-white appearance-none focus:outline-none focus:ring-1 focus:ring-white/40">
-                    <option value="" className="bg-blue-700 text-white">Select a client…</option>
-                    {clients.map(c => (
-                      <option key={c.IdUser} value={c.IdUser} className="bg-blue-700 text-white">
-                        {c.FirstName} {c.LastName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-
             <div className="flex items-center justify-between mt-2">
               <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-white hover:bg-white/20"
                 onClick={() => setSelectedDate(ddmmyyyy(moment(selectedDate,"DD-MM-YYYY").subtract(1,"day")))}>
@@ -892,25 +1585,54 @@ export default function AdminWorkoutPlanPage() {
           }`}>
           <Dumbbell className="h-3.5 w-3.5" /> Workouts
         </button>
+        <button onClick={() => setPageTab("templates")}
+          className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+            pageTab === "templates"
+              ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
+              : "text-gray-500 dark:text-gray-400"
+          }`}>
+          <LayoutGrid className="h-3.5 w-3.5" /> Templates
+          {templates.length > 0 && (
+            <span className="ml-1 text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full font-bold">{templates.length}</span>
+          )}
+        </button>
         <button onClick={() => setPageTab("library")}
           className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
             pageTab === "library"
               ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
               : "text-gray-500 dark:text-gray-400"
           }`}>
-          <BookOpen className="h-3.5 w-3.5" /> Exercise Library
+          <BookOpen className="h-3.5 w-3.5" /> Library
           {library.length > 0 && (
             <span className="ml-1 text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full font-bold">{library.length}</span>
           )}
+        </button>
+        <button onClick={() => setPageTab("weekly")}
+          className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+            pageTab === "weekly"
+              ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
+              : "text-gray-500 dark:text-gray-400"
+          }`}>
+          <CalendarDays className="h-3.5 w-3.5" /> Weekly
         </button>
       </div>
 
       {/* ── Content ───────────────────────────────────────────── */}
       <main className="flex-1 overflow-y-auto px-4 py-4 pb-28 bg-gray-50 dark:bg-gray-950 space-y-3">
 
+        {/* ── Templates Tab ────────────────────────────────────── */}
+        {pageTab === "templates" && (
+          <TemplateManager templates={templates} library={library} onRefresh={() => refetchTemplates()} />
+        )}
+
         {/* ── Library Tab ──────────────────────────────────────── */}
         {pageTab === "library" && (
           <LibraryManager library={library} onRefresh={() => refetchLibrary()} />
+        )}
+
+        {/* ── Weekly Plan Tab ───────────────────────────────────── */}
+        {pageTab === "weekly" && (
+          <WeeklyPlannerTab selectedClient={selectedClient} library={library} />
         )}
 
         {/* ── Workouts Tab ─────────────────────────────────────── */}

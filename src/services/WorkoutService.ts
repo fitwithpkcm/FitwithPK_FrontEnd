@@ -1,6 +1,6 @@
 import { httpCall } from "./HttpService";
 import { API_URL } from "../common/Urls";
-import { IWorkout, IExerciseLog, IExerciseLibraryItem, ISetLog } from "../interface/IWorkout";
+import { IWorkout, IExerciseLog, IExerciseLibraryItem, ISetLog, IWorkoutTemplate } from "../interface/IWorkout";
 
 // ── Admin: workout CRUD ───────────────────────────────────────────
 
@@ -18,6 +18,9 @@ export const deleteWorkout = (params: { IdWorkout: number }) =>
 
 export const rescheduleWorkout = (params: { IdWorkout: number; NewDate: string }) =>
   httpCall({ method: "post", url: API_URL.RESCHEDULE_WORKOUT, data: params });
+
+export const bulkCreateWorkouts = (params: { Workouts: IWorkout[] }) =>
+  httpCall({ method: "post", url: API_URL.BULK_CREATE_WORKOUTS, data: params });
 
 export const getWorkoutLogsForClient = (params: { IdUser: number; LogDate: string }) =>
   httpCall({ method: "post", url: API_URL.GET_WORKOUT_LOGS_FOR_CLIENT, data: params });
@@ -52,6 +55,20 @@ export const getSetLogsForDate = (params: { LogDate: string }) =>
 
 export const getSetLogsForExercise = (params: { IdExercise: number }) =>
   httpCall({ method: "post", url: API_URL.GET_SET_LOGS_FOR_EXERCISE, data: params });
+
+// ── Workout Templates ─────────────────────────────────────────────
+
+export const getWorkoutTemplates = () =>
+  httpCall({ method: "post", url: API_URL.GET_WORKOUT_TEMPLATES, data: {} });
+
+export const createWorkoutTemplate = (params: IWorkoutTemplate) =>
+  httpCall({ method: "post", url: API_URL.CREATE_WORKOUT_TEMPLATE, data: params });
+
+export const updateWorkoutTemplate = (params: IWorkoutTemplate) =>
+  httpCall({ method: "post", url: API_URL.UPDATE_WORKOUT_TEMPLATE, data: params });
+
+export const deleteWorkoutTemplate = (params: { IdTemplate: number }) =>
+  httpCall({ method: "post", url: API_URL.DELETE_WORKOUT_TEMPLATE, data: params });
 
 // ── Exercise Library ──────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Award, Droplet, MessageSquare, Sun, Moon, Trophy, Check, Dumbbell, Flame, Plus, ChevronRight, FileText, X, CreditCard } from "lucide-react";
 import { formatDate, calculatePercentage, isEmpty } from "../../lib/utils";
@@ -86,6 +86,9 @@ export default function HomePage() {
   const [workoutRatingOpen, setWorkoutRatingOpen] = useState(false);
   const [chartDataType, setChartDataType] = useState<'Steps_Percent' | 'Water_Percent' | 'Sleep_Percent'>('Steps_Percent');
   const [chartInfoVisible, setChartInfoVisible] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [sleepStartAngle, setSleepStartAngle] = useState(0); // degrees, 0 = 12 o'clock, clockwise
+  const draggingHandle = useRef<'start' | 'end' | null>(null);
 
   const [pdfType, setPdfType] = useState<'workout' | 'diet'>('workout');
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
@@ -366,19 +369,27 @@ export default function HomePage() {
         return error
       })
     },
-    onSuccess: () => {
+    onSuccess: (_, amount) => {
+      // Immediately update the cached daily stats so the home card bottle reflects the new value
+      // without waiting for the async refetch to complete
+      queryClient.setQueryData<IDailyStats[]>(["singleday-updates"], (old = []) => {
+        if (old.length === 0) return old;
+        return old.map((item, idx) => idx === old.length - 1 ? { ...item, Water: amount } : item);
+      });
       queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
-      queryClient.invalidateQueries({ queryKey: ['daily-updates-forweek'] })
+      queryClient.invalidateQueries({ queryKey: ['daily-updates-forweek'] });
       toast.success('Your water intake has been recorded successfully', {
-        position: 'bottom-center'
-      })
+        id: 'water-log',
+        position: 'bottom-center',
+        duration: 2500,
+      });
       setWaterInputOpen(false);
       setWaterAmount("");
     },
     onError: (error) => {
       toast.error(`Failed ${error.message}`, {
         position: 'bottom-center'
-      })
+      });
     },
   });
 
@@ -591,8 +602,8 @@ export default function HomePage() {
 
       <main className="flex-1 overflow-y-auto px-4 py-5 pb-24 sm:px-6 bg-gray-50 dark:bg-gray-950">
 
-        {/* Notification banner — visible until subscribed */}
-        {pushStatus !== 'subscribed' && (
+        {/* Notification banner — visible until subscribed or dismissed */}
+        {pushStatus !== 'subscribed' && !bannerDismissed && (
           <div className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 mb-4 border ${
             pushStatus === 'denied'
               ? 'bg-red-50 border-red-200'
@@ -629,6 +640,13 @@ export default function HomePage() {
                 Enable
               </button>
             )}
+            <button
+              onClick={() => setBannerDismissed(true)}
+              className="flex-shrink-0 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-black/10 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         )}
 
@@ -667,24 +685,16 @@ export default function HomePage() {
                       {/* Background track */}
                       <circle cx="54" cy="54" r={R} fill="none" stroke="#e5e7eb" strokeWidth="7" />
 
-                      {/* Animated dashed spinner ring */}
+                      {/* Subtle dotted inner ring */}
                       <circle
-                        cx="54" cy="54" r={R}
+                        cx="54" cy="54" r={R - 5}
                         fill="none"
-                        stroke={isGoalMet ? "#a7f3d0" : "#c7d2fe"}
-                        strokeWidth="2"
-                        strokeDasharray="4 9"
+                        stroke={isGoalMet ? "#a7f3d0" : "#e0e7ff"}
+                        strokeWidth="1"
+                        strokeDasharray="2 6"
                         strokeLinecap="round"
-                      >
-                        <animateTransform
-                          attributeName="transform"
-                          type="rotate"
-                          from="-90 54 54"
-                          to="270 54 54"
-                          dur={isGoalMet ? "4s" : "10s"}
-                          repeatCount="indefinite"
-                        />
-                      </circle>
+                        opacity="0.6"
+                      />
 
                       {/* Progress arc */}
                       <circle
@@ -706,9 +716,15 @@ export default function HomePage() {
                         const dotX = 54 + R * Math.cos(angle);
                         const dotY = 54 + R * Math.sin(angle);
                         return (
-                          <circle cx={dotX} cy={dotY} r="4" fill="#6366f1" filter="url(#stepGlow)">
-                            <animate attributeName="r" values="3.5;4.5;3.5" dur="1.5s" repeatCount="indefinite" />
-                          </circle>
+                          <g>
+                            <circle cx={dotX} cy={dotY} r="8" fill="#6366f1" opacity="0" filter="url(#stepGlow)">
+                              <animate attributeName="r" values="6;11;6" dur="1.8s" repeatCount="indefinite" />
+                              <animate attributeName="opacity" values="0.25;0;0.25" dur="1.8s" repeatCount="indefinite" />
+                            </circle>
+                            <circle cx={dotX} cy={dotY} r="4.5" fill="#6366f1" filter="url(#stepGlow)">
+                              <animate attributeName="r" values="4;5;4" dur="1.8s" repeatCount="indefinite" />
+                            </circle>
+                          </g>
                         );
                       })()}
                     </svg>
@@ -753,7 +769,7 @@ export default function HomePage() {
             return (
               <Card
                 className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 cursor-pointer overflow-hidden"
-                onClick={() => setWaterInputOpen(true)}
+                onClick={() => { setWaterAmount(latestUpdate?.Water ?? ""); setWaterInputOpen(true); }}
               >
                 <CardContent className="p-3 flex flex-col items-center">
                   <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1 self-start tracking-wide uppercase">
@@ -908,7 +924,7 @@ export default function HomePage() {
                       currentWater = parseFloat("" + currentWater);
                       const newAmount = +(currentWater + 0.25).toFixed(2);
                       setWaterAmount(newAmount.toString());
-                      updateWaterMutation.mutate(newAmount);
+                      setWaterInputOpen(true);
                     }}
                   >
                     + 250 ml
@@ -921,7 +937,7 @@ export default function HomePage() {
 
         <div className="grid grid-cols-2 gap-4 mb-6">
           {/* Sleep tracker */}
-          <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 cursor-pointer" onClick={() => setSleepInputOpen(true)}>
+          <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 cursor-pointer" onClick={() => { setSleepAmount(latestUpdate?.Sleep ?? ""); setSleepStartAngle(0); setSleepInputOpen(true); }}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Sleep Tracker</h3>
@@ -1290,7 +1306,7 @@ export default function HomePage() {
 
 
       {/* ── Water Dialog ── */}
-      <Dialog open={waterInputOpen} onOpenChange={setWaterInputOpen}>
+      <Dialog open={waterInputOpen} onOpenChange={(open) => { setWaterInputOpen(open); if (!open) setWaterAmount(latestUpdate?.Water ?? ""); }}>
         <DialogContent className="sm:max-w-[360px] p-0 overflow-hidden rounded-3xl border-0">
           <style>{`
             @keyframes waterWave {
@@ -1432,7 +1448,7 @@ export default function HomePage() {
                 className="border-0 bg-transparent p-0 text-right font-semibold text-gray-800 focus-visible:ring-0 text-lg" />
             </div>
             <div className="flex gap-3 pt-1">
-              <button onClick={() => setWaterInputOpen(false)}
+              <button onClick={() => { setWaterInputOpen(false); setWaterAmount(latestUpdate?.Water ?? ""); }}
                 className="flex-1 py-3 rounded-2xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">
                 Cancel
               </button>
@@ -1610,7 +1626,7 @@ export default function HomePage() {
       </Dialog>
 
       {/* ── Sleep Dialog ── */}
-      <Dialog open={sleepInputOpen} onOpenChange={setSleepInputOpen}>
+      <Dialog open={sleepInputOpen} onOpenChange={(open) => { setSleepInputOpen(open); if (!open) { setSleepAmount(latestUpdate?.Sleep ?? ""); setSleepStartAngle(0); } }}>
         <DialogContent className="sm:max-w-[360px] p-0 overflow-hidden rounded-3xl border-0">
           <style>{`
             @keyframes moonGlow {
@@ -1632,55 +1648,88 @@ export default function HomePage() {
           {(() => {
             const sH = Math.min(Math.max(parseFloat("" + sleepAmount) || 0, 0), 12);
             const goalReached = sH >= 8;
-            const clockAngleDeg = (sH / 12) * 360;
-            const clockAngleRad = (clockAngleDeg - 90) * (Math.PI / 180);
-            const cx = 100, cy = 100, handR = 68, arcR = 68, numR = 82;
-            const handX = cx + handR * Math.cos(clockAngleRad);
-            const handY = cy + handR * Math.sin(clockAngleRad);
-            const arcEndX = cx + arcR * Math.cos(clockAngleRad);
-            const arcEndY = cy + arcR * Math.sin(clockAngleRad);
-            const largeArc = clockAngleDeg > 180 ? 1 : 0;
+            const cx = 100, cy = 100, arcR = 68, numR = 82;
+
+            // Two-handle clock: start angle (where sleep began) + end angle (duration offset)
+            const endAngleDeg = (sleepStartAngle + (sH / 12) * 360) % 360;
+            const startAngleRad = (sleepStartAngle - 90) * (Math.PI / 180);
+            const endAngleRad = (endAngleDeg - 90) * (Math.PI / 180);
+            const startHandleX = cx + arcR * Math.cos(startAngleRad);
+            const startHandleY = cy + arcR * Math.sin(startAngleRad);
+            const endHandleX = cx + arcR * Math.cos(endAngleRad);
+            const endHandleY = cy + arcR * Math.sin(endAngleRad);
+            const largeArc = sH > 6 ? 1 : 0;
+
             const cpColors = ['#fbbf24','#c4b5fd','#a5f3fc','#f9a8d4','#6ee7b7','#93c5fd'];
-            // Stars around the clock ring when goal reached
             const ringStars = Array.from({length: 6}, (_, i) => {
               const a = (i / 6) * 2 * Math.PI - Math.PI / 2;
               return { x: cx + 92 * Math.cos(a), y: cy + 92 * Math.sin(a), cls: `tw-${i + 1}` };
             });
-            const handleClockTap = (e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>) => {
+
+            const getSvgAngle = (e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>): number => {
               const svg = e.currentTarget;
               const rect = svg.getBoundingClientRect();
               let clientX: number, clientY: number;
-              if ('touches' in e) {
+              if ('touches' in e && e.touches.length > 0) {
                 clientX = e.touches[0].clientX;
                 clientY = e.touches[0].clientY;
               } else {
                 clientX = (e as React.MouseEvent).clientX;
                 clientY = (e as React.MouseEvent).clientY;
               }
-              const scaleX = 200 / rect.width;
-              const scaleY = 200 / rect.height;
-              const x = (clientX - rect.left) * scaleX;
-              const y = (clientY - rect.top) * scaleY;
-              const dx = x - 100, dy = y - 100;
-              let ang = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+              const x = (clientX - rect.left) * (200 / rect.width);
+              const y = (clientY - rect.top) * (200 / rect.height);
+              let ang = Math.atan2(y - cy, x - cx) * 180 / Math.PI + 90;
               if (ang < 0) ang += 360;
-              const hours = Math.round((ang / 360) * 24) / 2;
-              setSleepAmount(Math.max(0, Math.min(12, hours)).toString());
+              return ang;
             };
+
+            const applyAngle = (ang: number) => {
+              if (draggingHandle.current === 'start') {
+                // Freeze the end handle's absolute position — only the start moves
+                const frozenEnd = endAngleDeg;
+                setSleepStartAngle(ang);
+                const newDuration = ((frozenEnd - ang + 360) % 360) / 360 * 12;
+                setSleepAmount(Math.max(0.5, Math.min(12, +newDuration.toFixed(1))).toString());
+              } else {
+                // Start stays fixed — only the end handle moves
+                const duration = ((ang - sleepStartAngle + 360) % 360) / 360 * 12;
+                setSleepAmount(Math.max(0.5, Math.min(12, +duration.toFixed(1))).toString());
+              }
+            };
+
+            const onPointerDown = (e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>) => {
+              const ang = getSvgAngle(e);
+              const dStart = Math.min((ang - sleepStartAngle + 360) % 360, (sleepStartAngle - ang + 360) % 360);
+              const dEnd = Math.min((ang - endAngleDeg + 360) % 360, (endAngleDeg - ang + 360) % 360);
+              draggingHandle.current = dStart <= dEnd ? 'start' : 'end';
+              applyAngle(ang);
+            };
+
+            const onPointerMove = (e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>) => {
+              if (!draggingHandle.current) return;
+              if (!('touches' in e) && (e as React.MouseEvent).buttons !== 1) return;
+              applyAngle(getSvgAngle(e));
+            };
+
+            const onPointerUp = () => { draggingHandle.current = null; };
+
             return (
               <>
                 <div className="relative bg-gradient-to-b from-indigo-500 to-purple-700 px-6 pt-5 pb-5 text-white text-center overflow-hidden">
                   <h2 className="text-xl font-bold">Sleep Tracker</h2>
                   <p className="text-indigo-200 text-xs mt-0.5">
-                    {goalReached ? "Outstanding sleep! Keep it up 🌟" : "Drag or tap the clock to set hours"}
+                    {goalReached ? "Outstanding sleep! Keep it up 🌟" : "Drag both handles to set start & end time"}
                   </p>
                   <div className="flex justify-center mt-3">
                     <svg viewBox="0 0 200 200" width="190" height="190"
                       className={`cursor-pointer select-none${goalReached ? ' moon-glow' : ''}`}
-                      onMouseDown={handleClockTap}
-                      onTouchStart={(e) => { e.preventDefault(); handleClockTap(e); }}
-                      onMouseMove={(e) => { if (e.buttons === 1) handleClockTap(e); }}
-                      onTouchMove={(e) => { e.preventDefault(); handleClockTap(e); }}>
+                      onMouseDown={onPointerDown}
+                      onTouchStart={(e) => { e.preventDefault(); onPointerDown(e); }}
+                      onMouseMove={onPointerMove}
+                      onTouchMove={(e) => { e.preventDefault(); onPointerMove(e); }}
+                      onMouseUp={onPointerUp}
+                      onMouseLeave={onPointerUp}>
                       {/* Outer ring */}
                       <circle cx="100" cy="100" r="96" fill="rgba(255,255,255,0.08)"
                         stroke={goalReached ? 'rgba(251,191,36,0.5)' : 'rgba(255,255,255,0.2)'} strokeWidth="2"/>
@@ -1689,17 +1738,17 @@ export default function HomePage() {
                         <text key={i} x={s.x} y={s.y} textAnchor="middle" dominantBaseline="central"
                           fontSize="13" className={s.cls}>✨</text>
                       ))}
-                      {/* Sleep arc */}
+                      {/* Track ring */}
+                      <circle cx="100" cy="100" r={arcR} fill="none"
+                        stroke="rgba(255,255,255,0.15)" strokeWidth="10"/>
+                      {/* Sleep arc from start to end handle */}
                       {sH > 0 && (
                         <path
-                          d={`M ${cx} ${cy - arcR} A ${arcR} ${arcR} 0 ${largeArc} 1 ${arcEndX} ${arcEndY}`}
+                          d={`M ${startHandleX} ${startHandleY} A ${arcR} ${arcR} 0 ${largeArc} 1 ${endHandleX} ${endHandleY}`}
                           fill="none"
                           stroke={goalReached ? '#fbbf24' : 'rgba(255,255,255,0.9)'}
                           strokeWidth="10" strokeLinecap="round"/>
                       )}
-                      {/* Track ring */}
-                      <circle cx="100" cy="100" r={arcR} fill="none"
-                        stroke="rgba(255,255,255,0.15)" strokeWidth="10"/>
                       {/* Hour numbers */}
                       {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((h, i) => {
                         const a = (i / 12) * 2 * Math.PI - Math.PI / 2;
@@ -1713,7 +1762,7 @@ export default function HomePage() {
                           </text>
                         );
                       })}
-                      {/* Center */}
+                      {/* Center label */}
                       <text x="100" y="90" textAnchor="middle" fontSize="28" fontWeight="700"
                         fill={goalReached ? '#fbbf24' : 'white'}>
                         {sH % 1 === 0 ? sH : sH.toFixed(1)}
@@ -1724,15 +1773,27 @@ export default function HomePage() {
                       <text x="100" y="126" textAnchor="middle" fontSize="16">
                         {goalReached ? "😴💛" : "🌙"}
                       </text>
-                      {/* Hand */}
-                      <line x1="100" y1="100" x2={handX} y2={handY}
+                      {/* Start handle (bedtime) — dashed line + hollow circle */}
+                      <line x1="100" y1="100" x2={startHandleX} y2={startHandleY}
+                        stroke={goalReached ? 'rgba(251,191,36,0.5)' : 'rgba(255,255,255,0.4)'}
+                        strokeWidth="2" strokeLinecap="round" strokeDasharray="4 3"/>
+                      <circle cx={startHandleX} cy={startHandleY} r="8"
+                        fill={goalReached ? 'rgba(251,191,36,0.25)' : 'rgba(255,255,255,0.2)'}
+                        stroke={goalReached ? '#fbbf24' : 'white'} strokeWidth="2"/>
+                      <text x={startHandleX} y={startHandleY} textAnchor="middle" dominantBaseline="central"
+                        fontSize="7" fill={goalReached ? '#fbbf24' : 'white'} fontWeight="700">ZZ</text>
+                      {/* End handle (wake time) — solid line + filled circle */}
+                      <line x1="100" y1="100" x2={endHandleX} y2={endHandleY}
                         stroke={goalReached ? '#fbbf24' : 'white'} strokeWidth="3" strokeLinecap="round"/>
-                      <circle cx={handX} cy={handY} r="7"
+                      <circle cx={endHandleX} cy={endHandleY} r="8"
                         fill={goalReached ? '#fbbf24' : 'white'} opacity="0.95"/>
+                      <text x={endHandleX} y={endHandleY} textAnchor="middle" dominantBaseline="central"
+                        fontSize="9" fill={goalReached ? '#92400e' : '#6366f1'} fontWeight="700">☀</text>
+                      {/* Center dot */}
                       <circle cx="100" cy="100" r="5" fill="white"/>
                     </svg>
                   </div>
-                  {/* Celebration confetti */}
+                  {/* Celebration confetti — particles only, no badge inside the overlay */}
                   {goalReached && (
                     <div className="absolute inset-0 pointer-events-none" style={{zIndex: 20}}>
                       {Array.from({length: 20}, (_, i) => {
@@ -1750,12 +1811,16 @@ export default function HomePage() {
                           } as React.CSSProperties}/>
                         );
                       })}
-                      <div className="celeb-badge bg-white text-gray-800 font-bold text-sm px-5 py-2 rounded-full shadow-xl"
-                        style={{zIndex: 21}}>
-                        ✨ Perfect Sleep Goal!
-                      </div>
                     </div>
                   )}
+                  {/* Badge — always occupies space to prevent dialog resize/shake */}
+                  <div className="flex justify-center mt-2" style={{height: '34px'}}>
+                    {goalReached && (
+                      <span className="bg-white text-gray-800 font-bold text-sm px-5 py-2 rounded-full shadow-xl">
+                        ✨ Perfect Sleep Goal!
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="bg-white px-6 pt-4 pb-6 space-y-3">
                   <div className="grid grid-cols-5 gap-2">
@@ -1777,7 +1842,7 @@ export default function HomePage() {
                       className="border-0 bg-transparent p-0 text-right font-semibold text-gray-800 focus-visible:ring-0 text-lg" />
                   </div>
                   <div className="flex gap-3 pt-1">
-                    <button onClick={() => setSleepInputOpen(false)}
+                    <button onClick={() => { setSleepInputOpen(false); setSleepAmount(latestUpdate?.Sleep ?? ""); setSleepStartAngle(0); }}
                       className="flex-1 py-3 rounded-2xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">
                       Cancel
                     </button>

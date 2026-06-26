@@ -87,7 +87,7 @@ function App() {
           <AuthProvider>
             <TooltipProvider>
               <Router />
-              <Toaster/>
+              <Toaster toastOptions={{ duration: 3000 }} />
             </TooltipProvider>
           </AuthProvider>
         </BrowserRouter>

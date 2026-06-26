@@ -166,6 +166,14 @@ export const API_URL = {
     GET_SET_LOGS_FOR_DATE:      '/workout/getSetLogsForDate',
     GET_SET_LOGS_FOR_EXERCISE:  '/workout/getSetLogsForExercise',
 
+    BULK_CREATE_WORKOUTS:     '/workout/bulkCreate',
+
+    // ── Workout Templates (Admin) ─────────────────────────────────
+    GET_WORKOUT_TEMPLATES:    '/workout/template/getAll',
+    CREATE_WORKOUT_TEMPLATE:  '/workout/template/create',
+    UPDATE_WORKOUT_TEMPLATE:  '/workout/template/update',
+    DELETE_WORKOUT_TEMPLATE:  '/workout/template/delete',
+
     // ── Exercise Library ──────────────────────────────────────────
     GET_EXERCISE_LIBRARY:    '/workout/library/getAll',
     CREATE_LIBRARY_ITEM:     '/workout/library/create',

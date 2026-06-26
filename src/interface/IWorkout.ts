@@ -2,6 +2,12 @@
 
 export type WorkoutStatus = 'Planned' | 'Completed' | 'Missed' | 'Rescheduled';
 
+export const WORKOUT_TYPES = [
+  'Upper Body', 'Lower Body', 'Push', 'Pull', 'Legs',
+  'Full Body', 'Cardio', 'Mobility', 'Rest Day',
+] as const;
+export type WorkoutTypeName = typeof WORKOUT_TYPES[number];
+
 export const WORKOUT_STATUS: WorkoutStatus[] = ['Planned', 'Completed', 'Missed', 'Rescheduled'];
 
 export const WEIGHT_UNITS = ['kg', 'lbs', 'bodyweight'] as const;
@@ -74,6 +80,41 @@ export interface IExerciseLog {
   IsCompleted: 0 | 1;
   Notes?: string;
   LoggedAt?: string;
+}
+
+// ── Workout Templates ─────────────────────────────────────────────
+
+export interface ITemplateExercise {
+  IdTemplateExercise?: number;
+  IdTemplate?:         number;
+  ExerciseName:        string;
+  VideoUrl?:           string;
+  Sets:                number;
+  TargetReps:          number;
+  TargetWeight?:       number;
+  WeightUnit?:         WeightUnit;
+  RestSeconds?:        number;
+  Notes?:              string;
+  SortOrder:           number;
+}
+
+export interface IWorkoutTemplate {
+  IdTemplate?:   number;
+  IdCoach?:      number;
+  TemplateName:  string;
+  Category?:     string;
+  Notes?:        string;
+  CreatedAt?:    string;
+  UpdatedAt?:    string;
+  Exercises:     ITemplateExercise[];
+}
+
+export function createBlankTemplate(): IWorkoutTemplate {
+  return { TemplateName: '', Category: '', Exercises: [] };
+}
+
+export function createBlankTemplateExercise(sortOrder: number): ITemplateExercise {
+  return { ExerciseName: '', Sets: 3, TargetReps: 10, WeightUnit: 'kg', SortOrder: sortOrder };
 }
 
 // ── Client-side merged types ──────────────────────────────────────
