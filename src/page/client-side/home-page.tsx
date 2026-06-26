@@ -1289,167 +1289,507 @@ export default function HomePage() {
 
 
 
-      {/* Water Input Dialog */}
+      {/* ── Water Dialog ── */}
       <Dialog open={waterInputOpen} onOpenChange={setWaterInputOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Update Water Intake</DialogTitle>
-            <DialogDescription>
-              Enter the amount of water you've consumed in liters.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="waterAmount" className="text-right text-sm font-medium col-span-1">
-                Amount
-              </label>
-              <div className="col-span-3 flex items-center">
-                <Input
-                  id="waterAmount"
-                  type="number"
-                  placeholder="0.0"
-                  step="0.1"
-                  value={waterAmount}
-                  onChange={(e) => setWaterAmount(e.target.value)}
-                  className="mr-2"
-                />
-                <span>liters</span>
+        <DialogContent className="sm:max-w-[360px] p-0 overflow-hidden rounded-3xl border-0">
+          <style>{`
+            @keyframes waterWave {
+              0% { transform: translateX(0px); }
+              100% { transform: translateX(-80px); }
+            }
+            .water-wave-anim { animation: waterWave 2s linear infinite; }
+            @keyframes bubbleRise {
+              0% { transform: translateY(0) scale(1); opacity: 0.7; }
+              100% { transform: translateY(-60px) scale(0.4); opacity: 0; }
+            }
+            .bubble1 { animation: bubbleRise 2.4s ease-in infinite; }
+            .bubble2 { animation: bubbleRise 2.4s ease-in 0.8s infinite; }
+            .bubble3 { animation: bubbleRise 2.4s ease-in 1.6s infinite; }
+            @keyframes cpBurst {
+              0% { transform: translate(-50%,-50%) translate(0,0) rotate(0deg) scale(1); opacity: 1; }
+              100% { transform: translate(-50%,-50%) translate(var(--tx),var(--ty)) rotate(var(--rz)) scale(0.15); opacity: 0; }
+            }
+            .cp { position:absolute; top:50%; left:50%; animation: cpBurst 1.3s ease-out both; }
+            @keyframes badgePop {
+              0% { transform: translateX(-50%) scale(0.4) translateY(12px); opacity: 0; }
+              35% { transform: translateX(-50%) scale(1.1) translateY(-3px); opacity: 1; }
+              55% { transform: translateX(-50%) scale(1) translateY(0); opacity: 1; }
+              80% { opacity: 1; }
+              100% { transform: translateX(-50%) scale(0.95) translateY(-8px); opacity: 0; }
+            }
+            .celeb-badge { position:absolute; left:50%; bottom:16px; animation: badgePop 2.8s ease-out 0.1s both; white-space:nowrap; }
+            @keyframes glassShimmer {
+              0%,100% { filter: drop-shadow(0 0 6px rgba(251,191,36,0.0)); }
+              50% { filter: drop-shadow(0 0 14px rgba(251,191,36,0.9)); }
+            }
+            .glass-goal { animation: glassShimmer 1s ease-in-out 3; }
+          `}</style>
+          {(() => {
+            const wL = parseFloat("" + waterAmount) || 0;
+            const pct = Math.min(wL / 3, 1);
+            const goalReached = wL >= 3;
+            const fillH = 120 * pct;
+            const fillY = 132 - fillH;
+            const waveY = fillY - 6;
+            const cpColors = ['#fbbf24','#f87171','#34d399','#60a5fa','#a78bfa','#f472b6'];
+            return (
+              <div className="relative bg-gradient-to-b from-cyan-400 to-blue-600 px-6 pt-6 pb-5 text-white text-center overflow-hidden">
+                <h2 className="text-xl font-bold">Water Intake</h2>
+                <p className="text-cyan-100 text-xs mt-0.5">Stay hydrated, stay strong</p>
+                <div className="flex justify-center mt-3">
+                  <svg viewBox="0 0 100 145" width="88" height="127"
+                    className={`drop-shadow-xl${goalReached ? ' glass-goal' : ''}`}>
+                    <defs>
+                      <clipPath id="glassClip">
+                        <path d="M14,12 L10,132 Q10,138 17,138 L83,138 Q90,138 90,132 L86,12 Z"/>
+                      </clipPath>
+                    </defs>
+                    <path d="M14,12 L10,132 Q10,138 17,138 L83,138 Q90,138 90,132 L86,12 Z"
+                      fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.5)" strokeWidth="2"/>
+                    <g clipPath="url(#glassClip)">
+                      <rect x="10" y={fillY} width="80" height={fillH + 10}
+                        fill={goalReached ? '#f59e0b' : '#1d4ed8'} opacity="0.8"
+                        style={{ transition: 'fill 0.4s ease' }}/>
+                      {pct > 0 && (
+                        <g style={{ transform: `translateY(${waveY}px)`, transition: 'transform 0.5s ease' }}>
+                          <g className="water-wave-anim">
+                            <path d="M-80,8 Q-70,1 -60,8 Q-50,15 -40,8 Q-30,1 -20,8 Q-10,15 0,8 Q10,1 20,8 Q30,15 40,8 Q50,1 60,8 Q70,15 80,8 Q90,1 100,8 Q110,15 120,8 Q130,1 140,8 Q150,15 160,8 V18 H-80Z"
+                              fill={goalReached ? '#d97706' : '#2563eb'} opacity="0.9"/>
+                          </g>
+                        </g>
+                      )}
+                      {pct > 0.05 && (
+                        <>
+                          <circle cx="35" cy={fillY + fillH - 8} r="3" fill="white" opacity="0.4" className="bubble1"/>
+                          <circle cx="55" cy={fillY + fillH - 5} r="2" fill="white" opacity="0.3" className="bubble2"/>
+                          <circle cx="70" cy={fillY + fillH - 10} r="2.5" fill="white" opacity="0.35" className="bubble3"/>
+                        </>
+                      )}
+                    </g>
+                    <path d="M14,12 L10,132 Q10,138 17,138 L83,138 Q90,138 90,132 L86,12 Z"
+                      fill="none" stroke={goalReached ? 'rgba(251,191,36,0.9)' : 'rgba(255,255,255,0.7)'} strokeWidth="2"/>
+                    <line x1="18" y1="52" x2="26" y2="52" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5"/>
+                    <text x="28" y="56" fill="rgba(255,255,255,0.4)" fontSize="7.5">1L</text>
+                    <line x1="18" y1="92" x2="26" y2="92" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5"/>
+                    <text x="28" y="96" fill="rgba(255,255,255,0.4)" fontSize="7.5">2L</text>
+                    <line x1="18" y1="132" x2="26" y2="132" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5"/>
+                    <text x="28" y="136" fill="rgba(255,255,255,0.4)" fontSize="7.5">3L</text>
+                  </svg>
+                </div>
+                <div className="mt-2 inline-flex items-baseline gap-1 bg-white/20 rounded-2xl px-5 py-2">
+                  <span className="text-4xl font-bold">{wL.toFixed(2)}</span>
+                  <span className="text-base font-medium">L</span>
+                </div>
+                {/* Celebration burst */}
+                {goalReached && (
+                  <div className="absolute inset-0 pointer-events-none" style={{zIndex: 20}}>
+                    {Array.from({length: 20}, (_, i) => {
+                      const ang = (i / 20) * 2 * Math.PI;
+                      const d = 55 + (i % 4) * 18;
+                      return (
+                        <div key={i} className="cp" style={{
+                          width: 7 + (i % 3) * 3, height: 7 + (i % 3) * 3,
+                          backgroundColor: cpColors[i % 6],
+                          borderRadius: i % 2 === 0 ? '50%' : '3px',
+                          '--tx': `${Math.cos(ang) * d}px`,
+                          '--ty': `${Math.sin(ang) * d - 15}px`,
+                          '--rz': `${(i * 61) % 360}deg`,
+                          animationDelay: `${(i % 5) * 0.05}s`,
+                        } as React.CSSProperties}/>
+                      );
+                    })}
+                    <div className="celeb-badge bg-white text-gray-800 font-bold text-sm px-5 py-2 rounded-full shadow-xl"
+                      style={{zIndex: 21}}>
+                      💧 Daily Goal Reached!
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-
+            );
+          })()}
+          <div className="bg-white px-6 pt-4 pb-6 space-y-3">
             <div className="grid grid-cols-4 gap-2">
-              <div className="col-span-1"></div>
-              <div className="col-span-3 flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
-                  onClick={() => {
-                    const newAmount = 0.25;
-                    setWaterAmount(newAmount.toString());
-                  }}
-                >
-                  250ml
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
-                  onClick={() => {
-                    const newAmount = 0.5;
-                    setWaterAmount(newAmount.toString());
-                  }}
-                >
-                  500ml
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
-                  onClick={() => {
-                    const newAmount = 1;
-                    setWaterAmount(newAmount.toString());
-                  }}
-                >
-                  1 liter
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
-                  onClick={() => {
-                    const currentAmount = parseFloat("" + waterAmount) || 0;
-                    const newAmount = currentAmount + 0.25;
-                    setWaterAmount(newAmount.toString());
-                  }}
-                >
-                  + 250ml
-                </Button>
-              </div>
+              {[{ label: "250ml", val: 0.25 }, { label: "500ml", val: 0.5 }, { label: "750ml", val: 0.75 }, { label: "1L", val: 1 }].map(({ label, val }) => (
+                <button key={label} onClick={() => setWaterAmount(val.toString())}
+                  className="py-2 rounded-xl text-sm font-semibold bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 active:scale-95 transition-all">
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[{ label: "+ 250ml", val: 0.25 }, { label: "+ 500ml", val: 0.5 }].map(({ label, val }) => (
+                <button key={label}
+                  onClick={() => setWaterAmount(((parseFloat("" + waterAmount) || 0) + val).toFixed(2))}
+                  className="py-2 rounded-xl text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 active:scale-95 transition-all">
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-2 border border-gray-200">
+              <span className="text-gray-400 text-sm">Custom (L)</span>
+              <Input type="number" placeholder="0.0" step="0.1" value={waterAmount}
+                onChange={(e) => setWaterAmount(e.target.value)}
+                className="border-0 bg-transparent p-0 text-right font-semibold text-gray-800 focus-visible:ring-0 text-lg" />
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button onClick={() => setWaterInputOpen(false)}
+                className="flex-1 py-3 rounded-2xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">
+                Cancel
+              </button>
+              <button onClick={handleWaterSubmit} disabled={updateWaterMutation.isPending}
+                className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-white font-semibold text-sm hover:opacity-90 disabled:opacity-60">
+                {updateWaterMutation.isPending ? "Saving…" : "Log Water 💧"}
+              </button>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setWaterInputOpen(false)}>Cancel</Button>
-            <Button onClick={handleWaterSubmit} disabled={updateWaterMutation.isPending}>
-              {updateWaterMutation.isPending ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Steps Input Dialog */}
+      {/* ── Steps Dialog ── */}
       <Dialog open={stepsInputOpen} onOpenChange={setStepsInputOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Update Step Count</DialogTitle>
-            <DialogDescription>
-              Enter the number of steps you've taken today.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="stepsAmount" className="text-right text-sm font-medium col-span-1">
-                Steps
-              </label>
-              <div className="col-span-3">
-                <Input
-                  id="stepsAmount"
-                  type="number"
-                  placeholder="0"
-                  value={stepsAmount}
-                  onChange={(e) => setStepsAmount(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setStepsInputOpen(false)}>Cancel</Button>
-            <Button onClick={handleStepsSubmit} disabled={updateStepsMutation.isPending}>
-              {updateStepsMutation.isPending ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
+        <DialogContent className="sm:max-w-[360px] p-0 overflow-hidden rounded-3xl border-0">
+          <style>{`
+            @keyframes shoeStride {
+              0%, 100% { transform: translateY(0px) rotate(-8deg); }
+              50% { transform: translateY(-8px) rotate(8deg); }
+            }
+            .shoe-stride { animation: shoeStride 0.7s ease-in-out infinite; }
+            @keyframes fpPop {
+              0% { opacity: 0; transform: scale(0.3) translateY(4px); }
+              25% { opacity: 1; transform: scale(1.1) translateY(0); }
+              60% { opacity: 0.8; transform: scale(1); }
+              100% { opacity: 0; transform: scale(0.9); }
+            }
+            .fp-a { animation: fpPop 1.6s ease 0s infinite; }
+            .fp-b { animation: fpPop 1.6s ease 0.4s infinite; }
+            .fp-c { animation: fpPop 1.6s ease 0.8s infinite; }
+            .fp-d { animation: fpPop 1.6s ease 1.2s infinite; }
+            @keyframes ringGlow {
+              0%,100% { filter: drop-shadow(0 0 4px rgba(251,191,36,0.3)); }
+              50% { filter: drop-shadow(0 0 16px rgba(251,191,36,1)); }
+            }
+            .ring-goal { animation: ringGlow 1s ease-in-out 4; }
+            @keyframes starPop {
+              0% { transform: translate(-50%,-50%) translate(var(--sx),var(--sy)) scale(0); opacity: 1; }
+              50% { opacity: 1; }
+              100% { transform: translate(-50%,-50%) translate(var(--sx),var(--sy)) scale(1.4); opacity: 0; }
+            }
+            .star-burst { position:absolute; top:50%; left:50%; font-size:20px; animation: starPop 1.2s ease-out both; line-height:1; }
+          `}</style>
+          {(() => {
+            const steps = parseInt("" + stepsAmount) || 0;
+            const goal = 10000;
+            const pct = Math.min(steps / goal, 1);
+            const goalReached = steps >= goal;
+            const r = 72, circ = 2 * Math.PI * r;
+            const dash = circ * pct;
+            const stepsLabel = steps >= 1000 ? `${(steps / 1000).toFixed(steps % 1000 === 0 ? 0 : 1)}K` : steps.toString();
+            const cpColors = ['#fbbf24','#f87171','#34d399','#60a5fa','#a78bfa','#f472b6'];
+            // 8 star positions around center
+            const starPositions = Array.from({length: 8}, (_, i) => {
+              const a = (i / 8) * 2 * Math.PI;
+              const d = 72 + (i % 2) * 20;
+              return { sx: `${Math.cos(a) * d}px`, sy: `${Math.sin(a) * d}px`, delay: i * 0.08 };
+            });
+            return (
+              <>
+                <div className="relative bg-gradient-to-b from-orange-400 to-rose-600 px-6 pt-5 pb-5 text-white text-center overflow-hidden">
+                  <h2 className="text-xl font-bold">Step Count</h2>
+                  <p className="text-orange-100 text-xs mt-0.5">Goal: 10,000 steps</p>
+                  <div className="flex justify-center mt-3">
+                    <svg viewBox="0 0 200 200" width="188" height="188"
+                      className={goalReached ? 'ring-goal' : ''}>
+                      {/* Background track */}
+                      <circle cx="100" cy="100" r={r} fill="none"
+                        stroke="rgba(255,255,255,0.2)" strokeWidth="12" strokeLinecap="round"/>
+                      {/* Progress arc */}
+                      <circle cx="100" cy="100" r={r} fill="none"
+                        stroke={goalReached ? '#fbbf24' : 'white'} strokeWidth="12" strokeLinecap="round"
+                        strokeDasharray={`${dash} ${circ}`}
+                        transform="rotate(-90 100 100)"
+                        style={{ transition: 'stroke-dasharray 0.5s ease, stroke 0.3s ease' }}/>
+                      {/* Goal tick */}
+                      <line x1="100" y1="22" x2="100" y2="16"
+                        stroke={goalReached ? '#fbbf24' : 'rgba(255,255,255,0.8)'}
+                        strokeWidth="3" strokeLinecap="round"/>
+                      {/* Footprints */}
+                      {steps > 0 && !goalReached && (
+                        <>
+                          <ellipse cx="68" cy="160" rx="7" ry="10" fill="rgba(255,255,255,0.25)" className="fp-a"/>
+                          <ellipse cx="82" cy="155" rx="7" ry="10" fill="rgba(255,255,255,0.25)" className="fp-b"/>
+                          <ellipse cx="96" cy="161" rx="7" ry="10" fill="rgba(255,255,255,0.25)" className="fp-c"/>
+                          <ellipse cx="111" cy="156" rx="7" ry="10" fill="rgba(255,255,255,0.25)" className="fp-d"/>
+                        </>
+                      )}
+                      {/* Shoe */}
+                      <text x="100" y="94" textAnchor="middle" fontSize="38"
+                        className={steps > 0 ? "shoe-stride" : ""}>
+                        {goalReached ? "🏆" : "👟"}
+                      </text>
+                      <text x="100" y="120" textAnchor="middle"
+                        fill={goalReached ? '#fbbf24' : 'white'} fontSize="22" fontWeight="700">
+                        {stepsLabel}
+                      </text>
+                      <text x="100" y="136" textAnchor="middle" fill="rgba(255,255,255,0.75)" fontSize="11">
+                        {goalReached ? "You crushed it! 🎉" : `${Math.round(pct * 100)}% of goal`}
+                      </text>
+                    </svg>
+                  </div>
+                  {/* Celebration burst */}
+                  {goalReached && (
+                    <div className="absolute inset-0 pointer-events-none" style={{zIndex: 20}}>
+                      {/* Confetti particles */}
+                      {Array.from({length: 20}, (_, i) => {
+                        const ang = (i / 20) * 2 * Math.PI;
+                        const d = 60 + (i % 4) * 18;
+                        return (
+                          <div key={i} className="cp" style={{
+                            width: 7 + (i % 3) * 3, height: 7 + (i % 3) * 3,
+                            backgroundColor: cpColors[i % 6],
+                            borderRadius: i % 2 === 0 ? '50%' : '3px',
+                            '--tx': `${Math.cos(ang) * d}px`,
+                            '--ty': `${Math.sin(ang) * d - 15}px`,
+                            '--rz': `${(i * 61) % 360}deg`,
+                            animationDelay: `${(i % 5) * 0.05}s`,
+                          } as React.CSSProperties}/>
+                        );
+                      })}
+                      {/* Star bursts */}
+                      {starPositions.map((s, i) => (
+                        <div key={`s${i}`} className="star-burst"
+                          style={{ '--sx': s.sx, '--sy': s.sy, animationDelay: `${s.delay}s` } as React.CSSProperties}>
+                          ⭐
+                        </div>
+                      ))}
+                      <div className="celeb-badge bg-white text-gray-800 font-bold text-sm px-5 py-2 rounded-full shadow-xl"
+                        style={{zIndex: 21}}>
+                        🏆 10K Steps Done!
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="bg-white px-6 pt-4 pb-6 space-y-3">
+                  <div className="grid grid-cols-4 gap-2">
+                    {[{ label: "1K", val: 1000 }, { label: "2.5K", val: 2500 }, { label: "5K", val: 5000 }, { label: "10K", val: 10000 }].map(({ label, val }) => (
+                      <button key={label} onClick={() => setStepsAmount(val.toString())}
+                        className="py-2 rounded-xl text-sm font-semibold bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 active:scale-95 transition-all">
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[{ label: "+ 1,000", val: 1000 }, { label: "+ 2,500", val: 2500 }].map(({ label, val }) => (
+                      <button key={label}
+                        onClick={() => setStepsAmount(((parseInt("" + stepsAmount) || 0) + val).toString())}
+                        className="py-2 rounded-xl text-sm font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-95 transition-all">
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-2 border border-gray-200">
+                    <span className="text-gray-400 text-sm">Custom</span>
+                    <Input type="number" placeholder="0" value={stepsAmount}
+                      onChange={(e) => setStepsAmount(e.target.value)}
+                      className="border-0 bg-transparent p-0 text-right font-semibold text-gray-800 focus-visible:ring-0 text-lg" />
+                  </div>
+                  <div className="flex gap-3 pt-1">
+                    <button onClick={() => setStepsInputOpen(false)}
+                      className="flex-1 py-3 rounded-2xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">
+                      Cancel
+                    </button>
+                    <button onClick={handleStepsSubmit} disabled={updateStepsMutation.isPending}
+                      className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-orange-400 to-rose-500 text-white font-semibold text-sm hover:opacity-90 disabled:opacity-60">
+                      {updateStepsMutation.isPending ? "Saving…" : "Log Steps 👟"}
+                    </button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
-      {/* Sleep Input Dialog */}
+      {/* ── Sleep Dialog ── */}
       <Dialog open={sleepInputOpen} onOpenChange={setSleepInputOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Update Sleep Hours</DialogTitle>
-            <DialogDescription>
-              Enter how many hours you slept last night.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="sleepAmount" className="text-right text-sm font-medium col-span-1">
-                Hours
-              </label>
-              <div className="col-span-3 flex items-center">
-                <Input
-                  id="sleepAmount"
-                  type="number"
-                  placeholder="0.0"
-                  step="0.5"
-                  min="0"
-                  max="24"
-                  value={sleepAmount}
-                  onChange={(e) => setSleepAmount(e.target.value)}
-                  className="mr-2"
-                />
-                <span>hours</span>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSleepInputOpen(false)}>Cancel</Button>
-            <Button onClick={handleSleepSubmit} disabled={updateSleepMutation.isPending}>
-              {updateSleepMutation.isPending ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
+        <DialogContent className="sm:max-w-[360px] p-0 overflow-hidden rounded-3xl border-0">
+          <style>{`
+            @keyframes moonGlow {
+              0%,100% { filter: drop-shadow(0 0 6px rgba(167,139,250,0)); }
+              50% { filter: drop-shadow(0 0 20px rgba(251,191,36,1)); }
+            }
+            .moon-glow { animation: moonGlow 1s ease-in-out 4; }
+            @keyframes starTwinkle {
+              0%,100% { opacity: 0.3; transform: scale(0.8); }
+              50% { opacity: 1; transform: scale(1.2); }
+            }
+            .tw-1 { animation: starTwinkle 1.2s ease-in-out infinite 0s; }
+            .tw-2 { animation: starTwinkle 1.2s ease-in-out infinite 0.3s; }
+            .tw-3 { animation: starTwinkle 1.2s ease-in-out infinite 0.6s; }
+            .tw-4 { animation: starTwinkle 1.2s ease-in-out infinite 0.9s; }
+            .tw-5 { animation: starTwinkle 1.2s ease-in-out infinite 1.1s; }
+            .tw-6 { animation: starTwinkle 1.2s ease-in-out infinite 0.15s; }
+          `}</style>
+          {(() => {
+            const sH = Math.min(Math.max(parseFloat("" + sleepAmount) || 0, 0), 12);
+            const goalReached = sH >= 8;
+            const clockAngleDeg = (sH / 12) * 360;
+            const clockAngleRad = (clockAngleDeg - 90) * (Math.PI / 180);
+            const cx = 100, cy = 100, handR = 68, arcR = 68, numR = 82;
+            const handX = cx + handR * Math.cos(clockAngleRad);
+            const handY = cy + handR * Math.sin(clockAngleRad);
+            const arcEndX = cx + arcR * Math.cos(clockAngleRad);
+            const arcEndY = cy + arcR * Math.sin(clockAngleRad);
+            const largeArc = clockAngleDeg > 180 ? 1 : 0;
+            const cpColors = ['#fbbf24','#c4b5fd','#a5f3fc','#f9a8d4','#6ee7b7','#93c5fd'];
+            // Stars around the clock ring when goal reached
+            const ringStars = Array.from({length: 6}, (_, i) => {
+              const a = (i / 6) * 2 * Math.PI - Math.PI / 2;
+              return { x: cx + 92 * Math.cos(a), y: cy + 92 * Math.sin(a), cls: `tw-${i + 1}` };
+            });
+            const handleClockTap = (e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>) => {
+              const svg = e.currentTarget;
+              const rect = svg.getBoundingClientRect();
+              let clientX: number, clientY: number;
+              if ('touches' in e) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+              } else {
+                clientX = (e as React.MouseEvent).clientX;
+                clientY = (e as React.MouseEvent).clientY;
+              }
+              const scaleX = 200 / rect.width;
+              const scaleY = 200 / rect.height;
+              const x = (clientX - rect.left) * scaleX;
+              const y = (clientY - rect.top) * scaleY;
+              const dx = x - 100, dy = y - 100;
+              let ang = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+              if (ang < 0) ang += 360;
+              const hours = Math.round((ang / 360) * 24) / 2;
+              setSleepAmount(Math.max(0, Math.min(12, hours)).toString());
+            };
+            return (
+              <>
+                <div className="relative bg-gradient-to-b from-indigo-500 to-purple-700 px-6 pt-5 pb-5 text-white text-center overflow-hidden">
+                  <h2 className="text-xl font-bold">Sleep Tracker</h2>
+                  <p className="text-indigo-200 text-xs mt-0.5">
+                    {goalReached ? "Outstanding sleep! Keep it up 🌟" : "Drag or tap the clock to set hours"}
+                  </p>
+                  <div className="flex justify-center mt-3">
+                    <svg viewBox="0 0 200 200" width="190" height="190"
+                      className={`cursor-pointer select-none${goalReached ? ' moon-glow' : ''}`}
+                      onMouseDown={handleClockTap}
+                      onTouchStart={(e) => { e.preventDefault(); handleClockTap(e); }}
+                      onMouseMove={(e) => { if (e.buttons === 1) handleClockTap(e); }}
+                      onTouchMove={(e) => { e.preventDefault(); handleClockTap(e); }}>
+                      {/* Outer ring */}
+                      <circle cx="100" cy="100" r="96" fill="rgba(255,255,255,0.08)"
+                        stroke={goalReached ? 'rgba(251,191,36,0.5)' : 'rgba(255,255,255,0.2)'} strokeWidth="2"/>
+                      {/* Twinkling stars when goal reached */}
+                      {goalReached && ringStars.map((s, i) => (
+                        <text key={i} x={s.x} y={s.y} textAnchor="middle" dominantBaseline="central"
+                          fontSize="13" className={s.cls}>✨</text>
+                      ))}
+                      {/* Sleep arc */}
+                      {sH > 0 && (
+                        <path
+                          d={`M ${cx} ${cy - arcR} A ${arcR} ${arcR} 0 ${largeArc} 1 ${arcEndX} ${arcEndY}`}
+                          fill="none"
+                          stroke={goalReached ? '#fbbf24' : 'rgba(255,255,255,0.9)'}
+                          strokeWidth="10" strokeLinecap="round"/>
+                      )}
+                      {/* Track ring */}
+                      <circle cx="100" cy="100" r={arcR} fill="none"
+                        stroke="rgba(255,255,255,0.15)" strokeWidth="10"/>
+                      {/* Hour numbers */}
+                      {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((h, i) => {
+                        const a = (i / 12) * 2 * Math.PI - Math.PI / 2;
+                        const isGoalHour = h === 8;
+                        return (
+                          <text key={h} x={cx + numR * Math.cos(a)} y={cy + numR * Math.sin(a)}
+                            textAnchor="middle" dominantBaseline="central"
+                            fill={isGoalHour && !goalReached ? 'rgba(251,191,36,0.9)' : goalReached ? '#fde68a' : 'rgba(255,255,255,0.65)'}
+                            fontSize={isGoalHour ? 13 : 12} fontWeight="600">
+                            {h}
+                          </text>
+                        );
+                      })}
+                      {/* Center */}
+                      <text x="100" y="90" textAnchor="middle" fontSize="28" fontWeight="700"
+                        fill={goalReached ? '#fbbf24' : 'white'}>
+                        {sH % 1 === 0 ? sH : sH.toFixed(1)}
+                      </text>
+                      <text x="100" y="110" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="11">
+                        hours
+                      </text>
+                      <text x="100" y="126" textAnchor="middle" fontSize="16">
+                        {goalReached ? "😴💛" : "🌙"}
+                      </text>
+                      {/* Hand */}
+                      <line x1="100" y1="100" x2={handX} y2={handY}
+                        stroke={goalReached ? '#fbbf24' : 'white'} strokeWidth="3" strokeLinecap="round"/>
+                      <circle cx={handX} cy={handY} r="7"
+                        fill={goalReached ? '#fbbf24' : 'white'} opacity="0.95"/>
+                      <circle cx="100" cy="100" r="5" fill="white"/>
+                    </svg>
+                  </div>
+                  {/* Celebration confetti */}
+                  {goalReached && (
+                    <div className="absolute inset-0 pointer-events-none" style={{zIndex: 20}}>
+                      {Array.from({length: 20}, (_, i) => {
+                        const ang = (i / 20) * 2 * Math.PI;
+                        const d = 55 + (i % 4) * 18;
+                        return (
+                          <div key={i} className="cp" style={{
+                            width: 7 + (i % 3) * 3, height: 7 + (i % 3) * 3,
+                            backgroundColor: cpColors[i % 6],
+                            borderRadius: i % 2 === 0 ? '50%' : '3px',
+                            '--tx': `${Math.cos(ang) * d}px`,
+                            '--ty': `${Math.sin(ang) * d - 15}px`,
+                            '--rz': `${(i * 61) % 360}deg`,
+                            animationDelay: `${(i % 5) * 0.05}s`,
+                          } as React.CSSProperties}/>
+                        );
+                      })}
+                      <div className="celeb-badge bg-white text-gray-800 font-bold text-sm px-5 py-2 rounded-full shadow-xl"
+                        style={{zIndex: 21}}>
+                        ✨ Perfect Sleep Goal!
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="bg-white px-6 pt-4 pb-6 space-y-3">
+                  <div className="grid grid-cols-5 gap-2">
+                    {[{ label: "5h", val: 5 }, { label: "6h", val: 6 }, { label: "7h", val: 7 }, { label: "8h", val: 8 }, { label: "9h", val: 9 }].map(({ label, val }) => (
+                      <button key={label} onClick={() => setSleepAmount(val.toString())}
+                        className={`py-2 rounded-xl text-sm font-semibold border active:scale-95 transition-all ${
+                          val === 8
+                            ? 'bg-amber-50 text-amber-700 border-amber-300 ring-1 ring-amber-300'
+                            : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+                        }`}>
+                        {label}{val === 8 ? ' ⭐' : ''}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-2 border border-gray-200">
+                    <span className="text-gray-400 text-sm">Custom (hrs)</span>
+                    <Input type="number" placeholder="0.0" step="0.5" min="0" max="12" value={sleepAmount}
+                      onChange={(e) => setSleepAmount(e.target.value)}
+                      className="border-0 bg-transparent p-0 text-right font-semibold text-gray-800 focus-visible:ring-0 text-lg" />
+                  </div>
+                  <div className="flex gap-3 pt-1">
+                    <button onClick={() => setSleepInputOpen(false)}
+                      className="flex-1 py-3 rounded-2xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">
+                      Cancel
+                    </button>
+                    <button onClick={handleSleepSubmit} disabled={updateSleepMutation.isPending}
+                      className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-700 text-white font-semibold text-sm hover:opacity-90 disabled:opacity-60">
+                      {updateSleepMutation.isPending ? "Saving…" : "Log Sleep 🌙"}
+                    </button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

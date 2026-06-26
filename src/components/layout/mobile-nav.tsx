@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, BarChart, Apple, UtensilsCrossed, Settings } from "lucide-react";
+import { Home, BarChart, Apple, UtensilsCrossed, Settings, Dumbbell } from "lucide-react";
 import { RENDER_URL } from "../../common/Urls";
 import React from "react";
 
@@ -14,6 +14,7 @@ export function MobileNav() {
           <NavItem icon={<BarChart className="h-5 w-5" />} label="Updates" href={RENDER_URL.STUDENT_UPDATES} isActive={location === RENDER_URL.STUDENT_UPDATES} />
           <NavItem icon={<Apple className="h-5 w-5" />} label="NutriSwap" href={RENDER_URL.STUDENT_NUTRI_SWAP} isActive={location === RENDER_URL.STUDENT_NUTRI_SWAP} />
           <NavItem icon={<UtensilsCrossed className="h-5 w-5" />} label="Meals" href={RENDER_URL.STUDENT_MEAL_TRACKING} isActive={location === RENDER_URL.STUDENT_MEAL_TRACKING} />
+          <NavItem icon={<Dumbbell className="h-5 w-5" />} label="Workouts" href={RENDER_URL.STUDENT_WORKOUT} isActive={location === RENDER_URL.STUDENT_WORKOUT} />
           <NavItem icon={<Settings className="h-5 w-5" />} label="Profile" href={RENDER_URL.STUDENT_PROFILE} isActive={location === RENDER_URL.STUDENT_PROFILE} />
         </div>
       </nav>

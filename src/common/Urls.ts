@@ -39,6 +39,8 @@ export const RENDER_URL = {
     ADMIN_CLIENT_MANAGEMENT: '/admin-client-manage',
     ADMIN_MEAL_PLAN: '/admin-meal-plan',
     STUDENT_MEAL_TRACKING: '/student-meal-plan',
+    ADMIN_WORKOUT_PLAN: '/admin-workout-plan',
+    STUDENT_WORKOUT: '/student-workout',
     VIEW_STUDENT: '/student',
     DATA_MANAGEMENT: '/data-management',
     STAFFS: '/staffs',
@@ -142,6 +144,33 @@ export const API_URL = {
 
     // ── Meal Plan (Admin — view client adherence) ─────────────────
     GET_MEAL_LOGS_FOR_CLIENT: '/mealplan/getClientLogs',
+
+    // ── Workout Plan (Admin) ──────────────────────────────────────
+    GET_WORKOUTS_FOR_CLIENT: '/workout/getForClient',
+    CREATE_WORKOUT: '/workout/create',
+    UPDATE_WORKOUT: '/workout/update',
+    DELETE_WORKOUT: '/workout/delete',
+    RESCHEDULE_WORKOUT: '/workout/reschedule',
+    GET_WORKOUT_LOGS_FOR_CLIENT: '/workout/getClientLogs',
+
+    // ── Workout Plan (Client) ─────────────────────────────────────
+    GET_MY_WORKOUTS: '/workout/getMyWorkouts',
+    LOG_EXERCISE: '/workout/logExercise',
+    BATCH_LOG_EXERCISES: '/workout/batchLog',
+    GET_MY_WORKOUT_LOGS: '/workout/getMyLogs',
+    GET_MY_WORKOUT_HISTORY: '/workout/getHistory',
+
+    // ── Per-set logging ───────────────────────────────────────────
+    LOG_SET:                    '/workout/logSet',
+    DELETE_SET_LOG:             '/workout/deleteSet',
+    GET_SET_LOGS_FOR_DATE:      '/workout/getSetLogsForDate',
+    GET_SET_LOGS_FOR_EXERCISE:  '/workout/getSetLogsForExercise',
+
+    // ── Exercise Library ──────────────────────────────────────────
+    GET_EXERCISE_LIBRARY:    '/workout/library/getAll',
+    CREATE_LIBRARY_ITEM:     '/workout/library/create',
+    UPDATE_LIBRARY_ITEM:     '/workout/library/update',
+    DELETE_LIBRARY_ITEM:     '/workout/library/delete',
 
     // ── Push Notifications ────────────────────────────────────────
     SAVE_PUSH_SUBSCRIPTION: '/notification/saveSubscription',
