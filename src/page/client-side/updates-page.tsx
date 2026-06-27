@@ -6,7 +6,7 @@ import { useAuth } from "../../hooks/use-auth";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "../../lib/queryClient";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon, Plus, ArrowUpIcon, ChevronRightIcon, Droplet, ActivityIcon, Clock, PencilIcon, FilterIcon, UploadIcon, X, ChevronRight, ChevronLeft, ImageIcon } from "lucide-react";
+import { CalendarIcon, Plus, ArrowUpIcon, ChevronRightIcon, Droplet, ActivityIcon, Clock, PencilIcon, FilterIcon, UploadIcon, X, ChevronRight, ChevronLeft, ImageIcon, Footprints, Moon, Scale, StickyNote, Dumbbell, Salad } from "lucide-react";
 import { Calendar } from "../../components/ui/calendar";
 import { MobileNav } from "../../components/layout/mobile-nav";
 import { Button } from "../../components/ui/button";
@@ -31,32 +31,58 @@ import { IBodyMeasurement } from '../../interface/IBodyMeasurement'
 // ─── Sleep Clock ────────────────────────────────────────────────────────────
 function SleepClock({ value, onChange }: { value: number; onChange: (h: number) => void }) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const dragging = useRef(false);
+  const dragging = useRef<'start' | 'end' | null>(null);
   const cx = 100, cy = 100, R = 80;
 
+  // Digital time state – bedtime default 10 PM, wake default 6 AM
+  const [bedtime, setBedtime] = useState('22:00');
+  const [waketime, setWaketime] = useState('06:00');
+
   const snap = (h: number) => Math.round(h * 2) / 2;
+
+  // Minutes since midnight
+  const toMins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  const minsToTime = (m: number) => {
+    const total = ((m % 1440) + 1440) % 1440;
+    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  };
+  const fmt12 = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    const ampm = h < 12 ? 'AM' : 'PM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+  };
+
+  const durationFromTimes = (bed: string, wake: string) => {
+    let diff = toMins(wake) - toMins(bed);
+    if (diff <= 0) diff += 1440;
+    return snap(Math.min(12, diff / 60));
+  };
+
+  // angle on the 12-h clock face for a given time string
+  const timeToAngle = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return ((h % 12) / 12 + m / 720) * 360;
+  };
+
+  const startAngle = timeToAngle(bedtime);
+  const spanDeg   = (value / 12) * 360;
+  const endAngle  = (startAngle + spanDeg) % 360;
 
   const polarToXY = (angleDeg: number) => {
     const a = ((angleDeg - 90) * Math.PI) / 180;
     return { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) };
   };
 
-  const buildArc = (h: number) => {
-    if (h <= 0) return '';
-    const deg = (h / 12) * 360;
-    if (deg >= 359.9) {
-      return `M ${cx} ${cy - R} A ${R} ${R} 0 1 1 ${cx - 0.001} ${cy - R}`;
+  const buildArc = () => {
+    if (value <= 0) return '';
+    if (spanDeg >= 359.9) {
+      const s = polarToXY(startAngle);
+      return `M ${s.x} ${s.y} A ${R} ${R} 0 1 1 ${s.x - 0.001} ${s.y}`;
     }
-    const end = polarToXY(deg);
-    return `M ${cx} ${cy - R} A ${R} ${R} 0 ${deg > 180 ? 1 : 0} 1 ${end.x} ${end.y}`;
-  };
-
-  const qualityInfo = (h: number) => {
-    if (h === 0) return { label: '—', cls: 'text-gray-400' };
-    if (h < 5)  return { label: 'Too little', cls: 'text-red-500' };
-    if (h < 7)  return { label: 'Below avg',  cls: 'text-amber-500' };
-    if (h <= 9) return { label: 'Good sleep', cls: 'text-indigo-500' };
-    return { label: 'Extra rest', cls: 'text-green-600' };
+    const start = polarToXY(startAngle);
+    const end   = polarToXY(endAngle);
+    return `M ${start.x} ${start.y} A ${R} ${R} 0 ${spanDeg > 180 ? 1 : 0} 1 ${end.x} ${end.y}`;
   };
 
   const angleFromSVG = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
@@ -71,19 +97,46 @@ function SleepClock({ value, onChange }: { value: number; onChange: (h: number) 
     return deg;
   };
 
+  const angleToMins = (ang: number) => Math.round((ang / 360) * 12 * 60 / 30) * 30; // snap to 30 min
+
   const handleDrag = (e: MouseEvent | TouchEvent) => {
     if (!dragging.current) return;
     e.preventDefault();
-    onChange(snap((angleFromSVG(e) / 360) * 12));
+    const ang = angleFromSVG(e);
+    const dragMins = angleToMins(ang);
+
+    if (dragging.current === 'start') {
+      // drag start: keep duration, shift bedtime. Preserve AM/PM from current bedtime.
+      const curBedH = parseInt(bedtime.split(':')[0]);
+      const isPM = curBedH >= 12;
+      const newH = Math.floor(dragMins / 60) % 12 + (isPM ? 12 : 0);
+      const newM = dragMins % 60;
+      const newBed = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+      setBedtime(newBed);
+      // update wake to keep same duration
+      const wakeMins = toMins(newBed) + value * 60;
+      setWaketime(minsToTime(wakeMins));
+    } else {
+      // drag end: change wake time → update duration
+      const curBedH = parseInt(bedtime.split(':')[0]);
+      const isPM_wake = curBedH >= 12 ? false : false; // wake could be AM
+      const wakeH = Math.floor(dragMins / 60) % 12;
+      const newWakeH = wakeH < (parseInt(bedtime.split(':')[0]) % 12) ? wakeH : wakeH;
+      const newWake = `${String(newWakeH).padStart(2, '0')}:${String(dragMins % 60).padStart(2, '0')}`;
+      const newWakeFull = minsToTime(toMins(bedtime) + ((dragMins / 60) / 12) * 720);
+      setWaketime(newWakeFull);
+      const dur = durationFromTimes(bedtime, newWakeFull);
+      onChange(dur);
+    }
   };
 
-  const startDrag = (e: React.MouseEvent | React.TouchEvent) => {
-    dragging.current = true;
-    onChange(snap((angleFromSVG(e) / 360) * 12));
+  const startHandleDrag = (handle: 'start' | 'end') => (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    dragging.current = handle;
   };
 
   useEffect(() => {
-    const stop = () => { dragging.current = false; };
+    const stop = () => { dragging.current = null; };
     window.addEventListener('mousemove', handleDrag);
     window.addEventListener('mouseup', stop);
     window.addEventListener('touchmove', handleDrag, { passive: false });
@@ -96,74 +149,99 @@ function SleepClock({ value, onChange }: { value: number; onChange: (h: number) 
     };
   });
 
-  const handlePos = polarToXY((value / 12) * 360);
-  const { label, cls } = qualityInfo(value);
-  const displayVal = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
+  const onBedtimeChange = (v: string) => {
+    setBedtime(v);
+    const dur = durationFromTimes(v, waketime);
+    onChange(dur);
+  };
+  const onWaketimeChange = (v: string) => {
+    setWaketime(v);
+    const dur = durationFromTimes(bedtime, v);
+    onChange(dur);
+  };
 
-  const ticks = Array.from({ length: 13 }, (_, i) => {
-    const deg = (i / 12) * 360;
+  const startPos = polarToXY(startAngle);
+  const endPos   = polarToXY(endAngle);
+  const displayVal = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
+  const qualityLabel = value === 0 ? { label: 'Set your sleep', cls: 'text-gray-400' }
+    : value < 5  ? { label: 'Too little', cls: 'text-red-500' }
+    : value < 7  ? { label: 'Below avg',  cls: 'text-amber-500' }
+    : value <= 9 ? { label: 'Good sleep', cls: 'text-indigo-500' }
+    :              { label: 'Extra rest', cls: 'text-green-600' };
+
+  const ticks = Array.from({ length: 12 }, (_, i) => {
+    const hour = i + 1;
+    const deg = (hour / 12) * 360;
     const a = ((deg - 90) * Math.PI) / 180;
-    const isMajor = i % 3 === 0;
-    const inner = isMajor ? 66 : 70;
     return {
       x1: cx + 76 * Math.cos(a), y1: cy + 76 * Math.sin(a),
-      x2: cx + inner * Math.cos(a), y2: cy + inner * Math.sin(a),
-      label: isMajor && i > 0 ? i : null,
-      lx: cx + 57 * Math.cos(a), ly: cy + 57 * Math.sin(a),
-      isMajor,
+      x2: cx + 70 * Math.cos(a), y2: cy + 70 * Math.sin(a),
+      lx: cx + 60 * Math.cos(a), ly: cy + 60 * Math.sin(a),
+      label: hour,
     };
   });
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <svg
-        ref={svgRef}
-        viewBox="0 0 200 200"
-        width={200}
-        height={200}
-        className="cursor-pointer touch-none select-none"
-        onMouseDown={startDrag}
-        onTouchStart={startDrag}
-      >
-        {/* Track */}
+      {/* Analog clock */}
+      <svg ref={svgRef} viewBox="0 0 200 200" width={220} height={220} className="touch-none select-none">
         <circle cx={cx} cy={cy} r={R} fill="none" stroke="#e5e7eb" strokeWidth={14} className="dark:stroke-gray-700" />
-        {/* Filled arc */}
-        {value > 0 && (
-          <path d={buildArc(value)} fill="none" stroke="#6366f1" strokeWidth={14} strokeLinecap="round" />
-        )}
-        {/* Ticks */}
+        {value > 0 && <path d={buildArc()} fill="none" stroke="#6366f1" strokeWidth={14} strokeLinecap="round" />}
         {ticks.map((t, i) => (
           <g key={i}>
-            <line x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
-              stroke={t.isMajor ? '#9ca3af' : '#d1d5db'} strokeWidth={t.isMajor ? 2 : 1} />
-            {t.label && (
-              <text x={t.lx} y={t.ly} textAnchor="middle" dominantBaseline="middle"
-                fontSize={9} fill="#9ca3af">{t.label}h</text>
-            )}
+            <line x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke="#9ca3af" strokeWidth={1.5} />
+            <text x={t.lx} y={t.ly} textAnchor="middle" dominantBaseline="middle" fontSize={9} fill="#9ca3af">{t.label}</text>
           </g>
         ))}
-        {/* Handle */}
-        <circle cx={handlePos.x} cy={handlePos.y} r={9} fill="#6366f1" stroke="white" strokeWidth={2.5} />
-        {/* Center display */}
-        <text x={cx} y={cy - 10} textAnchor="middle" fontSize={28} fontWeight={500} fill="currentColor" className="text-gray-800">{displayVal}</text>
-        <text x={cx} y={cy + 16} textAnchor="middle" fontSize={11} fill="#9ca3af">hours</text>
+        {/* Start handle */}
+        <circle cx={startPos.x} cy={startPos.y} r={10} fill="white" stroke="#6366f1" strokeWidth={3}
+          className="cursor-grab" onMouseDown={startHandleDrag('start')} onTouchStart={startHandleDrag('start')} />
+        <text x={startPos.x} y={startPos.y + 1} textAnchor="middle" dominantBaseline="middle" fontSize={7} fill="#6366f1" style={{ pointerEvents: 'none' }}>S</text>
+        {/* End handle */}
+        <circle cx={endPos.x} cy={endPos.y} r={10} fill="#6366f1" stroke="white" strokeWidth={2.5}
+          className="cursor-grab" onMouseDown={startHandleDrag('end')} onTouchStart={startHandleDrag('end')} />
+        <text x={endPos.x} y={endPos.y + 1} textAnchor="middle" dominantBaseline="middle" fontSize={7} fill="white" style={{ pointerEvents: 'none' }}>E</text>
+        {/* Center */}
+        <text x={cx} y={cy - 8} textAnchor="middle" fontSize={26} fontWeight={600} fill="currentColor">{displayVal}h</text>
+        <text x={cx} y={cy + 14} textAnchor="middle" fontSize={10} fill="#9ca3af">sleep</text>
       </svg>
-      <span className={`text-xs font-semibold ${cls}`}>{label}</span>
-      {/* Preset buttons */}
+
+      <span className={`text-xs font-semibold ${qualityLabel.cls}`}>{qualityLabel.label}</span>
+
+      {/* Digital time inputs */}
+      <div className="w-full max-w-xs grid grid-cols-2 gap-3">
+        <div className="flex flex-col items-center gap-1 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl p-3">
+          <span className="text-[10px] font-medium text-indigo-400 uppercase tracking-wide">Bedtime</span>
+          <span className="text-lg font-bold text-indigo-700 dark:text-indigo-300">{fmt12(bedtime)}</span>
+          <input
+            type="time"
+            value={bedtime}
+            onChange={e => onBedtimeChange(e.target.value)}
+            className="w-full text-xs text-center border border-indigo-200 dark:border-indigo-700 rounded-lg px-2 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+          />
+        </div>
+        <div className="flex flex-col items-center gap-1 bg-purple-50 dark:bg-purple-950/30 rounded-xl p-3">
+          <span className="text-[10px] font-medium text-purple-400 uppercase tracking-wide">Wake up</span>
+          <span className="text-lg font-bold text-purple-700 dark:text-purple-300">{fmt12(waketime)}</span>
+          <input
+            type="time"
+            value={waketime}
+            onChange={e => onWaketimeChange(e.target.value)}
+            className="w-full text-xs text-center border border-purple-200 dark:border-purple-700 rounded-lg px-2 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-purple-400"
+          />
+        </div>
+      </div>
+
+      {/* Quick presets */}
       <div className="grid grid-cols-4 gap-2 w-full max-w-xs">
         {[5, 6, 7, 8].map(h => (
-          <button
-            key={h}
-            type="button"
-            onClick={() => onChange(h)}
+          <button key={h} type="button"
+            onClick={() => { onChange(h); setWaketime(minsToTime(toMins(bedtime) + h * 60)); }}
             className={`py-1.5 text-xs font-medium rounded-lg border transition-colors ${
               value === h
                 ? 'bg-indigo-50 border-indigo-400 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-400 dark:text-indigo-300'
                 : 'border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-400'
-            }`}
-          >
-            {h} hrs
-          </button>
+            }`}>{h} hrs</button>
         ))}
       </div>
     </div>
@@ -227,6 +305,8 @@ export default function UpdatesPage() {
   const [showForm, setShowForm] = useState(false);
   const [showMeasurementForm, setShowMeasurementForm] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [lastSaved, setLastSaved] = useState<DailyUpdateFormValues | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [measurementForm, setMeasurementForm] = useState({
@@ -606,14 +686,12 @@ export default function UpdatesPage() {
       })
 
     },
-    onSuccess: () => {
+    onSuccess: (_, submitted) => {
       queryClient.invalidateQueries({ queryKey: ["daily-updates"] });
-      toast({
-        title: "Success",
-        description: "Your daily updates have been logged",
-      });
+      setLastSaved(submitted);
       form.reset();
       setShowForm(false);
+      setShowNotes(false);
     },
     onError: (error) => {
       toast({
@@ -776,8 +854,8 @@ export default function UpdatesPage() {
 
                   <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mr-3">
-                        <ActivityIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mr-3">
+                        <Footprints className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Steps</p>
@@ -786,8 +864,8 @@ export default function UpdatesPage() {
                     </div>
 
                     <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mr-3">
-                        <Droplet className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center mr-3">
+                        <Droplet className="h-4 w-4 text-sky-500 dark:text-sky-400" />
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Water</p>
@@ -796,8 +874,8 @@ export default function UpdatesPage() {
                     </div>
 
                     <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mr-3">
-                        <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mr-3">
+                        <Moon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Sleep</p>
@@ -806,12 +884,8 @@ export default function UpdatesPage() {
                     </div>
 
                     <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center mr-3">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-rose-600 dark:text-rose-400">
-                          <path d="M19 5C19 3.9 18.1 3 17 3H7C5.9 3 5 3.9 5 5M19 5V19C19 20.1 18.1 21 17 21H7C5.9 21 5 20.1 5 19V5M19 5H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M12 7V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M8 12H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                      <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center mr-3">
+                        <Scale className="h-4 w-4 text-rose-500 dark:text-rose-400" />
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Weight</p>
@@ -820,10 +894,8 @@ export default function UpdatesPage() {
                     </div>
 
                     <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mr-3">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-green-600 dark:text-green-400">
-                          <path d="M10 8V16M14 8V16M18 8V16M6 8V16M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                      <div className="w-8 h-8 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center mr-3">
+                        <Salad className="h-4 w-4 text-green-600 dark:text-green-400" />
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Diet follow</p>
@@ -836,13 +908,8 @@ export default function UpdatesPage() {
                     </div>
 
                     <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mr-3">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-purple-600 dark:text-purple-400">
-                          <path d="M5 9C5 5.13401 8.13401 2 12 2C15.866 2 19 5.13401 19 9V14C19 17.866 15.866 21 12 21C8.13401 21 5 17.866 5 14V9Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M9 9H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M9 13H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M12 9V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                      <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mr-3">
+                        <Dumbbell className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Workout</p>
@@ -1427,6 +1494,37 @@ export default function UpdatesPage() {
               </Button>
             </div>
 
+            {/* Previous day prefill */}
+            {(() => {
+              const selectedMs = moment(selectedDate).startOf('day').valueOf();
+              const prev = sortedUpdates.find(u => moment(u.DayDate, 'DD-MM-YYYY').startOf('day').valueOf() < selectedMs);
+              if (!prev) return null;
+              const prevLabel = moment(prev.DayDate, 'DD-MM-YYYY').format('ddd, MMM D');
+              return (
+                <button
+                  type="button"
+                  onClick={() => form.reset({
+                    Steps: prev.Steps ?? undefined,
+                    Water: prev.Water ?? undefined,
+                    Weight: prev.Weight ?? undefined,
+                    Sleep: prev.Sleep ?? undefined,
+                    Diet_Follow: prev.Diet_Follow ?? undefined,
+                    WorkOut: prev.WorkOut ?? undefined,
+                    Notes: prev.Notes ?? undefined,
+                  })}
+                  className="w-full mb-4 flex items-center justify-between px-4 py-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <svg className="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Use values from {prevLabel}</span>
+                  </div>
+                  <span className="text-xs text-blue-500 dark:text-blue-400">Tap to fill</span>
+                </button>
+              );
+            })()}
+
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                 {/* Steps */}
@@ -1435,15 +1533,12 @@ export default function UpdatesPage() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center">
                         <div className="w-8 h-8 rounded-full bg-primary-100 flex-shrink-0 flex items-center justify-center">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary-600">
-                            <path d="M19 5.5C19 6.9 16.7 8 16 8C15.3 8 13 6.9 13 5.5C13 4.1 14.1 3 16 3C17.9 3 19 4.1 19 5.5ZM16 10C16 10 7 10 7 14.5C7 18.5 12 21 16 21C20 21 21 18 21 14.5C21 11 16 10 16 10ZM11 5.5C11 6.9 8.7 8 8 8C7.3 8 5 6.9 5 5.5C5 4.1 6.1 3 8 3C9.9 3 11 4.1 11 5.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
+                          <Footprints className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
                         <h3 className="ml-3 font-medium text-gray-800 dark:text-gray-200">Steps</h3>
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">Goal: 10,000</div>
                     </div>
-
                     <FormField
                       control={form.control}
                       name="Steps"
@@ -1451,15 +1546,7 @@ export default function UpdatesPage() {
                         <FormItem>
                           <div className="flex items-center">
                             <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="Enter steps"
-                                min="0"
-                                max="100000"
-                                className="flex-1"
-                                {...field}
-                                value={field.value ?? ""}
-                              />
+                              <Input type="number" placeholder="Enter steps" min="0" max="100000" className="flex-1" {...field} value={field.value ?? ""} />
                             </FormControl>
                             <span className="ml-3 text-gray-500 dark:text-gray-400">steps</span>
                           </div>
@@ -1476,15 +1563,12 @@ export default function UpdatesPage() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center">
                         <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-blue-600">
-                            <path d="M12 2L16 6.5M12 2L8 6.5M12 2V10.5M16 6.5C18.2091 6.5 20 8.29086 20 10.5C20 15 14.5 18.5 12 22C9.5 18.5 4 15 4 10.5C4 8.29086 5.79086 6.5 8 6.5M16 6.5H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
+                          <Droplet className="h-4 w-4 text-sky-500 dark:text-sky-400" />
                         </div>
                         <h3 className="ml-3 font-medium text-gray-800 dark:text-gray-200">Water Intake</h3>
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">Goal: 2.5L</div>
                     </div>
-
                     <FormField
                       control={form.control}
                       name="Water"
@@ -1492,58 +1576,31 @@ export default function UpdatesPage() {
                         <FormItem>
                           <div className="flex items-center">
                             <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="Enter water intake"
-                                min="0"
-                                step="0.1"
-                                className="flex-1"
-                                {...field}
-                                value={field.value ?? ""}
-                              />
+                              <Input type="number" placeholder="Enter water intake" min="0" step="0.1" className="flex-1" {...field} value={field.value ?? ""} />
                             </FormControl>
                             <span className="ml-3 text-gray-500 dark:text-gray-400">liters</span>
                           </div>
                           <FormMessage />
-
-                          {/* Water quick add buttons */}
+                          {/* Quick add (increments) */}
                           <div className="flex space-x-2 mt-3">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1 text-xs"
-                              type="button"
-                              onClick={() => {
-                                const currentAmount = field.value || 0;
-                                form.setValue('Water', parseFloat("" + currentAmount) + 0.25);
-                              }}
-                            >
-                              +250ml
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1 text-xs"
-                              type="button"
-                              onClick={() => {
-                                const currentAmount = field.value || 0;
-                                form.setValue('Water', currentAmount + 0.5);
-                              }}
-                            >
-                              +500ml
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1 text-xs"
-                              type="button"
-                              onClick={() => {
-                                const currentAmount = field.value || 0;
-                                form.setValue('Water', currentAmount + 0.75);
-                              }}
-                            >
-                              +750ml
-                            </Button>
+                            <Button size="sm" variant="outline" className="flex-1 text-xs" type="button"
+                              onClick={() => form.setValue('Water', parseFloat("" + (field.value || 0)) + 0.25)}>+250ml</Button>
+                            <Button size="sm" variant="outline" className="flex-1 text-xs" type="button"
+                              onClick={() => form.setValue('Water', (field.value || 0) + 0.5)}>+500ml</Button>
+                            <Button size="sm" variant="outline" className="flex-1 text-xs" type="button"
+                              onClick={() => form.setValue('Water', (field.value || 0) + 0.75)}>+750ml</Button>
+                            <Button size="sm" variant="outline" className="flex-1 text-xs" type="button"
+                              onClick={() => form.setValue('Water', (field.value || 0) + 1)}>+1L</Button>
+                          </div>
+                          {/* Set total */}
+                          <div className="flex space-x-2 mt-2">
+                            {[1, 1.5, 2, 2.5, 3].map(v => (
+                              <button key={v} type="button"
+                                onClick={() => form.setValue('Water', v)}
+                                className={`flex-1 py-1 text-xs rounded-lg border transition-colors ${Number(field.value) === v ? 'bg-sky-100 border-sky-400 text-sky-700 dark:bg-sky-900/40 dark:border-sky-500 dark:text-sky-300' : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                                {v}L
+                              </button>
+                            ))}
                           </div>
                         </FormItem>
                       )}
@@ -1556,14 +1613,10 @@ export default function UpdatesPage() {
                   <CardContent className="p-5">
                     <div className="flex items-center mb-4">
                       <div className="w-8 h-8 rounded-full bg-secondary-100 flex-shrink-0 flex items-center justify-center">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-secondary-600">
-                          <path d="M12 9C14.2091 9 16 7.20914 16 5C16 2.79086 14.2091 1 12 1C9.79086 1 8 2.79086 8 5C8 7.20914 9.79086 9 12 9Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M3 19C3 14.0294 7.02944 10 12 10C16.9706 10 21 14.0294 21 19V22C21 22.5523 20.5523 23 20 23H4C3.44772 23 3 22.5523 3 22V19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                        <Scale className="h-4 w-4 text-rose-500 dark:text-rose-400" />
                       </div>
                       <h3 className="ml-3 font-medium text-gray-800 dark:text-gray-200">Weight</h3>
                     </div>
-
                     <FormField
                       control={form.control}
                       name="Weight"
@@ -1571,15 +1624,7 @@ export default function UpdatesPage() {
                         <FormItem>
                           <div className="flex items-center">
                             <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="Enter weight"
-                                min="0"
-                                step="0.1"
-                                className="flex-1"
-                                {...field}
-                                value={field.value ?? ""}
-                              />
+                              <Input type="number" placeholder="Enter weight" min="0" step="0.1" className="flex-1" {...field} value={field.value ?? ""} />
                             </FormControl>
                             <span className="ml-3 text-gray-500 dark:text-gray-400">kg</span>
                           </div>
@@ -1595,23 +1640,17 @@ export default function UpdatesPage() {
                   <CardContent className="p-5">
                     <div className="flex items-center mb-4">
                       <div className="w-8 h-8 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-indigo-600">
-                          <path d="M10.5 2C2 2 2 10.5 2 10.5C2 19 10.5 19 10.5 19C19 19 19 10.5 19 10.5M10.5 2C19 2 19 10.5 19 10.5M10.5 2C10.5 2 10.5 6.5 14.5 8.5M19 10.5C19 10.5 14.5 10.5 12.5 14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                        <Moon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                       </div>
                       <h3 className="ml-3 font-medium text-gray-800 dark:text-gray-200">Sleep</h3>
                     </div>
-
                     <FormField
                       control={form.control}
                       name="Sleep"
                       render={({ field }) => (
                         <FormItem>
                           <FormControl>
-                            <SleepClock
-                              value={Number(field.value) || 0}
-                              onChange={(h) => field.onChange(h)}
-                            />
+                            <SleepClock value={Number(field.value) || 0} onChange={(h) => field.onChange(h)} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1620,41 +1659,41 @@ export default function UpdatesPage() {
                   </CardContent>
                 </Card>
 
-                  {/* Notes */}
-                <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
-                  <CardContent className="p-5">
-                    <div className="flex items-center mb-4">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-indigo-600">
-                          <path d="M10.5 2C2 2 2 10.5 2 10.5C2 19 10.5 19 10.5 19C19 19 19 10.5 19 10.5M10.5 2C19 2 19 10.5 19 10.5M10.5 2C10.5 2 10.5 6.5 14.5 8.5M19 10.5C19 10.5 14.5 10.5 12.5 14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </div>
-                      <h3 className="ml-3 font-medium text-gray-800 dark:text-gray-200">Notes</h3>
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="Notes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <div className="flex items-center">
-                            <FormControl>
-                              <Input
-                                type="text"
-                                placeholder="Notes"
-                                className="flex-1"
-                                {...field}
-                                value={field.value ?? ""}
-                              />
-                            </FormControl>
-                          
+                {/* Notes – collapsible */}
+                {!showNotes ? (
+                  <button type="button" onClick={() => setShowNotes(true)}
+                    className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 hover:text-amber-500 dark:hover:text-amber-400 transition-colors px-1">
+                    <StickyNote className="h-4 w-4" />
+                    <span>Add a note <span className="text-xs">(optional)</span></span>
+                  </button>
+                ) : (
+                  <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 rounded-full bg-amber-100 flex-shrink-0 flex items-center justify-center">
+                            <StickyNote className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                           </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
+                          <h3 className="ml-3 font-medium text-gray-800 dark:text-gray-200">Notes</h3>
+                        </div>
+                        <button type="button" onClick={() => { setShowNotes(false); form.setValue('Notes', ''); }}
+                          className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">Remove</button>
+                      </div>
+                      <FormField
+                        control={form.control}
+                        name="Notes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input type="text" placeholder="How was your day?" className="flex-1 w-full" {...field} value={field.value ?? ""} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Diet Follow */}
                 <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
@@ -1665,7 +1704,6 @@ export default function UpdatesPage() {
                       </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Did you follow your planned diet today?</p>
                     </div>
-
                     <FormField
                       control={form.control}
                       name="Diet_Follow"
@@ -1677,99 +1715,14 @@ export default function UpdatesPage() {
                           <FormControl>
                             <div className="flex items-center justify-between w-full py-2 px-5 relative">
                               {[1, 2, 3, 4, 5].map((rating) => (
-                                <div
-                                  key={rating}
-                                  className="flex flex-col items-center"
-                                  onClick={() => field.onChange(rating)}
-                                >
-                                  <div
-                                    className={`cursor-pointer w-10 h-10 rounded-full flex items-center justify-center transition-colors ${Number(field.value) === rating ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
-                                  >
-                                    <div
-                                      className={`w-8 h-8 rounded-full flex items-center justify-center ${rating === 1 ? 'bg-red-500' :
-                                        rating === 2 ? 'bg-orange-500' :
-                                          rating === 3 ? 'bg-yellow-500' :
-                                            rating === 4 ? 'bg-lime-500' :
-                                              'bg-green-500'
-                                        } ${Number(field.value) === rating ? 'ring-2 ring-offset-2 ring-gray-300 dark:ring-gray-600' : 'opacity-60'}`}
-                                    >
-                                      {rating === 1 && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                          <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm2.97 4.43l1.06-1.06 1.06 1.06 1.415-1.414-1.06-1.06 1.06-1.06-1.415-1.416-1.06 1.06-1.06-1.06-1.414 1.415 1.06 1.06-1.06 1.06 1.414 1.415z" />
-                                        </svg>
-                                      )}
-                                      {rating === 2 && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                          <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm8 5H9v2h6v-2z" />
-                                        </svg>
-                                      )}
-                                      {rating === 3 && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                          <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm8 5H9v2h6v-2z" />
-                                        </svg>
-                                      )}
-                                      {rating === 4 && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                          <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm1.146 5.146l1.414 1.414L12 15.12l2.44 2.44 1.414-1.414L12 12.292l-3.854 3.854z" />
-                                        </svg>
-                                      )}
-                                      {rating === 5 && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: '-1px' }}>
-                                          <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm4.592 4.295l2.7-4.055 1.416.943-3.85 5.776-3.374-2.7.943-1.176 2.165 1.212z" />
-                                        </svg>
-                                      )}
+                                <div key={rating} className="flex flex-col items-center" onClick={() => field.onChange(rating)}>
+                                  <div className={`cursor-pointer w-10 h-10 rounded-full flex items-center justify-center transition-colors ${Number(field.value) === rating ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${rating === 1 ? 'bg-red-500' : rating === 2 ? 'bg-orange-500' : rating === 3 ? 'bg-yellow-500' : rating === 4 ? 'bg-lime-500' : 'bg-green-500'} ${Number(field.value) === rating ? 'ring-2 ring-offset-2 ring-gray-300 dark:ring-gray-600' : 'opacity-60'}`}>
+                                      {rating}
                                     </div>
                                   </div>
-                                  <span className="text-xs font-medium mt-1">{rating}</span>
                                 </div>
                               ))}
-
-                              <div className="absolute bottom-2 right-4">
-                                <button
-                                  type="button"
-                                  className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const infoEl = document.getElementById("diet-rating-info");
-                                    if (infoEl) {
-                                      // Close any other open popups first
-                                      document.getElementById("workout-rating-info")?.classList.add("hidden");
-                                      // Toggle this popup
-                                      infoEl.classList.toggle("hidden");
-                                    }
-                                  }}
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-600 dark:text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="12" y1="16" x2="12" y2="12" />
-                                    <line x1="12" y1="8" x2="12.01" y2="8" />
-                                  </svg>
-                                </button>
-
-                                <div id="diet-rating-info" className="hidden absolute right-0 bottom-8 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 z-50 text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                                  <div className="flex items-start">
-                                    <span className="w-3 h-3 rounded-full bg-red-500 mr-2 mt-1 flex-shrink-0"></span>
-                                    <span>1 – Off Plan (Did not follow the diet)</span>
-                                  </div>
-                                  <div className="flex items-start">
-                                    <span className="w-3 h-3 rounded-full bg-orange-500 mr-2 mt-1 flex-shrink-0"></span>
-                                    <span>2 – Some Effort (Few healthy choices)</span>
-                                  </div>
-                                  <div className="flex items-start">
-                                    <span className="w-3 h-3 rounded-full bg-yellow-500 mr-2 mt-1 flex-shrink-0"></span>
-                                    <span>3 – Partially On Track (Balanced day)</span>
-                                  </div>
-                                  <div className="flex items-start">
-                                    <span className="w-3 h-3 rounded-full bg-lime-500 mr-2 mt-1 flex-shrink-0"></span>
-                                    <span>4 – Mostly On Track (Minor deviations)</span>
-                                  </div>
-                                  <div className="flex items-start">
-                                    <span className="w-3 h-3 rounded-full bg-green-500 mr-2 mt-1 flex-shrink-0"></span>
-                                    <span>5 – Fully On Track (Perfect adherence)</span>
-                                  </div>
-                                  <div className="absolute -bottom-2 right-1 w-4 h-4 bg-white dark:bg-gray-800 border-b border-r border-gray-200 dark:border-gray-700 rotate-45"></div>
-                                </div>
-                              </div>
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -1788,7 +1741,6 @@ export default function UpdatesPage() {
                       </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Did you follow your planned workout routine today?</p>
                     </div>
-
                     <FormField
                       control={form.control}
                       name="WorkOut"
@@ -1800,99 +1752,14 @@ export default function UpdatesPage() {
                           <FormControl>
                             <div className="flex items-center justify-between w-full py-2 px-5 relative">
                               {[1, 2, 3, 4, 5].map((rating) => (
-                                <div
-                                  key={rating}
-                                  className="flex flex-col items-center"
-                                  onClick={() => field.onChange(rating)}
-                                >
-                                  <div
-                                    className={`cursor-pointer w-10 h-10 rounded-full flex items-center justify-center transition-colors ${Number(field.value) === rating ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
-                                  >
-                                    <div
-                                      className={`w-8 h-8 rounded-full flex items-center justify-center ${rating === 1 ? 'bg-red-500' :
-                                        rating === 2 ? 'bg-orange-500' :
-                                          rating === 3 ? 'bg-yellow-500' :
-                                            rating === 4 ? 'bg-lime-500' :
-                                              'bg-green-500'
-                                        } ${Number(field.value) === rating ? 'ring-2 ring-offset-2 ring-gray-300 dark:ring-gray-600' : 'opacity-60'}`}
-                                    >
-                                      {rating === 1 && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                          <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm2.97 4.43l1.06-1.06 1.06 1.06 1.415-1.414-1.06-1.06 1.06-1.06-1.415-1.416-1.06 1.06-1.06-1.06-1.414 1.415 1.06 1.06-1.06 1.06 1.414 1.415z" />
-                                        </svg>
-                                      )}
-                                      {rating === 2 && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                          <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm8 5H9v2h6v-2z" />
-                                        </svg>
-                                      )}
-                                      {rating === 3 && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                          <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm8 5H9v2h6v-2z" />
-                                        </svg>
-                                      )}
-                                      {rating === 4 && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                          <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm1.146 5.146l1.414 1.414L12 15.12l2.44 2.44 1.414-1.414L12 12.292l-3.854 3.854z" />
-                                        </svg>
-                                      )}
-                                      {rating === 5 && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: '-1px' }}>
-                                          <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm4.592 4.295l2.7-4.055 1.416.943-3.85 5.776-3.374-2.7.943-1.176 2.165 1.212z" />
-                                        </svg>
-                                      )}
+                                <div key={rating} className="flex flex-col items-center" onClick={() => field.onChange(rating)}>
+                                  <div className={`cursor-pointer w-10 h-10 rounded-full flex items-center justify-center transition-colors ${Number(field.value) === rating ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${rating === 1 ? 'bg-red-500' : rating === 2 ? 'bg-orange-500' : rating === 3 ? 'bg-yellow-500' : rating === 4 ? 'bg-lime-500' : 'bg-green-500'} ${Number(field.value) === rating ? 'ring-2 ring-offset-2 ring-gray-300 dark:ring-gray-600' : 'opacity-60'}`}>
+                                      {rating}
                                     </div>
                                   </div>
-                                  <span className="text-xs font-medium mt-1">{rating}</span>
                                 </div>
                               ))}
-
-                              <div className="absolute bottom-2 right-4">
-                                <button
-                                  type="button"
-                                  className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const infoEl = document.getElementById("workout-rating-info");
-                                    if (infoEl) {
-                                      // Close any other open popups first
-                                      document.getElementById("diet-rating-info")?.classList.add("hidden");
-                                      // Toggle this popup
-                                      infoEl.classList.toggle("hidden");
-                                    }
-                                  }}
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-600 dark:text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="12" y1="16" x2="12" y2="12" />
-                                    <line x1="12" y1="8" x2="12.01" y2="8" />
-                                  </svg>
-                                </button>
-
-                                <div id="workout-rating-info" className="hidden absolute right-0 bottom-8 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 z-50 text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                                  <div className="flex items-start">
-                                    <span className="w-3 h-3 rounded-full bg-red-500 mr-2 mt-1 flex-shrink-0"></span>
-                                    <span>1 – Off Plan (Did not do workout)</span>
-                                  </div>
-                                  <div className="flex items-start">
-                                    <span className="w-3 h-3 rounded-full bg-orange-500 mr-2 mt-1 flex-shrink-0"></span>
-                                    <span>2 – Some Effort (Minimal workout)</span>
-                                  </div>
-                                  <div className="flex items-start">
-                                    <span className="w-3 h-3 rounded-full bg-yellow-500 mr-2 mt-1 flex-shrink-0"></span>
-                                    <span>3 – Partially On Track (Modified workout)</span>
-                                  </div>
-                                  <div className="flex items-start">
-                                    <span className="w-3 h-3 rounded-full bg-lime-500 mr-2 mt-1 flex-shrink-0"></span>
-                                    <span>4 – Workout Completed, Steps Missed (Completed workout, missed step goal)</span>
-                                  </div>
-                                  <div className="flex items-start">
-                                    <span className="w-3 h-3 rounded-full bg-green-500 mr-2 mt-1 flex-shrink-0"></span>
-                                    <span>5 – Workout and Step Goal Completed (Completed both)</span>
-                                  </div>
-                                  <div className="absolute -bottom-2 right-1 w-4 h-4 bg-white dark:bg-gray-800 border-b border-r border-gray-200 dark:border-gray-700 rotate-45"></div>
-                                </div>
-                              </div>
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -1902,15 +1769,8 @@ export default function UpdatesPage() {
                   </CardContent>
                 </Card>
 
-
-
-                {/* Submit button */}
                 <div className="w-100 mt-6 text-center">
-                  <Button
-                    type="submit"
-                    variant="outline" size="sm" className="mr-2 text-xs"
-                    disabled={mutation.isPending}
-                  >
+                  <Button type="submit" variant="outline" size="sm" className="mr-2 text-xs" disabled={mutation.isPending}>
                     {mutation.isPending ? "Submitting..." : "Submit Update"}
                   </Button>
                 </div>
@@ -1919,7 +1779,60 @@ export default function UpdatesPage() {
           </div>
         ) : (
           <div>
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Update History</h2>
+            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Update History</h2>
+
+            {/* Success banner after submit */}
+            {lastSaved && (
+              <div className="mb-4 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <svg className="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-sm font-semibold text-green-700 dark:text-green-400">Update saved!</span>
+                  </div>
+                  <button onClick={() => setLastSaved(null)} className="text-green-400 hover:text-green-600 dark:hover:text-green-300 text-xs">Dismiss</button>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-1">
+                  {lastSaved.Steps != null && (
+                    <div className="flex items-center gap-1.5">
+                      <Footprints className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                      <span className="text-xs text-gray-700 dark:text-gray-300">{Number(lastSaved.Steps).toLocaleString()} steps</span>
+                    </div>
+                  )}
+                  {lastSaved.Water != null && (
+                    <div className="flex items-center gap-1.5">
+                      <Droplet className="h-3.5 w-3.5 text-sky-500 flex-shrink-0" />
+                      <span className="text-xs text-gray-700 dark:text-gray-300">{lastSaved.Water} L</span>
+                    </div>
+                  )}
+                  {lastSaved.Sleep != null && (
+                    <div className="flex items-center gap-1.5">
+                      <Moon className="h-3.5 w-3.5 text-purple-500 flex-shrink-0" />
+                      <span className="text-xs text-gray-700 dark:text-gray-300">{lastSaved.Sleep} hrs</span>
+                    </div>
+                  )}
+                  {lastSaved.Weight != null && (
+                    <div className="flex items-center gap-1.5">
+                      <Scale className="h-3.5 w-3.5 text-rose-500 flex-shrink-0" />
+                      <span className="text-xs text-gray-700 dark:text-gray-300">{lastSaved.Weight} kg</span>
+                    </div>
+                  )}
+                  {lastSaved.Diet_Follow != null && (
+                    <div className="flex items-center gap-1.5">
+                      <Salad className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                      <span className="text-xs text-gray-700 dark:text-gray-300">Diet {lastSaved.Diet_Follow}/5</span>
+                    </div>
+                  )}
+                  {lastSaved.WorkOut != null && (
+                    <div className="flex items-center gap-1.5">
+                      <Dumbbell className="h-3.5 w-3.5 text-purple-500 flex-shrink-0" />
+                      <span className="text-xs text-gray-700 dark:text-gray-300">Workout {lastSaved.WorkOut}/5</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {renderDailyUpdatesList()}
 

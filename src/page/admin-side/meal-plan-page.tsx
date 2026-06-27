@@ -243,7 +243,7 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
         {/* ── sticky header ──────────────────────────────────────── */}
         <div className={`px-4 pt-4 pb-3 ${meta.headerBg} border-b ${meta.borderColor}`}>
           <DialogHeader className="mb-2 p-0">
-            <DialogTitle className="flex items-center gap-2 text-base">
+            <DialogTitle className="flex items-center gap-2 text-base pr-8">
               <span className="text-xl">{meta.emoji}</span>
               Add foods to <span className={`font-bold ${meta.badgeText}`}>{meta.label}</span>
               {cartCount > 0 && (
@@ -314,7 +314,7 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
           {/* ── selected foods pinned at top (always visible regardless of search) ── */}
           {cartCount > 0 && (
             <>
-              <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wide px-1 pt-1">
+              <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wide px-1 pt-1 pb-1.5">
                 ✓ Selected ({cartCount}) — search more to add
               </p>
               {Array.from(cart.values()).map(entry => renderFoodRow(entry.food, entry))}
@@ -855,6 +855,7 @@ export default function AdminMealPlanPage() {
 
   // ── sync fetched plan ─────────────────────────────────────────
   useEffect(() => {
+    autoSwitchedRef.current = false;
     if (!selectedUserId || !selectedDate) { setPlan(null); return; }
     if (fetchedPlan) {
       const meals = MEAL_TYPES.map(mt => fetchedPlan.Meals?.find(m => m.MealType === mt) ?? { MealType: mt, FoodItems: [] });
@@ -874,9 +875,13 @@ export default function AdminMealPlanPage() {
     }
   }, [fetchedPlan, selectedUserId, selectedDate]);
 
-  // Auto-switch to progress view when logs arrive (clientLogs loads async after fetchedPlan)
+  // Auto-switch to progress view on initial load when logs exist (only on first fetch, not every change)
+  const autoSwitchedRef = useRef(false);
   useEffect(() => {
-    if (clientLogs.length > 0) setViewMode(true);
+    if (!autoSwitchedRef.current && clientLogs.length > 0) {
+      autoSwitchedRef.current = true;
+      setViewMode(true);
+    }
   }, [clientLogs]);
 
   // ── mutations ─────────────────────────────────────────────────
@@ -1053,12 +1058,15 @@ export default function AdminMealPlanPage() {
             <div className="flex-1">
               <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                 <PopoverTrigger asChild>
-                  <button className="w-full h-9 rounded-xl border border-gray-200 bg-gray-50 text-sm text-center font-semibold text-gray-800 px-3 flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setCalendarOpen(o => !o)}
+                    className="w-full h-9 rounded-xl border border-gray-200 bg-gray-50 text-sm text-center font-semibold text-gray-800 px-3 flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors">
                     <CalendarDays className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
                     {moment(selectedDate, "DD-MM-YYYY").format("ddd, MMM D YYYY")}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="center">
+                <PopoverContent className="w-auto p-0 z-[100]" align="center">
                   <Calendar
                     mode="single"
                     selected={moment(selectedDate, "DD-MM-YYYY").toDate()}
@@ -1198,7 +1206,7 @@ export default function AdminMealPlanPage() {
           <div className="px-4 pt-4 space-y-3">
 
             {/* ── status + macros bar ── */}
-            <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex items-center gap-3">
+            <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex items-center justify-center gap-3">
               {/* plan status */}
               <div className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
                 isNewPlan ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
@@ -1212,7 +1220,7 @@ export default function AdminMealPlanPage() {
                 </div>
               )}
               {adherence && (
-                <div className={`ml-auto flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                <div className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full ${
                   adherence.pct >= 80 ? "bg-green-100 text-green-700" : adherence.pct >= 50 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
                 }`}>
                   {adherence.pct}% adherence
@@ -1265,94 +1273,125 @@ export default function AdminMealPlanPage() {
           </div>
         ) : null}
 
-        {/* ── Client Q&A section ───────────────────────────────────── */}
-        {selectedUserId && selectedDate && (
-          <div className="mx-4 mb-4 rounded-xl border border-blue-100 dark:border-blue-900 overflow-hidden">
-            <div className="flex items-center bg-blue-50 dark:bg-blue-950/30">
-              <button
-                className="flex-1 flex items-center justify-between px-4 py-3"
-                onClick={() => setQaOpen(o => !o)}
-              >
-                <div className="flex items-center gap-2">
-                  <HelpCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                    Client Questions
-                  </span>
-                  {clientQueries.filter(q => !q.Answer).length > 0 && (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                      {clientQueries.filter(q => !q.Answer).length}
-                    </span>
-                  )}
-                </div>
-                {qaOpen
-                  ? <ChevronUp className="h-4 w-4 text-blue-500" />
-                  : <ChevronDown className="h-4 w-4 text-blue-500" />}
-              </button>
-              <button
-                onClick={() => refetchQueries()}
-                className="px-3 py-3 text-blue-500 hover:text-blue-700"
-                title="Refresh"
-              >
-                <RefreshCw className={`h-4 w-4 ${queriesFetching ? "animate-spin" : ""}`} />
-              </button>
-            </div>
+      </main>
 
-            {qaOpen && (
-              <div className="bg-white dark:bg-gray-900 p-3 space-y-4">
-                {clientQueries.length === 0 ? (
-                  <p className="text-xs text-gray-400 text-center py-3">
-                    No questions from client for this day.
-                  </p>
-                ) : (
-                  clientQueries.map(q => (
-                    <div key={q.IdQuery} className="space-y-2">
-                      {/* Client question */}
-                      <div className="flex justify-end">
-                        <div className="max-w-[85%] bg-blue-600 text-white text-sm px-3 py-2 rounded-2xl rounded-tr-sm">
-                          {q.Question}
-                          <p className="text-[10px] opacity-60 mt-0.5 text-right">
-                            {q.CreatedAt ? moment(q.CreatedAt).format("MMM D, h:mm a") : ""}
+      {/* ── Floating chat FAB ─────────────────────────────────────── */}
+      {selectedUserId && selectedDate && clientQueries.length > 0 && (
+        <button
+          onClick={() => setQaOpen(o => !o)}
+          className="fixed bottom-20 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
+        >
+          <MessageCircle className="h-6 w-6 text-white" />
+          {clientQueries.filter(q => !q.Answer).length > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+              {clientQueries.filter(q => !q.Answer).length}
+            </span>
+          )}
+        </button>
+      )}
+
+      {/* ── Client Q&A slide-up drawer ────────────────────────────── */}
+      {qaOpen && (
+        <>
+          {/* backdrop */}
+          <div
+            className="fixed inset-0 z-30 bg-black/40"
+            onClick={() => setQaOpen(false)}
+          />
+          {/* drawer */}
+          <div className="fixed bottom-0 left-0 right-0 z-40 rounded-t-2xl bg-white dark:bg-gray-900 shadow-2xl flex flex-col h-[50vh]">
+            {/* drawer header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Client Questions</span>
+                {clientQueries.filter(q => !q.Answer).length > 0 && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {clientQueries.filter(q => !q.Answer).length}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => refetchQueries()}
+                  className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
+                  title="Refresh"
+                >
+                  <RefreshCw className={`h-4 w-4 ${queriesFetching ? "animate-spin" : ""}`} />
+                </button>
+                <button
+                  onClick={() => setQaOpen(false)}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            {/* drawer body — thread only */}
+            <div className="overflow-y-auto flex-1 min-h-0 p-4 space-y-4">
+              {clientQueries.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-6">
+                  No questions from client for this day.
+                </p>
+              ) : (
+                clientQueries.map(q => (
+                  <div key={q.IdQuery} className="space-y-2">
+                    <div className="flex justify-end">
+                      <div className="max-w-[85%] bg-blue-600 text-white text-sm px-3 py-2 rounded-2xl rounded-tr-sm">
+                        {q.Question}
+                        <p className="text-[10px] opacity-60 mt-0.5 text-right">
+                          {q.CreatedAt ? moment(q.CreatedAt).format("MMM D, h:mm a") : ""}
+                        </p>
+                      </div>
+                    </div>
+                    {q.Answer ? (
+                      <div className="flex justify-start">
+                        <div className="max-w-[85%] bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 py-2 rounded-2xl rounded-tl-sm">
+                          {q.Answer}
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            {q.AnsweredAt ? moment(q.AnsweredAt).format("MMM D, h:mm a") : ""}
                           </p>
                         </div>
                       </div>
-                      {/* Reply or reply box */}
-                      {q.Answer ? (
-                        <div className="flex justify-start">
-                          <div className="max-w-[85%] bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 py-2 rounded-2xl rounded-tl-sm">
-                            {q.Answer}
-                            <p className="text-[10px] text-gray-400 mt-0.5">
-                              {q.AnsweredAt ? moment(q.AnsweredAt).format("MMM D, h:mm a") : ""}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex gap-2 items-end pl-1">
-                          <textarea
-                            className="flex-1 min-h-[60px] p-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none focus:ring-2 focus:ring-blue-300 outline-none"
-                            placeholder="Type your reply…"
-                            value={replyText[q.IdQuery!] ?? ""}
-                            onChange={e => setReplyText(prev => ({ ...prev, [q.IdQuery!]: e.target.value }))}
-                          />
-                          <button
-                            disabled={!replyText[q.IdQuery!]?.trim() || replyMutation.isPending}
-                            onClick={() => replyMutation.mutate({ IdQuery: q.IdQuery!, Answer: replyText[q.IdQuery!] })}
-                            className="mb-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white transition-colors"
-                          >
-                            <Send className="h-4 w-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
+                    ) : (
+                      <div className="flex justify-start">
+                        <span className="text-[11px] text-gray-400 italic px-1">Awaiting your reply…</span>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+            {/* pinned reply input */}
+            {(() => {
+              const unanswered = clientQueries.filter(q => !q.Answer);
+              const q = unanswered[0];
+              const allAnswered = unanswered.length === 0;
+              return (
+                <div className="flex-shrink-0 border-t border-gray-100 dark:border-gray-800 p-3 flex gap-2">
+                  <textarea
+                    disabled={allAnswered}
+                    className="flex-1 min-h-[60px] max-h-[100px] p-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none focus:ring-2 focus:ring-blue-300 outline-none disabled:opacity-40 disabled:cursor-not-allowed"
+                    placeholder={allAnswered ? "All questions answered" : unanswered.length > 1 ? `Reply to question 1 of ${unanswered.length}…` : "Type your reply…"}
+                    value={q ? (replyText[q.IdQuery!] ?? "") : ""}
+                    onChange={e => q && setReplyText(prev => ({ ...prev, [q.IdQuery!]: e.target.value }))}
+                  />
+                  <button
+                    disabled={allAnswered || !q || !replyText[q.IdQuery!]?.trim() || replyMutation.isPending}
+                    onClick={() => q && replyMutation.mutate({ IdQuery: q.IdQuery!, Answer: replyText[q.IdQuery!] })}
+                    className="self-center flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors flex-shrink-0"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })()}
           </div>
-        )}
-      </main>
+        </>
+      )}
 
       {/* ── Sticky save bar (fixed above mobile nav) ─────────────── */}
-      {plan && !viewMode && (
+      {plan && !viewMode && hasChanges && (
         <div className="fixed bottom-16 left-0 right-0 z-10 bg-white border-t border-gray-100 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
           <button
             onClick={handleSave}
@@ -1447,7 +1486,7 @@ export default function AdminMealPlanPage() {
           </p>
           <DialogFooter className="flex-row gap-2 sm:justify-between">
             <Button variant="outline" className="flex-1" onClick={() => setUnsavedGuard(null)}>
-              Stay &amp; Save
+              Keep Editing
             </Button>
             <Button variant="destructive" className="flex-1" onClick={() => { unsavedGuard?.action(); setUnsavedGuard(null); }}>
               Discard &amp; Leave

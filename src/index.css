@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .pt-safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .header-safe-top {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 1rem);
+  }
+}
+
 :root {
   /* Page background — light blue-gray so white cards lift off the surface */
   --background: 220 18% 96%;

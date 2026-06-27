@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ChevronLeft, ChevronRight, Check, MessageSquare, X,
-  Loader2, UtensilsCrossed, TrendingUp, Save, HelpCircle, Send, ChevronDown, ChevronUp, RefreshCw,
+  Loader2, UtensilsCrossed, TrendingUp, Save, HelpCircle, Send, ChevronDown, ChevronUp, RefreshCw, MessageCircle, CalendarDays,
 } from "lucide-react";
 import moment from "moment";
 import toast from "react-hot-toast";
@@ -14,6 +14,8 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { Progress } from "../../components/ui/progress";
+import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
+import { Calendar } from "../../components/ui/calendar";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
@@ -229,6 +231,7 @@ function MealSection({
 export default function MealTrackingPage() {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(moment().format("DD-MM-YYYY"));
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   // local log overrides (optimistic + pending changes)
   const [localLogs, setLocalLogs] = useState<Map<number, IMealLog>>(new Map());
@@ -418,18 +421,47 @@ export default function MealTrackingPage() {
           <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-white hover:bg-white/20" onClick={() => goDay(-1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm font-semibold text-white">
-            {fmtDate(selectedDate)}
-            {selectedDate === moment().format("DD-MM-YYYY") && (
-              <Badge className="ml-2 text-[10px] h-4 bg-white/20 text-white border-0">
-                Today
-              </Badge>
-            )}
-          </span>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                onClick={() => setCalendarOpen(o => !o)}
+                className="flex items-center gap-1.5 text-sm font-semibold text-white hover:text-white/80 transition-colors"
+              >
+                <CalendarDays className="h-3.5 w-3.5 flex-shrink-0" />
+                {fmtDate(selectedDate)}
+                {selectedDate === moment().format("DD-MM-YYYY") && (
+                  <Badge className="ml-1 text-[10px] h-4 bg-white/20 text-white border-0">Today</Badge>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 z-[100]" align="center">
+              <Calendar
+                mode="single"
+                selected={moment(selectedDate, "DD-MM-YYYY").toDate()}
+                onSelect={date => {
+                  if (date) {
+                    setSelectedDate(moment(date).format("DD-MM-YYYY"));
+                    setLocalLogs(new Map());
+                    setCalendarOpen(false);
+                  }
+                }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
           <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-white hover:bg-white/20" onClick={() => goDay(1)}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
+        {selectedDate !== moment().format("DD-MM-YYYY") && (
+          <button
+            onClick={() => { setSelectedDate(moment().format("DD-MM-YYYY")); setLocalLogs(new Map()); }}
+            className="mt-1.5 w-full text-[11px] font-semibold text-white/70 hover:text-white flex items-center justify-center gap-1 py-1 transition-colors"
+          >
+            ↩ Jump to today
+          </button>
+        )}
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 py-4 pb-28 bg-gray-50 dark:bg-gray-950 space-y-3">
@@ -455,7 +487,7 @@ export default function MealTrackingPage() {
         )}
 
         {/* future date banner */}
-        {isFuture && (
+        {isFuture && mergedPlan && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-xs font-medium">
             <span>📅</span>
             <span>You're viewing a future day — meal logging is disabled.</span>
@@ -521,106 +553,117 @@ export default function MealTrackingPage() {
           </>
         )}
 
-        {/* ── Ask Coach Q&A section ──────────────────────────────── */}
-        <div className="rounded-xl border border-blue-100 dark:border-blue-900 overflow-hidden">
-          <div className="flex items-center bg-blue-50 dark:bg-blue-950/30">
-            <button
-              className="flex-1 flex items-center justify-between px-4 py-3"
-              onClick={() => setQaOpen(o => !o)}
-            >
-              <div className="flex items-center gap-2">
-                <HelpCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                  Ask Your Coach
-                </span>
-                {myQueries.filter(q => !q.Answer).length > 0 && (
-                  <Badge className="text-[10px] h-5 bg-blue-600 text-white border-0">
-                    {myQueries.filter(q => !q.Answer).length} pending
-                  </Badge>
-                )}
-              </div>
-              {qaOpen
-                ? <ChevronUp className="h-4 w-4 text-blue-500" />
-                : <ChevronDown className="h-4 w-4 text-blue-500" />}
-            </button>
-            <button
-              onClick={e => { e.stopPropagation(); refetchQueries(); }}
-              className="px-3 py-3 text-blue-500 hover:text-blue-700"
-              title="Refresh"
-            >
-              <RefreshCw className={`h-4 w-4 ${queriesFetching ? "animate-spin" : ""}`} />
-            </button>
-          </div>
-
-          {qaOpen && (
-            <div className="bg-white dark:bg-gray-900 p-3 space-y-3">
-              {/* Ask input */}
-              {!isFuture && (
-                <div className="flex gap-2">
-                  <textarea
-                    className="flex-1 min-h-[72px] p-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none focus:ring-2 focus:ring-blue-300 outline-none"
-                    placeholder="Ask your coach about this meal plan…"
-                    value={questionText}
-                    onChange={e => setQuestionText(e.target.value)}
-                  />
-                  <Button
-                    size="sm"
-                    className="self-end h-9 px-3 bg-blue-600 hover:bg-blue-700 text-white"
-                    disabled={!questionText.trim() || askMutation.isPending}
-                    onClick={() => askMutation.mutate(questionText)}
-                  >
-                    {askMutation.isPending
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : <Send className="h-4 w-4" />}
-                  </Button>
-                </div>
-              )}
-
-              {/* Q&A thread */}
-              {myQueries.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-2">
-                  No questions yet for this day.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {myQueries.map(q => (
-                    <div key={q.IdQuery} className="space-y-1.5">
-                      {/* Question bubble */}
-                      <div className="flex justify-end">
-                        <div className="max-w-[85%] bg-blue-600 text-white text-sm px-3 py-2 rounded-2xl rounded-tr-sm">
-                          {q.Question}
-                          <p className="text-[10px] opacity-60 mt-0.5 text-right">
-                            {q.CreatedAt ? moment(q.CreatedAt).format("MMM D, h:mm a") : ""}
-                          </p>
-                        </div>
-                      </div>
-                      {/* Answer bubble or waiting */}
-                      {q.Answer ? (
-                        <div className="flex justify-start">
-                          <div className="max-w-[85%] bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 py-2 rounded-2xl rounded-tl-sm">
-                            {q.Answer}
-                            <p className="text-[10px] text-gray-400 mt-0.5">
-                              {q.AnsweredAt ? moment(q.AnsweredAt).format("MMM D, h:mm a") : ""}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex justify-start">
-                          <span className="text-[11px] text-gray-400 italic px-1">
-                            Waiting for coach reply…
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
       </main>
 
       <MobileNav />
+
+      {/* ── Floating chat FAB ─────────────────────────────────────── */}
+      {mergedPlan && <button
+        onClick={() => setQaOpen(o => !o)}
+        className="fixed bottom-20 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
+      >
+        <MessageCircle className="h-6 w-6 text-white" />
+        {myQueries.filter(q => !q.Answer).length > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+            {myQueries.filter(q => !q.Answer).length}
+          </span>
+        )}
+      </button>}
+
+      {/* ── Ask Coach slide-up drawer ─────────────────────────────── */}
+      {qaOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-30 bg-black/40"
+            onClick={() => setQaOpen(false)}
+          />
+          <div className="fixed bottom-0 left-0 right-0 z-40 rounded-t-2xl bg-white dark:bg-gray-900 shadow-2xl flex flex-col max-h-[50vh] min-h-[200px] overflow-hidden">
+            {/* drawer header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Ask Your Coach</span>
+                {myQueries.filter(q => !q.Answer).length > 0 && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {myQueries.filter(q => !q.Answer).length}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={e => { e.stopPropagation(); refetchQueries(); }}
+                  className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
+                  title="Refresh"
+                >
+                  <RefreshCw className={`h-4 w-4 ${queriesFetching ? "animate-spin" : ""}`} />
+                </button>
+                <button
+                  onClick={() => setQaOpen(false)}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            {/* thread */}
+            <div className="overflow-y-auto flex-1 min-h-0 p-4 space-y-3">
+              {myQueries.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-6">No questions yet for this day.</p>
+              ) : (
+                myQueries.map(q => (
+                  <div key={q.IdQuery} className="space-y-1.5">
+                    <div className="flex justify-end">
+                      <div className="max-w-[85%] bg-blue-600 text-white text-sm px-3 py-2 rounded-2xl rounded-tr-sm">
+                        {q.Question}
+                        <p className="text-[10px] opacity-60 mt-0.5 text-right">
+                          {q.CreatedAt ? moment(q.CreatedAt).format("MMM D, h:mm a") : ""}
+                        </p>
+                      </div>
+                    </div>
+                    {q.Answer ? (
+                      <div className="flex justify-start">
+                        <div className="max-w-[85%] bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 py-2 rounded-2xl rounded-tl-sm">
+                          {q.Answer}
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            {q.AnsweredAt ? moment(q.AnsweredAt).format("MMM D, h:mm a") : ""}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-start">
+                        <span className="text-[11px] text-gray-400 italic px-1">Waiting for coach reply…</span>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+            {/* ask input pinned at bottom */}
+            <div className="flex-shrink-0 border-t border-gray-100 dark:border-gray-800 px-3 pt-2 pb-1">
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-snug mb-2">
+                Use this for doubts about your meal plan only. To log a skip or substitution, tap the <MessageSquare className="inline h-3 w-3 mx-0.5" /> icon next to the meal item.
+              </p>
+            </div>
+            <div className="flex-shrink-0 px-3 pb-3 flex gap-2">
+                <textarea
+                  className="flex-1 min-h-[60px] max-h-[100px] p-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none focus:ring-2 focus:ring-blue-300 outline-none"
+                  placeholder="Ask your coach about this meal plan…"
+                  value={questionText}
+                  onChange={e => setQuestionText(e.target.value)}
+                />
+                <button
+                  disabled={!questionText.trim() || askMutation.isPending}
+                  onClick={() => askMutation.mutate(questionText)}
+                  className="self-center flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white transition-colors flex-shrink-0"
+                >
+                  {askMutation.isPending
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <Send className="h-4 w-4" />}
+                </button>
+              </div>
+          </div>
+        </>
+      )}
 
       {/* ── Notes Dialog ──────────────────────────────────────────── */}
       <Dialog open={!!notesItem} onOpenChange={() => setNotesItem(null)}>

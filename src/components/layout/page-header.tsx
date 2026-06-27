@@ -64,7 +64,7 @@ interface AdminPageHeaderProps {
 
 export function AdminPageHeader({ title, subtitle, right, onBack }: AdminPageHeaderProps) {
   return (
-    <header className="flex-shrink-0 bg-gradient-to-r from-blue-700 to-blue-600 px-4 py-4 sm:px-6">
+    <header className="flex-shrink-0 bg-gradient-to-r from-blue-700 to-blue-600 px-4 header-safe-top pb-4 sm:px-6">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {onBack && (

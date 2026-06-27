@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useAuth } from "../../hooks/use-auth";
 import { MobileNav } from "../../components/layout/mobile-nav";
 import { PageHeader } from "../../components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "../../components/ui/card";
@@ -11,18 +10,13 @@ import { Badge } from "../../components/ui/badge";
 import { useToast } from "../../hooks/use-toast";
 import { setBaseUrl } from "../../services/HttpService"
 import {
-  ArrowRight,
-  CalendarClock,
-  ChevronDown,
-  ChevronUp,
-  Clock,
+  Check,
+  ChevronsUpDown,
   FileText,
   Flame,
   Leaf,
-  Plus,
   Salad,
   Utensils,
-  X
 } from "lucide-react";
 import {
   Dialog,
@@ -30,9 +24,13 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "../../components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "../../components/ui/command";
+import { cn } from "../../lib/utils";
 import { BASE_URL } from "../../common/Constant";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { IFoodCatergory } from "../../interface/IFoodAlternative";
@@ -63,8 +61,8 @@ export default function NutritionPage() {
   const [activeNutrient, setActiveNutrient] = useState<keyof IFoodCatergory>("Protein");
   const [nutritionGoal, setNutritionGoal] = useState<"fat-loss" | "muscle-gain" | "maintenance">("maintenance");
 
-  const [inputValue, setInputValue] = useState('');
-  const [foodItem, setFoodItem] = useState<FoodAlternative | null>();
+  const [comboOpen, setComboOpen] = useState(false);
+  const [foodItem, setFoodItem] = useState<FoodAlternative | null>(null);
   const [quantity, setQuantity] = useState<string | null>("");
   const [selectedAlternative, setSelectedAlternative] = useState<FoodAlternative | null>(null);
   const [showBenefitsDialog, setShowBenefitsDialog] = useState(false);
@@ -73,7 +71,6 @@ export default function NutritionPage() {
     alternatives: FoodAlternative[]
   } | null>(null);
   const [showResults, setShowResults] = useState(false);
-  const [suggestions, setSuggestions] = useState<FoodAlternative[]>([]);
 
   //constructor basil
   useEffect(() => {
@@ -94,7 +91,7 @@ export default function NutritionPage() {
   });
 
   const getSwapProductsMutation = useMutation({
-    mutationFn: async ({ food, weight, foodType, nutritionGoal }: { food: string; weight: string | null, foodType: string | null, nutritionGoal: "fat-loss" | "muscle-gain" | "maintenance" }) => {
+    mutationFn: async ({ food, weight, foodType, nutritionGoal, resolvedFoodItem }: { food: string; weight: string | null, foodType: string | null, nutritionGoal: "fat-loss" | "muscle-gain" | "maintenance", resolvedFoodItem: FoodAlternative }) => {
       const currentFoodItem = {
         Food: food,
         Quantity: weight,
@@ -108,7 +105,7 @@ export default function NutritionPage() {
         if (response.data.success) {
           return {
             swappedData: response.data.data,
-            originalFood: foodItem  // Pass original food for use in onSuccess
+            originalFood: resolvedFoodItem,
           };
         }
         throw new Error("Swap operation was not successful");
@@ -119,15 +116,10 @@ export default function NutritionPage() {
     onSuccess: (data) => {
 
       setSelectedFoodInfo({
-        baseInfo: data.originalFood!,
+        baseInfo: data.originalFood,
         alternatives: data.swappedData
       });
 
-
-      console.log("YYOOYOYOY", {
-        baseInfo: data.originalFood,
-        alternatives: data.swappedData
-      })
 
       setShowResults(true);
 
@@ -147,55 +139,21 @@ export default function NutritionPage() {
 
 
 
-  const handleFoodItemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setInputValue(value);
-    // Show suggestions based on input
-    if (value.length > 0) {
-
-      const filtered = foodListBasedOnCatergory?.[activeNutrient]?.filter(item =>
-        item.name.toLowerCase().includes(value.toLowerCase())
-      ) || [];
-      setSuggestions(filtered);
-    } else {
-      setSuggestions([]);
-    }
-  };
-
-
-
-  
-
-  const selectSuggestion = (suggestion: FoodAlternative) => {
-    setFoodItem(suggestion);
-    setInputValue(suggestion.name);
-    setSuggestions([]);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    /**
-   * author : basil1112
-   * fetch daily updates for this weeek 
-   */
+    if (!foodItem) {
+      toast({ title: "Please select a food item from the list", variant: "destructive" });
+      return;
+    }
 
-    getSwapProductsMutation.mutate({ food: foodItem!.name, weight: quantity, foodType: activeNutrient, nutritionGoal})
-
-
-    /* 
-        // Check if the food exists in our database
-        const foodCategory = foodDatabase[activeNutrient];
-        if (foodCategory && foodCategory[foodItem]) {
-          setSelectedFoodInfo(foodCategory[foodItem]);
-          setShowResults(true);
-        } else {
-          // If food not found, show empty results
-          setSelectedFoodInfo(null);
-          setShowResults(true);
-        } */
-
-
+    getSwapProductsMutation.mutate({
+      food: foodItem.name,
+      weight: quantity,
+      foodType: activeNutrient,
+      nutritionGoal,
+      resolvedFoodItem: foodItem,
+    });
   };
 
   return (
@@ -215,7 +173,6 @@ export default function NutritionPage() {
                 setActiveNutrient(value as "Carbs" | "Protein" | "Fat");
                 setFoodItem(null);
                 setQuantity(null);
-                setSuggestions([]);
                 setShowResults(false);
               }}
               className="w-full"
@@ -228,31 +185,47 @@ export default function NutritionPage() {
             </Tabs>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Food item input with autocomplete */}
+              {/* Food item combobox */}
               <div className="space-y-2">
-                <Label htmlFor="foodItem">Food Item</Label>
-                <div className="relative">
-                  <Input
-                    id="foodItem"
-                    placeholder="Enter a food item"
-                    value={inputValue}
-                    onChange={handleFoodItemChange}
-                    className="w-full"
-                  />
-                  {suggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 max-h-60 overflow-auto">
-                      {suggestions.map((suggestion, idx) => (
-                        <div
-                          key={idx}
-                          className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                          onClick={() => selectSuggestion(suggestion)}
-                        >
-                          {suggestion.name}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <Label>Food Item</Label>
+                <Popover open={comboOpen} onOpenChange={setComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={comboOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {foodItem ? foodItem.name : "Search food…"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Type to filter foods…" />
+                      <CommandList>
+                        <CommandEmpty>No foods found.</CommandEmpty>
+                        <CommandGroup>
+                          {(foodListBasedOnCatergory?.[activeNutrient] ?? []).map((item, idx) => (
+                            <CommandItem
+                              key={idx}
+                              value={item.name}
+                              onSelect={() => {
+                                setFoodItem(item as unknown as FoodAlternative);
+                                setComboOpen(false);
+                                setShowResults(false);
+                              }}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", foodItem?.name === item.name ? "opacity-100" : "opacity-0")} />
+                              {item.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Quantity input */}
@@ -302,7 +275,9 @@ export default function NutritionPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full">Calculate Alternatives</Button>
+              <Button type="submit" className="w-full" disabled={!foodItem || getSwapProductsMutation.isPending}>
+                {getSwapProductsMutation.isPending ? "Calculating…" : "Calculate Alternatives"}
+              </Button>
             </form>
           </CardContent>
         </Card>
@@ -329,12 +304,13 @@ export default function NutritionPage() {
                     <div className={`p-5 ${selectedFoodInfo.baseInfo.imageUrl ? '-mt-16 relative z-10' : ''}`}>
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="text-xl font-bold text-white dark:text-white">{foodItem?.name}</h3>
+                          <h3 className="text-xl font-bold text-white dark:text-white">{selectedFoodInfo.baseInfo.name}</h3>
                           <p className="text-gray-200 dark:text-gray-300">{quantity || "100"}g serving</p>
                         </div>
                         <Badge className="bg-primary-500 hover:bg-primary-600">{activeNutrient}</Badge>
                       </div>
 
+                      {selectedFoodInfo.baseInfo.calories > 0 && (
                       <div className="grid grid-cols-2 gap-4 mt-6">
                         <div className="bg-black/20 backdrop-blur-sm p-3 rounded-lg">
                           <div className="flex items-center text-white">
@@ -365,6 +341,7 @@ export default function NutritionPage() {
                           <p className="text-lg font-semibold text-white mt-1">{selectedFoodInfo.baseInfo.fat}g</p>
                         </div>
                       </div>
+                      )}
                     </div>
                   </div>
                 </Card>
@@ -374,6 +351,13 @@ export default function NutritionPage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                   Tap any alternative to see detailed nutrition comparison
                 </p>
+
+                {selectedFoodInfo.alternatives.length === 0 && (
+                  <div className="text-center py-8 text-gray-400 dark:text-gray-500">
+                    <p className="text-sm">No alternatives found for <strong className="text-gray-600 dark:text-gray-300">{selectedFoodInfo.baseInfo.name}</strong>.</p>
+                    <p className="text-xs mt-1">Try selecting a different food from the list.</p>
+                  </div>
+                )}
 
                 {/* Alternatives */}
                 <div className="space-y-4">

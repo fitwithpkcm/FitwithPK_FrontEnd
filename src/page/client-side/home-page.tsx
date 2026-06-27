@@ -616,6 +616,8 @@ export default function HomePage() {
           {/* Steps */}
           {(() => {
             const pct = Math.min(calculatePercentage(latestUpdate?.Steps || 0, dietTargetGoalPlans!.Targets.steps), 100);
+            const steps = latestUpdate?.Steps || 0;
+            const goal = dietTargetGoalPlans?.Targets.steps || 0;
             return (
               <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 cursor-pointer"
                 onClick={() => { setStepsAmount(latestUpdate?.Steps ?? ""); setStepsInputOpen(true); }}>
@@ -625,13 +627,19 @@ export default function HomePage() {
                   </div>
                   <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-0.5">Steps</p>
                   <p className="text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
-                    {(latestUpdate?.Steps || 0).toLocaleString()}
+                    {steps.toLocaleString()}
                   </p>
                   <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
-                    Goal: {(dietTargetGoalPlans?.Targets.steps || 0).toLocaleString()}
+                    Goal: {goal.toLocaleString()}
                   </p>
                   <div className="mt-2 h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${pct >= 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+                    <div
+                      className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                      style={{
+                        width: `${pct}%`,
+                        transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                      }}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -994,26 +1002,16 @@ export default function HomePage() {
       <Dialog open={stepsInputOpen} onOpenChange={(open) => { setStepsInputOpen(open); if (!open) setStepsAmount(latestUpdate?.Steps ?? ""); }}>
         <DialogContent className="sm:max-w-[360px] p-0 overflow-hidden rounded-3xl border-0">
           <style>{`
-            @keyframes shoeRun {
-              0%   { transform: translateY(2px)   rotate(-18deg) scale(0.97); }
-              28%  { transform: translateY(-10px) rotate(-26deg) scale(1.07); }
-              55%  { transform: translateY(-4px)  rotate(-21deg) scale(1.02); }
-              78%  { transform: translateY(1px)   rotate(-16deg) scale(0.97); }
-              100% { transform: translateY(2px)   rotate(-18deg) scale(0.97); }
+            @keyframes footprint {
+              0%      { opacity: 0; transform: scale(0.4) translateY(4px); }
+              12%     { opacity: 1; transform: scale(1.05) translateY(-1px); }
+              20%,55% { opacity: 1; transform: scale(1) translateY(0px); }
+              75%,100%{ opacity: 0; transform: scale(0.9) translateY(0px); }
             }
-            .shoe-run { animation: shoeRun 0.62s ease-in-out infinite; }
-            @keyframes footStepL {
-              0%,100% { opacity: 0; transform: rotate(-12deg) scale(0.7); }
-              20%,60% { opacity: 0.65; transform: rotate(-12deg) scale(1); }
-            }
-            @keyframes footStepR {
-              0%,100% { opacity: 0; transform: rotate(12deg) scale(0.7); }
-              20%,60% { opacity: 0.65; transform: rotate(12deg) scale(1); }
-            }
-            .fsl-1 { animation: footStepL 1.8s ease-in-out 0s    infinite; transform-origin: center; }
-            .fsr-1 { animation: footStepR 1.8s ease-in-out 0.45s infinite; transform-origin: center; }
-            .fsl-2 { animation: footStepL 1.8s ease-in-out 0.9s  infinite; transform-origin: center; }
-            .fsr-2 { animation: footStepR 1.8s ease-in-out 1.35s infinite; transform-origin: center; }
+            .ft1 { animation: footprint 2s ease-in-out 0s    infinite; transform-box: fill-box; transform-origin: center; }
+            .ft2 { animation: footprint 2s ease-in-out 0.5s  infinite; transform-box: fill-box; transform-origin: center; }
+            .ft3 { animation: footprint 2s ease-in-out 1.0s  infinite; transform-box: fill-box; transform-origin: center; }
+            .ft4 { animation: footprint 2s ease-in-out 1.5s  infinite; transform-box: fill-box; transform-origin: center; }
             @keyframes arcTipPulse {
               0%,100% { r: 5; opacity: 0.9; }
               50%     { r: 8; opacity: 0.4; }
@@ -1085,15 +1083,6 @@ export default function HomePage() {
                       <line x1="100" y1="20" x2="100" y2="13"
                         stroke={goalReached ? '#fbbf24' : 'rgba(255,255,255,0.7)'}
                         strokeWidth="3" strokeLinecap="round"/>
-                      {/* Alternating footprints when walking */}
-                      {steps > 0 && !goalReached && (
-                        <>
-                          <ellipse cx="65"  cy="158" rx="6" ry="9" fill="rgba(255,255,255,0.3)" className="fsl-1"/>
-                          <ellipse cx="79"  cy="152" rx="6" ry="9" fill="rgba(255,255,255,0.3)" className="fsr-1"/>
-                          <ellipse cx="93"  cy="158" rx="6" ry="9" fill="rgba(255,255,255,0.3)" className="fsl-2"/>
-                          <ellipse cx="108" cy="152" rx="6" ry="9" fill="rgba(255,255,255,0.3)" className="fsr-2"/>
-                        </>
-                      )}
                       {/* Glow filter */}
                       <defs>
                         <filter id="tipGlow">
@@ -1102,15 +1091,50 @@ export default function HomePage() {
                         </filter>
                       </defs>
                       {/* Central icon */}
-                      <text x="100" y="98" textAnchor="middle" fontSize="36"
-                        className={steps > 0 && !goalReached ? "shoe-run" : ""}>
-                        {goalReached ? "🏆" : "👟"}
-                      </text>
-                      <text x="100" y="120" textAnchor="middle"
+                      {goalReached ? (
+                        <text x="100" y="98" textAnchor="middle" fontSize="36">🏆</text>
+                      ) : (
+                        <>
+                          {/* Footprint trail — 4 steps appearing sequentially bottom→top */}
+                          {/* Step 1: left foot, bottom */}
+                          <g transform="translate(89,80) rotate(-16)">
+                            <g className={steps > 0 ? "ft1" : ""} style={steps === 0 ? {opacity:0.35} : {}}>
+                              <path d="M0,-10 C4,-10 7,-6 7,0 C7,6 4,10 0,10 C-4,10 -7,6 -7,0 C-7,-6 -4,-10 0,-10 Z" fill="white"/>
+                              <ellipse cx="-2.5" cy="-8" rx="2" ry="1.5" fill="white"/>
+                              <ellipse cx="2.5"  cy="-8.5" rx="2" ry="1.5" fill="white"/>
+                            </g>
+                          </g>
+                          {/* Step 2: right foot */}
+                          <g transform="translate(112,70) rotate(16)">
+                            <g className={steps > 0 ? "ft2" : ""} style={steps === 0 ? {opacity:0.35} : {}}>
+                              <path d="M0,-10 C4,-10 7,-6 7,0 C7,6 4,10 0,10 C-4,10 -7,6 -7,0 C-7,-6 -4,-10 0,-10 Z" fill="white"/>
+                              <ellipse cx="-2.5" cy="-8" rx="2" ry="1.5" fill="white"/>
+                              <ellipse cx="2.5"  cy="-8.5" rx="2" ry="1.5" fill="white"/>
+                            </g>
+                          </g>
+                          {/* Step 3: left foot, top */}
+                          <g transform="translate(89,58) rotate(-16)">
+                            <g className={steps > 0 ? "ft3" : ""} style={steps === 0 ? {opacity:0.35} : {}}>
+                              <path d="M0,-10 C4,-10 7,-6 7,0 C7,6 4,10 0,10 C-4,10 -7,6 -7,0 C-7,-6 -4,-10 0,-10 Z" fill="white"/>
+                              <ellipse cx="-2.5" cy="-8" rx="2" ry="1.5" fill="white"/>
+                              <ellipse cx="2.5"  cy="-8.5" rx="2" ry="1.5" fill="white"/>
+                            </g>
+                          </g>
+                          {/* Step 4: right foot, top */}
+                          <g transform="translate(112,48) rotate(16)">
+                            <g className={steps > 0 ? "ft4" : ""} style={steps === 0 ? {opacity:0.35} : {}}>
+                              <path d="M0,-10 C4,-10 7,-6 7,0 C7,6 4,10 0,10 C-4,10 -7,6 -7,0 C-7,-6 -4,-10 0,-10 Z" fill="white"/>
+                              <ellipse cx="-2.5" cy="-8" rx="2" ry="1.5" fill="white"/>
+                              <ellipse cx="2.5"  cy="-8.5" rx="2" ry="1.5" fill="white"/>
+                            </g>
+                          </g>
+                        </>
+                      )}
+                      <text x="100" y="112" textAnchor="middle"
                         fill={goalReached ? '#fbbf24' : 'white'} fontSize="22" fontWeight="700">
                         {stepsLabel}
                       </text>
-                      <text x="100" y="134" textAnchor="middle" fill="rgba(255,255,255,0.75)" fontSize="11">
+                      <text x="100" y="126" textAnchor="middle" fill="rgba(255,255,255,0.75)" fontSize="11">
                         {goalReached ? "You crushed it! 🎉" : `${Math.round(pct * 100)}% of goal`}
                       </text>
                     </svg>
