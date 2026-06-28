@@ -27,7 +27,7 @@ async function doSubscribe(): Promise<PushStatus> {
     return 'unsupported';
   }
 
-  if (VAPID_PUBLIC_KEY === 'YOUR_VAPID_PUBLIC_KEY_HERE') {
+  if (!VAPID_PUBLIC_KEY) {
     console.error('[Push] VAPID public key not configured');
     return 'error';
   }

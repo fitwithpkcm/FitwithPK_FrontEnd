@@ -26,6 +26,7 @@ import {
   getMyWorkouts, getMyWorkoutLogs, getMyWorkoutHistory,
   logSet, deleteSetLog, getSetLogsForDate,
 } from "../../services/WorkoutService";
+import WorkoutProgressCharts from "../../components/workout/WorkoutProgressCharts";
 import {
   IWorkout, IExercise, IExerciseLog, ISetLog,
   mergeWorkoutWithLogs, WEIGHT_UNITS,
@@ -954,7 +955,7 @@ export default function WorkoutTrackingPage() {
   const [detailEx, setDetailEx] = useState<IExercise|null>(null);
   const [detailWk, setDetailWk] = useState<IWorkout|null>(null);
   const [logSheet, setLogSheet] = useState<{ex: IExercise; setNumber: number; existing: ISetLog|null; prefill: ISetLog|null}|null>(null);
-  const [tab, setTab] = useState<"today"|"history">("today");
+  const [tab, setTab] = useState<"today"|"history"|"progress">("today");
 
   // ── Queries ──────────────────────────────────────────────────────
 
@@ -964,7 +965,7 @@ export default function WorkoutTrackingPage() {
     enabled: !!user,
     staleTime: 30_000,
   });
-  const workouts: IWorkout[] = workoutsRes?.data?.data ?? [];
+  const workouts: IWorkout[] = Array.isArray(workoutsRes?.data?.data) ? workoutsRes.data.data : [];
 
   const { data: setLogsRes, refetch: refetchSetLogs } = useQuery({
     queryKey: ["my-set-logs", selectedDate],
@@ -972,7 +973,7 @@ export default function WorkoutTrackingPage() {
     enabled: !!user,
     staleTime: 30_000,
   });
-  const allSetLogs: ISetLog[] = setLogsRes?.data?.data ?? [];
+  const allSetLogs: ISetLog[] = Array.isArray(setLogsRes?.data?.data) ? setLogsRes.data.data : [];
 
   const { data: historyRes } = useQuery({
     queryKey: ["my-workout-history"],
@@ -1131,14 +1132,14 @@ export default function WorkoutTrackingPage() {
 
       {/* Tabs */}
       <div className="flex-shrink-0 flex bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        {(["today","history"] as const).map(t => (
+        {(["today","history","progress"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`flex-1 py-2.5 text-sm font-semibold capitalize transition-colors ${
               tab === t
                 ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
                 : "text-gray-500 dark:text-gray-400"
             }`}>
-            {t === "today" ? "Today" : "History"}
+            {t === "today" ? "Today" : t === "history" ? "History" : "Progress"}
           </button>
         ))}
       </div>
@@ -1212,6 +1213,10 @@ export default function WorkoutTrackingPage() {
                 <HistoryCard key={w.IdWorkout} workout={w}
                   logs={historyLogs.filter(l => l.IdWorkout === w.IdWorkout)} />
               ))
+        )}
+
+        {tab === "progress" && (
+          <WorkoutProgressCharts isAdmin={false} />
         )}
       </main>
 

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Droplet, Sun, Moon, Trophy, Dumbbell, Flame, X, CreditCard } from "lucide-react";
+import { Droplet, Sun, Moon, Trophy, Dumbbell, Flame, X, CreditCard, Pill, Check, Clock, Pencil } from "lucide-react";
 import { formatDate, calculatePercentage, isEmpty } from "../../lib/utils";
 import { Link } from "wouter";
 import { MobileNav } from "../../components/layout/mobile-nav";
@@ -25,7 +25,9 @@ import { RENDER_URL } from "../../common/Urls";
 import { IdDietPlan } from "../../interface/IDietPlan";
 import { IUser } from "@/interface/models/User";
 import { getLoggedUserDetails } from "@/services/ProfileService";
-import { usePushNotification } from "@/hooks/use-push-notification";
+import { useFcmNotification } from "@/hooks/use-fcm-notification";
+import { getMySupplements, getMySupplementLogs, logSupplement, updateSupplementReminderTime } from "@/services/SupplementService";
+import { ISupplement, ISupplementLog, SUPPLEMENT_TIMINGS, TIMING_ICONS } from "@/interface/ISupplement";
 
 import toast from 'react-hot-toast';
 
@@ -50,7 +52,7 @@ export default function HomePage() {
   const currentDate = new Date();
 
   // Register Web Push subscription so coach can send reminders to this client
-  const { status: pushStatus, subscribe: enablePush } = usePushNotification();
+  const { status: pushStatus, requestPermission: enablePush } = useFcmNotification();
 
   if (user?.info.EmailID == "devumani10@gmail.com" || user?.info.EmailID == "devumani3@gmail.com") {
     alert("Odikko Nee");
@@ -76,6 +78,9 @@ export default function HomePage() {
   const [chartInfoVisible, setChartInfoVisible] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [sleepStartAngle, setSleepStartAngle] = useState(0); // degrees, 0 = 12 o'clock, clockwise
+  const [suppDrawerOpen, setSuppDrawerOpen] = useState(false);
+  const [editingTimeId, setEditingTimeId] = useState<number | null>(null);
+  const [editingTimeValue, setEditingTimeValue] = useState("");
   const draggingHandle = useRef<'start' | 'end' | null>(null);
 
 
@@ -83,6 +88,42 @@ export default function HomePage() {
 
 
 
+
+  const todayStr = moment().format("DD-MM-YYYY");
+
+  const { data: suppRes } = useQuery({
+    queryKey: ["my-supplements"],
+    queryFn: () => getMySupplements(),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+  const supplements: ISupplement[] = Array.isArray(suppRes?.data?.data) ? suppRes.data.data : [];
+
+  const { data: suppLogRes, refetch: refetchSuppLogs } = useQuery({
+    queryKey: ["my-supplement-logs-home", todayStr],
+    queryFn: () => getMySupplementLogs(todayStr),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+  const suppLogs: ISupplementLog[] = Array.isArray(suppLogRes?.data?.data) ? suppLogRes.data.data : [];
+
+  const { mutate: toggleSupp } = useMutation({
+    mutationFn: logSupplement,
+    onSuccess: () => refetchSuppLogs(),
+    onError: () => toast.error("Failed to log supplement"),
+  });
+
+  const { mutate: saveReminderTime, isPending: savingTime } = useMutation({
+    mutationFn: ({ id, time }: { id: number; time: string }) => updateSupplementReminderTime(id, time),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-supplements"] });
+      setEditingTimeId(null);
+      toast.success("Reminder time updated");
+    },
+    onError: () => toast.error("Failed to update time"),
+  });
+
+  const suppTakenCount = suppLogs.filter(l => l.IsTaken === 1).length;
 
   //constructor basil
   useEffect(() => {
@@ -562,21 +603,21 @@ export default function HomePage() {
       <main className="flex-1 overflow-y-auto px-4 py-5 pb-24 sm:px-6 bg-gray-50 dark:bg-gray-950">
 
         {/* Notification banner — visible until subscribed or dismissed */}
-        {pushStatus !== 'subscribed' && !bannerDismissed && (
+        {pushStatus !== 'granted' && !bannerDismissed && (
           <div className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 mb-4 border ${
             pushStatus === 'denied'
               ? 'bg-red-50 border-red-200'
-              : pushStatus === 'subscribing'
+              : pushStatus === 'requesting'
               ? 'bg-blue-50 border-blue-200'
               : 'bg-orange-50 border-orange-200'
           }`}>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-lg">
-                {pushStatus === 'denied' ? '🚫' : pushStatus === 'subscribing' ? '⏳' : '🔔'}
+                {pushStatus === 'denied' ? '🚫' : pushStatus === 'requesting' ? '⏳' : '🔔'}
               </span>
               <span className={
                 pushStatus === 'denied' ? 'text-red-800'
-                : pushStatus === 'subscribing' ? 'text-blue-700'
+                : pushStatus === 'requesting' ? 'text-blue-700'
                 : 'text-orange-800'
               }>
                 {pushStatus === 'denied' ? (
@@ -584,7 +625,7 @@ export default function HomePage() {
                     Notifications blocked.{' '}
                     <strong>To fix:</strong> open your browser Settings → Site Settings → Notifications → find this site → set to <strong>Allow</strong>, then reload the app.
                   </span>
-                ) : pushStatus === 'subscribing' ? (
+                ) : pushStatus === 'requesting' ? (
                   'Enabling notifications…'
                 ) : (
                   'Enable notifications so your coach can send you reminders.'
@@ -607,6 +648,70 @@ export default function HomePage() {
               <X className="h-4 w-4" />
             </button>
           </div>
+        )}
+
+        {/* ── Today's Supplements ── */}
+        {supplements.length > 0 && (
+          <>
+            <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Today's supplements</p>
+            <Card
+              className="shadow-sm border border-violet-100 dark:border-violet-900/40 dark:bg-gray-900 mb-5 cursor-pointer active:scale-[0.99] transition-transform"
+              onClick={() => setSuppDrawerOpen(true)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-950/40 flex items-center justify-center">
+                      <Pill className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Supplements</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        {suppTakenCount}/{supplements.length} taken today
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {suppTakenCount === supplements.length ? (
+                      <span className="text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-full">All done ✅</span>
+                    ) : (
+                      <span className="text-xs font-medium text-violet-600 bg-violet-50 dark:bg-violet-900/20 px-2.5 py-1 rounded-full">
+                        {supplements.length - suppTakenCount} remaining
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* mini progress bar */}
+                <div className="mt-3 bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
+                  <div
+                    className="bg-violet-500 h-1.5 rounded-full transition-all duration-500"
+                    style={{ width: `${supplements.length ? Math.round((suppTakenCount / supplements.length) * 100) : 0}%` }}
+                  />
+                </div>
+                {/* upcoming due */}
+                {(() => {
+                  const due = supplements.filter(s => {
+                    if (!s.ReminderTime) return false;
+                    const log = suppLogs.find(l => l.IdSupplement === s.IdSupplement);
+                    if (log?.IsTaken === 1) return false;
+                    const [h, m] = s.ReminderTime.split(":").map(Number);
+                    const diff = moment().hours(h).minutes(m).seconds(0).diff(moment(), "minutes");
+                    return diff >= 0 && diff <= 60;
+                  });
+                  if (!due.length) return null;
+                  return (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {due.map(s => (
+                        <span key={s.IdSupplement} className="text-[10px] bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 px-2 py-0.5 rounded-full animate-pulse">
+                          {TIMING_ICONS[s.Timing]} {s.Name} · {s.ReminderTime}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </>
         )}
 
         {/* ── Today's stats ── */}
@@ -821,6 +926,120 @@ export default function HomePage() {
 
       <MobileNav />
 
+      {/* ── Supplement Drawer ── */}
+      {suppDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          {/* backdrop */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setSuppDrawerOpen(false); setEditingTimeId(null); }} />
+          <div className="relative bg-white dark:bg-gray-900 rounded-t-2xl max-h-[80vh] flex flex-col shadow-2xl">
+            {/* handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-gray-700" />
+            </div>
+            {/* header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+              <div>
+                <p className="font-semibold text-gray-800 dark:text-gray-100">Today's Supplements</p>
+                <p className="text-xs text-gray-400">{suppTakenCount}/{supplements.length} taken</p>
+              </div>
+              <button onClick={() => { setSuppDrawerOpen(false); setEditingTimeId(null); }}
+                className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                <X className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
+            {/* list */}
+            <div className="overflow-y-auto px-4 py-3 space-y-3 pb-8">
+              {SUPPLEMENT_TIMINGS.map(timing => {
+                const group = supplements.filter(s => s.Timing === timing);
+                if (!group.length) return null;
+                return (
+                  <div key={timing}>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                      {TIMING_ICONS[timing]} {timing}
+                    </p>
+                    <div className="space-y-2">
+                      {group.map(s => {
+                        const log = suppLogs.find(l => l.IdSupplement === s.IdSupplement);
+                        const taken = log?.IsTaken === 1;
+                        const isEditing = editingTimeId === s.IdSupplement;
+                        return (
+                          <div key={s.IdSupplement}
+                            className={`rounded-xl border px-3 py-2.5 flex items-center gap-3 transition-colors ${
+                              taken ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/50"
+                                    : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                            }`}>
+                            {/* check button */}
+                            <button
+                              onClick={() => toggleSupp({ IdSupplement: s.IdSupplement!, LogDate: todayStr, IsTaken: taken ? 0 : 1 })}
+                              className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                                taken ? "border-green-500 bg-green-500 text-white"
+                                       : "border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700"
+                              }`}>
+                              {taken && <Check className="h-4 w-4" />}
+                            </button>
+                            {/* info */}
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-semibold truncate ${taken ? "line-through text-gray-400" : "text-gray-800 dark:text-gray-100"}`}>
+                                {s.Name}
+                              </p>
+                              <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                                {s.Dose && <span className="text-[10px] text-violet-500">{s.Dose}</span>}
+                                {s.Duration && <span className="text-[10px] text-gray-400">⏱ {s.Duration}</span>}
+                                {taken && log?.TakenAt && (
+                                  <span className="text-[10px] text-green-500">✓ {moment(log.TakenAt).format("h:mm a")}</span>
+                                )}
+                              </div>
+                              {/* reminder time — always visible, tap pencil to edit */}
+                              <div className="mt-1.5">
+                                {isEditing ? (
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5 bg-violet-50 dark:bg-violet-900/20 border border-violet-300 dark:border-violet-600 rounded-lg px-2.5 py-1.5">
+                                      <Clock className="h-3.5 w-3.5 text-violet-500 flex-shrink-0" />
+                                      <input
+                                        type="time"
+                                        value={editingTimeValue}
+                                        onChange={e => setEditingTimeValue(e.target.value)}
+                                        className="text-xs bg-transparent text-violet-700 dark:text-violet-300 font-medium outline-none w-24"
+                                        autoFocus
+                                      />
+                                    </div>
+                                    <button
+                                      onClick={() => saveReminderTime({ id: s.IdSupplement!, time: editingTimeValue })}
+                                      disabled={savingTime}
+                                      className="text-xs font-semibold text-white bg-violet-600 hover:bg-violet-700 px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
+                                      Save
+                                    </button>
+                                    <button onClick={() => setEditingTimeId(null)}
+                                      className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => { setEditingTimeId(s.IdSupplement!); setEditingTimeValue(s.ReminderTime ?? ""); }}
+                                    className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:border-violet-300 border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 transition-colors group"
+                                  >
+                                    <Clock className="h-3.5 w-3.5 text-gray-400 group-hover:text-violet-500" />
+                                    <span className="text-xs font-medium text-gray-600 dark:text-gray-300 group-hover:text-violet-600">
+                                      {s.ReminderTime ? s.ReminderTime : "Set reminder time"}
+                                    </span>
+                                    <Pencil className="h-3 w-3 text-gray-400 group-hover:text-violet-500 ml-0.5" />
+                                  </button>
+                                )}
+                                {!isEditing && (
+                                  <p className="text-[9px] text-gray-400 mt-0.5 ml-0.5">Applies to all scheduled days</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* alert message dialog */}
 

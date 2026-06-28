@@ -6,8 +6,9 @@ import {
   Plus, Trash2, Pencil, Check, Dumbbell, Video,
   ChevronLeft, ChevronRight, ArrowRightLeft, Eye,
   AlertCircle, ChevronDown, ChevronUp, Loader2, User, X,
-  MessageSquare, BookOpen, Search, CalendarDays, Copy, LayoutGrid,
+  MessageSquare, BookOpen, Search, CalendarDays, Copy, LayoutGrid, BarChart2,
 } from "lucide-react";
+import WorkoutProgressCharts from "../../components/workout/WorkoutProgressCharts";
 import moment from "moment";
 import toast from "react-hot-toast";
 
@@ -25,13 +26,13 @@ import { setBaseUrl } from "../../services/HttpService";
 import { getUserListForACoach } from "../../services/AdminServices";
 import {
   getWorkoutsForClient, createWorkout, updateWorkout,
-  deleteWorkout, rescheduleWorkout, getWorkoutLogsForClient,
+  deleteWorkout, rescheduleWorkout, getWorkoutLogsForClient, getClientSetLogs,
   getExerciseLibrary, createLibraryItem, updateLibraryItem, deleteLibraryItem,
   bulkCreateWorkouts,
   getWorkoutTemplates, createWorkoutTemplate, updateWorkoutTemplate, deleteWorkoutTemplate,
 } from "../../services/WorkoutService";
 import {
-  IWorkout, IExercise, IExerciseLog, IExerciseLibraryItem,
+  IWorkout, IExercise, IExerciseLog, ISetLog, IExerciseLibraryItem,
   createBlankWorkout, createBlankExercise, mergeWorkoutWithLogs, WEIGHT_UNITS, WORKOUT_TYPES,
   IWorkoutTemplate, ITemplateExercise, createBlankTemplate, createBlankTemplateExercise,
 } from "../../interface/IWorkout";
@@ -565,11 +566,13 @@ function LibraryManager({ library, onRefresh }: {
 
 // ── Log Viewer Dialog ─────────────────────────────────────────────
 
-function LogViewerDialog({ open, workout, logs, onClose }: {
-  open: boolean; workout: IWorkout|null; logs: IExerciseLog[]; onClose: ()=>void;
+function LogViewerDialog({ open, workout, logs, setLogs, onClose }: {
+  open: boolean; workout: IWorkout|null; logs: IExerciseLog[]; setLogs: ISetLog[]; onClose: ()=>void;
 }) {
   if (!workout) return null;
   const merged = mergeWorkoutWithLogs(workout, logs);
+  const hasAnyLog = setLogs.length > 0 || logs.some(l => l.IsCompleted === 1);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md p-0 gap-0 max-h-[85vh] overflow-y-auto">
@@ -589,34 +592,49 @@ function LogViewerDialog({ open, workout, logs, onClose }: {
           <Progress value={merged.completionPercent} className="h-1.5 mt-2" />
         </DialogHeader>
         <div className="px-5 py-4 space-y-2">
-          {merged.exercisesWithLogs.map((ex, i) => (
-            <div key={i} className={`rounded-xl p-3 border ${ex.isCompleted
-              ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
-              : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700"}`}>
-              <div className="flex items-center gap-2">
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${ex.isCompleted ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`}>
-                  {ex.isCompleted && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+          {!hasAnyLog && (
+            <p className="text-center text-sm text-gray-400 py-4">Client hasn't logged this workout yet.</p>
+          )}
+          {merged.exercisesWithLogs.map((ex, i) => {
+            const exSetLogs = setLogs.filter(s => s.IdExercise === ex.IdExercise);
+            const isLogged = exSetLogs.length > 0 || ex.isCompleted;
+            return (
+              <div key={i} className={`rounded-xl p-3 border ${isLogged
+                ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700"}`}>
+                <div className="flex items-center gap-2">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${isLogged ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`}>
+                    {isLogged && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                  </div>
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200 flex-1 truncate">{ex.ExerciseName}</span>
+                  {ex.VideoUrl && (
+                    <a href={ex.VideoUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-500">
+                      <Video className="h-3.5 w-3.5" />
+                    </a>
+                  )}
                 </div>
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-200 flex-1 truncate">{ex.ExerciseName}</span>
-                {ex.VideoUrl && (
-                  <a href={ex.VideoUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-500">
-                    <Video className="h-3.5 w-3.5" />
-                  </a>
+                <p className="text-xs text-gray-400 ml-7 mt-1">
+                  Target: {ex.Sets}×{ex.TargetReps}{ex.TargetWeight ? ` @ ${ex.TargetWeight}${ex.WeightUnit ?? "kg"}` : ""}
+                </p>
+                {/* Per-set breakdown */}
+                {exSetLogs.length > 0 && (
+                  <div className="ml-7 mt-2 space-y-1">
+                    {exSetLogs.map((s, si) => (
+                      <div key={si} className="flex items-center gap-2 text-xs">
+                        <span className="text-gray-400 w-10">Set {s.SetNumber}</span>
+                        <span className="font-medium text-green-700 dark:text-green-300">
+                          {s.RepsCompleted} reps{s.WeightUsed ? ` @ ${s.WeightUsed}${s.WeightUnit ?? "kg"}` : ""}
+                        </span>
+                        {s.Notes && <span className="text-gray-400 italic truncate">— {s.Notes}</span>}
+                      </div>
+                    ))}
+                  </div>
                 )}
+                {ex.logNotes && <p className="text-xs text-gray-400 ml-7 mt-1 italic">"{ex.logNotes}"</p>}
               </div>
-              <div className="flex gap-3 mt-1.5 ml-7 text-xs text-gray-400">
-                <span>Target: {ex.Sets}×{ex.TargetReps}{ex.TargetWeight ? ` @ ${ex.TargetWeight}${ex.WeightUnit ?? "kg"}` : ""}</span>
-                {ex.isCompleted && ex.log && (
-                  <span>
-                    <span className="text-green-600 dark:text-green-400">{ex.log.SetsCompleted}×{ex.log.RepsCompleted}</span>
-                    {ex.log.WeightUsed ? <span className="text-orange-600 dark:text-orange-400"> @ {ex.log.WeightUsed}{ex.log.WeightUnit ?? "kg"}</span> : null}
-                  </span>
-                )}
-              </div>
-              {ex.logNotes && <p className="text-xs text-gray-400 ml-7 mt-1 italic">"{ex.logNotes}"</p>}
-            </div>
-          ))}
-          {merged.totalCount === 0 && <p className="text-center text-sm text-gray-400 py-6">No exercises.</p>}
+            );
+          })}
+          {merged.totalCount === 0 && <p className="text-center text-sm text-gray-400 py-6">No exercises in this workout.</p>}
         </div>
         <DialogFooter className="px-5 pb-5">
           <Button onClick={onClose} variant="outline" className="w-full">Close</Button>
@@ -1433,7 +1451,7 @@ function WeeklyPlannerTab({ selectedClient, library }: {
 export default function AdminWorkoutPlanPage() {
   useEffect(() => { setBaseUrl(BASE_URL); }, []);
 
-  const [pageTab, setPageTab]               = useState<"workouts"|"templates"|"library"|"weekly">("workouts");
+  const [pageTab, setPageTab]               = useState<"workouts"|"templates"|"library"|"weekly"|"progress">("workouts");
   const [selectedClient, setSelectedClient] = useState<number|null>(null);
   const [selectedDate, setSelectedDate]     = useState(ddmmyyyy(moment()));
   const [editorOpen, setEditorOpen]         = useState(false);
@@ -1473,7 +1491,7 @@ export default function AdminWorkoutPlanPage() {
     enabled: !!selectedClient,
     staleTime: 30_000,
   });
-  const workouts: IWorkout[] = workoutsRes?.data?.data ?? [];
+  const workouts: IWorkout[] = Array.isArray(workoutsRes?.data?.data) ? workoutsRes.data.data : [];
 
   const { data: logsRes } = useQuery({
     queryKey: ["workout-logs-admin", selectedClient, selectedDate],
@@ -1483,11 +1501,20 @@ export default function AdminWorkoutPlanPage() {
   });
   const allLogs: IExerciseLog[] = logsRes?.data?.data ?? [];
 
+  const { data: setLogsRes } = useQuery({
+    queryKey: ["workout-set-logs-admin", selectedClient, selectedDate],
+    queryFn: () => getClientSetLogs({ IdUser: selectedClient!, LogDate: selectedDate }),
+    enabled: !!selectedClient,
+    staleTime: 30_000,
+  });
+  const allSetLogs: ISetLog[] = setLogsRes?.data?.data ?? [];
+
   // ── Mutations ──────────────────────────────────────────────────
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["workouts", selectedClient] });
     queryClient.invalidateQueries({ queryKey: ["workout-logs-admin", selectedClient] });
+    queryClient.invalidateQueries({ queryKey: ["workout-set-logs-admin", selectedClient] });
   };
 
   const createMut     = useMutation({ mutationFn: createWorkout,     onSuccess: () => { toast.success("Workout created!"); invalidate(); setEditorOpen(false); }, onError: () => toast.error("Failed to create") });
@@ -1615,6 +1642,14 @@ export default function AdminWorkoutPlanPage() {
           }`}>
           <CalendarDays className="h-3.5 w-3.5" /> Weekly
         </button>
+        <button onClick={() => setPageTab("progress")}
+          className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+            pageTab === "progress"
+              ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
+              : "text-gray-500 dark:text-gray-400"
+          }`}>
+          <BarChart2 className="h-3.5 w-3.5" /> Progress
+        </button>
       </div>
 
       {/* ── Content ───────────────────────────────────────────── */}
@@ -1633,6 +1668,21 @@ export default function AdminWorkoutPlanPage() {
         {/* ── Weekly Plan Tab ───────────────────────────────────── */}
         {pageTab === "weekly" && (
           <WeeklyPlannerTab selectedClient={selectedClient} library={library} />
+        )}
+
+        {/* ── Progress Tab ─────────────────────────────────────── */}
+        {pageTab === "progress" && (
+          selectedClient ? (
+            <WorkoutProgressCharts idUser={selectedClient} isAdmin />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
+                <BarChart2 className="h-7 w-7 text-gray-400 dark:text-gray-600" />
+              </div>
+              <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">Select a client</p>
+              <p className="text-xs text-gray-400 mt-1">Choose a client to view their progress charts.</p>
+            </div>
+          )
         )}
 
         {/* ── Workouts Tab ─────────────────────────────────────── */}
@@ -1710,6 +1760,7 @@ export default function AdminWorkoutPlanPage() {
         onClose={() => setRescheduleOpen(false)}
         onConfirm={(id, d) => rescheduleMut.mutate({ IdWorkout: id, NewDate: d })} />
       <LogViewerDialog open={logViewerOpen} workout={viewingWorkout} logs={logsForViewer}
+        setLogs={viewingWorkout ? allSetLogs.filter(s => s.IdWorkout === viewingWorkout.IdWorkout) : []}
         onClose={() => setLogViewerOpen(false)} />
     </div>
   );

@@ -1,6 +1,6 @@
 // Login
 
-export const BASE_URL = "http://192.168.1.15:3202";
+export const BASE_URL = "https://backend.mazhaundo.com";
 
 /**
  * VAPID public key for Web Push notifications.

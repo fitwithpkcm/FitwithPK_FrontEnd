@@ -13,6 +13,12 @@ export const WORKOUT_STATUS: WorkoutStatus[] = ['Planned', 'Completed', 'Missed'
 export const WEIGHT_UNITS = ['kg', 'lbs', 'bodyweight'] as const;
 export type WeightUnit = typeof WEIGHT_UNITS[number];
 
+export const MUSCLE_GROUPS = [
+  'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps',
+  'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Core', 'Cardio',
+] as const;
+export type MuscleGroup = typeof MUSCLE_GROUPS[number];
+
 export interface ISetLog {
   IdSetLog?:     number;
   IdExercise:    number;
@@ -31,6 +37,7 @@ export interface IExerciseLibraryItem {
   IdLibraryItem?: number;
   ExerciseName:   string;
   Category?:      string;
+  MuscleGroup?:   string;
   DefaultSets:    number;
   DefaultReps:    number;
   DefaultWeight?: number;
@@ -44,6 +51,7 @@ export interface IExercise {
   IdExercise?: number;
   IdWorkout?: number;
   ExerciseName: string;
+  MuscleGroup?: string;
   VideoUrl?: string;
   Sets: number;
   TargetReps: number;
@@ -88,6 +96,7 @@ export interface ITemplateExercise {
   IdTemplateExercise?: number;
   IdTemplate?:         number;
   ExerciseName:        string;
+  MuscleGroup?:        string;
   VideoUrl?:           string;
   Sets:                number;
   TargetReps:          number;
@@ -165,6 +174,29 @@ export function mergeWorkoutWithLogs(workout: IWorkout, logs: IExerciseLog[]): I
     totalCount,
     completionPercent: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0,
   };
+}
+
+// ── Progress ──────────────────────────────────────────────────────
+
+export interface IVolumeDataPoint {
+  WorkoutName: string;
+  LogDate: string;
+  Volume: number;
+  TotalSets: number;
+}
+
+export interface IMuscleVolumePoint {
+  MuscleGroup: string;
+  WeeklySets: number;
+  WeeklyVolume: number;
+}
+
+export interface IMuscleTarget {
+  IdTarget?: number;
+  IdCoach: number;
+  IdUser: number;
+  MuscleGroup: string;
+  WeeklySetTarget: number;
 }
 
 export function createBlankWorkout(userId: number, date: string): IWorkout {

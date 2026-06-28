@@ -32,6 +32,8 @@ import AdminMealPlanPage from './page/admin-side/meal-plan-page';
 import MealTrackingPage from './page/client-side/meal-tracking-page';
 import AdminWorkoutPlanPage from './page/admin-side/workout-plan-page';
 import WorkoutTrackingPage from './page/client-side/workout-tracking-page';
+import AdminSupplementPage from './page/admin-side/supplement-page';
+import SupplementPage from './page/client-side/supplement-page';
 import { Toaster } from 'react-hot-toast';
 function Router() {
   console.log("Router rendering");
@@ -62,8 +64,8 @@ function Router() {
       <Route path={RENDER_URL.STUDENT_MEAL_TRACKING} component={MealTrackingPage} />
       <Route path={RENDER_URL.ADMIN_WORKOUT_PLAN} component={AdminWorkoutPlanPage} />
       <ClientRoute path={RENDER_URL.STUDENT_WORKOUT} component={WorkoutTrackingPage} />
-
-
+      <Route path={RENDER_URL.ADMIN_SUPPLEMENTS} component={AdminSupplementPage} />
+      <ClientRoute path={RENDER_URL.STUDENT_SUPPLEMENTS} component={() => <SupplementPage />} />
 
     </Switch>
   );

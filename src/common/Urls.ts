@@ -41,6 +41,8 @@ export const RENDER_URL = {
     STUDENT_MEAL_TRACKING: '/student-meal-plan',
     ADMIN_WORKOUT_PLAN: '/admin-workout-plan',
     STUDENT_WORKOUT: '/student-workout',
+    ADMIN_SUPPLEMENTS: '/admin-supplements',
+    STUDENT_SUPPLEMENTS: '/student-supplements',
     VIEW_STUDENT: '/student',
     DATA_MANAGEMENT: '/data-management',
     STAFFS: '/staffs',
@@ -158,6 +160,11 @@ export const API_URL = {
     DELETE_WORKOUT: '/workout/delete',
     RESCHEDULE_WORKOUT: '/workout/reschedule',
     GET_WORKOUT_LOGS_FOR_CLIENT: '/workout/getClientLogs',
+    GET_CLIENT_SET_LOGS: '/workout/getClientSetLogs',
+    GET_VOLUME_HISTORY: '/workout/volumeHistory',
+    GET_MUSCLE_GROUP_VOLUME: '/workout/muscleGroupVolume',
+    GET_MUSCLE_TARGETS: '/workout/getMuscleTargets',
+    UPSERT_MUSCLE_TARGET: '/workout/upsertMuscleTarget',
 
     // ── Workout Plan (Client) ─────────────────────────────────────
     GET_MY_WORKOUTS: '/workout/getMyWorkouts',
@@ -185,6 +192,20 @@ export const API_URL = {
     CREATE_LIBRARY_ITEM:     '/workout/library/create',
     UPDATE_LIBRARY_ITEM:     '/workout/library/update',
     DELETE_LIBRARY_ITEM:     '/workout/library/delete',
+
+    // ── Supplements (Admin) ───────────────────────────────────────
+    GET_SUPPLEMENTS_FOR_CLIENT: '/supplement/getForClient',
+    CREATE_SUPPLEMENT:          '/supplement/create',
+    UPDATE_SUPPLEMENT:          '/supplement/update',
+    DELETE_SUPPLEMENT:          '/supplement/delete',
+    GET_SUPPLEMENT_CLIENT_LOGS: '/supplement/getClientLogs',
+    GET_SUPPLEMENT_ADHERENCE:   '/supplement/adherence',
+
+    // ── Supplements (Client) ──────────────────────────────────────
+    GET_MY_SUPPLEMENTS:              '/supplement/getMine',
+    GET_MY_SUPPLEMENT_LOGS:          '/supplement/getMyLogs',
+    LOG_SUPPLEMENT:                  '/supplement/log',
+    UPDATE_SUPPLEMENT_REMINDER_TIME: '/supplement/updateReminderTime',
 
     // ── Push Notifications ────────────────────────────────────────
     SAVE_PUSH_SUBSCRIPTION: '/notification/saveSubscription',

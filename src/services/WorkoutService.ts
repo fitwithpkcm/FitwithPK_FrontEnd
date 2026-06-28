@@ -1,6 +1,6 @@
 import { httpCall } from "./HttpService";
 import { API_URL } from "../common/Urls";
-import { IWorkout, IExerciseLog, IExerciseLibraryItem, ISetLog, IWorkoutTemplate } from "../interface/IWorkout";
+import { IWorkout, IExerciseLog, IExerciseLibraryItem, ISetLog, IWorkoutTemplate, IMuscleTarget } from "../interface/IWorkout";
 
 // ── Admin: workout CRUD ───────────────────────────────────────────
 
@@ -24,6 +24,23 @@ export const bulkCreateWorkouts = (params: { Workouts: IWorkout[] }) =>
 
 export const getWorkoutLogsForClient = (params: { IdUser: number; LogDate: string }) =>
   httpCall({ method: "post", url: API_URL.GET_WORKOUT_LOGS_FOR_CLIENT, data: params });
+
+export const getClientSetLogs = (params: { IdUser: number; LogDate: string }) =>
+  httpCall({ method: "post", url: API_URL.GET_CLIENT_SET_LOGS, data: params });
+
+// ── Progress ──────────────────────────────────────────────────────
+
+export const getVolumeHistory = (params: { IdUser?: number; weeks?: number }) =>
+  httpCall({ method: "post", url: API_URL.GET_VOLUME_HISTORY, data: params });
+
+export const getMuscleGroupVolume = (params: { IdUser?: number; weeks?: number }) =>
+  httpCall({ method: "post", url: API_URL.GET_MUSCLE_GROUP_VOLUME, data: params });
+
+export const getMuscleTargets = (params: { IdUser: number }) =>
+  httpCall({ method: "post", url: API_URL.GET_MUSCLE_TARGETS, data: params });
+
+export const upsertMuscleTarget = (params: IMuscleTarget) =>
+  httpCall({ method: "post", url: API_URL.UPSERT_MUSCLE_TARGET, data: params });
 
 // ── Client: workout + exercise log ───────────────────────────────
 
