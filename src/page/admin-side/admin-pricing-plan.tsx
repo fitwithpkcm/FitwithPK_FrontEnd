@@ -1,515 +1,307 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Upload, X, Check, Edit, Trash2, EuroIcon, Calendar, Search, Users } from 'lucide-react';
+import { Search, Calendar, CheckCircle, XCircle, Clock, Save, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { setBaseUrl } from '../../services/HttpService';
 import { BASE_URL } from '../../common/Constant';
 import { MobileAdminNav } from '../../components/layout/mobile-admin-nav';
 import { AdminPageHeader } from '../../components/layout/page-header';
-import { deletePricingPlans, getAllPricingPlans, getAllSubscriptionAssigned, insertPricingPlans, removeSubscriptionFromUser, setSubscriptionToUser } from '../../services/AdminServices';
-import { ISubscriptionHistory, IUser } from '../../interface/models/User';
+import { getUserListForACoach, setCoachingPlan } from '../../services/AdminServices';
+import { getLoggedUserDetails, getCoachingHistory } from '../../services/ProfileService';
+import { IUser, ICoachingPlan } from '../../interface/models/User';
 import toast from 'react-hot-toast';
+import moment from 'moment';
 
+interface PlanForm {
+    PlanName: string;
+    Price: string;
+    StartDate: string;
+    EndDate: string;
+}
 
+const EMPTY_FORM: PlanForm = { PlanName: '', Price: '', StartDate: '', EndDate: '' };
 
 export default function PricingPlanManagementScreen() {
-    const [showAddForm, setShowAddForm] = useState(false);
-    const [showEditForm, setShowEditForm] = useState(false);
-    const [showSubscriptionAssignment, setShowSubscriptionAssignment] = useState(false);
-    const [selectedPlan, setSelectedPlan] = useState<ISubscriptionHistory | null>(null);
-    const [userSearchTerm, setUserSearchTerm] = useState('');
-
     const queryClient = useQueryClient();
+    const [search, setSearch] = useState('');
+    const [selectedUser, setSelectedUser] = useState<IUser | null>(null);
+    const [form, setForm] = useState<PlanForm>(EMPTY_FORM);
 
-    // Form state
-    const [formData, setFormData] = useState<ISubscriptionHistory>({
-        PlanName: '',
-        PlanDescription: '',
-        Price: 0,
-        IsActive: 1,
-        BillingCycle: 'Monthly'
+    useEffect(() => { setBaseUrl(BASE_URL); }, []);
+
+    // All clients for this coach
+    const { data: clients = [], isLoading } = useQuery<IUser[]>({
+        queryKey: ['coach-clients-plans'],
+        queryFn: async () => {
+            const res = await getUserListForACoach({});
+            return res.data?.data ?? [];
+        },
     });
 
-    /**
-     * Set up base url
-     */
+    // Coaching history for selected user
+    const { data: history = [] } = useQuery<ICoachingPlan[]>({
+        queryKey: ['coaching-history', selectedUser?.IdUser],
+        queryFn: async () => {
+            const res = await getCoachingHistory({ IdUser: selectedUser!.IdUser! });
+            return res.data?.data ?? [];
+        },
+        enabled: !!selectedUser?.IdUser,
+    });
+
+    // Profile of selected user (to pre-fill current plan)
+    const { data: selectedProfile } = useQuery({
+        queryKey: ['client-profile-plan', selectedUser?.IdUser],
+        queryFn: async () => {
+            const res = await getLoggedUserDetails({ IdUser: selectedUser!.IdUser });
+            return (res.data?.data as any)?.[0] ?? null;
+        },
+        enabled: !!selectedUser?.IdUser,
+    });
+
+    // Pre-fill form when profile loads
     useEffect(() => {
-        setBaseUrl(BASE_URL);
-    }, []);
-
-    // Fetch pricing plans
-    const { data: pricingPlans } = useQuery({
-        queryKey: ["pricing-plans-all"],
-        queryFn: async (): Promise<ISubscriptionHistory[]> => {
-            const response = await getAllPricingPlans(null);
-            if (!response.data) {
-                throw new Error('No data received');
-            }
-            return response.data.data;
-        }
-    });
-
-
-
-    // Fetch assigned subscriptions for the selected plan
-    const { data: assignedSubscriptions } = useQuery({
-        queryKey: ["assigned-subscriptions", selectedPlan?.IdPricingPlan],
-        queryFn: async (): Promise<IUser[]> => {
-            if (!selectedPlan?.IdPricingPlan) return [];
-            const response = await getAllSubscriptionAssigned({ IdPricingPlan: selectedPlan.IdPricingPlan });
-            if (!response.data) {
-                throw new Error('No data received');
-            }
-            return response.data.data;
-        },
-        enabled: !!selectedPlan?.IdPricingPlan && showSubscriptionAssignment
-    });
-
-    // Add mutation
-    const { mutate: savePricingPlan } = useMutation({
-        mutationFn: async (planData: ISubscriptionHistory) => {
-            if (planData.IdPricingPlan) {
-                // await updatePricingPlan(planData);
-                return
-            } else {
-
-                await insertPricingPlans(planData);
-                return
-            }
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['pricing-plans-all'] });
-            resetForm();
-            setShowAddForm(false);
-            setShowEditForm(false);
-
-        },
-        onError: (error) => {
-            console.error('Error saving pricing plan:', error);
-            alert('Failed to save pricing plan');
-        }
-    });
-
-    //delte pricing plans
-    const { mutate: deletePricingPlan } = useMutation({
-        mutationFn: async (planData: ISubscriptionHistory) => {
-            if (planData.IdPricingPlan) {
-                return await deletePricingPlans(planData);
-            }
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['pricing-plans-all'] });
-            resetForm();
-            setShowAddForm(false);
-            setShowEditForm(false);
-
-        },
-        onError: (error) => {
-            console.error('Error saving pricing plan:', error);
-            alert('Failed to save pricing plan');
-        }
-    });
-
-
-    // Assign subscription mutation
-    const { mutate: assignUserSubscription } = useMutation({
-        mutationFn: setSubscriptionToUser,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["assigned-subscriptions"] });
-            toast.success("Subscriptions Assigned Successful", {
-                position: "bottom-center"
-            });
-        },
-        onError: (error) => {
-            console.error('Error assigning subscription:', error);
-            toast.error('Failed to assign subscription', {
-                position: "bottom-center"
-            });
-        }
-    });
-
-    // Remove subscription mutation
-    const { mutate: removeUserSubscription } = useMutation({
-        mutationFn: removeSubscriptionFromUser,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["assigned-subscriptions"] });
-            queryClient.invalidateQueries({ queryKey: ["users-all"] });
-            toast.success("Subscription removed successfully!", {
-                position: "bottom-center"
-            });
-        },
-        onError: (error) => {
-            console.error('Error removing subscription:', error);
-
-            toast.error('Failed to remove subscription!', {
-                position: "bottom-center"
-            });
-        }
-    });
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        savePricingPlan(formData);
-    };
-
-    const startEdit = (plan: ISubscriptionHistory) => {
-        setSelectedPlan(plan);
-        setFormData(plan);
-        setShowEditForm(true);
-    };
-
-    const handleDelete = (plan: ISubscriptionHistory) => {
-        console.log(plan);
-        deletePricingPlan(plan);
-
-    };
-
-    const startSubscriptionAssignment = (plan: ISubscriptionHistory) => {
-        setSelectedPlan(plan);
-        setShowSubscriptionAssignment(true);
-        setUserSearchTerm('');
-    };
-
-    const handleAssignSubscription = (userId: number | undefined) => {
-        if (!selectedPlan?.IdPricingPlan) return;
-        console.log(userId);
-        const data = {
-            IdUser: userId,
-            IdPricingPlan: selectedPlan.IdPricingPlan
-        }
-        assignUserSubscription(data);
-    };
-
-    const handleRemoveSubscription = (userId: number) => {
-        if (!selectedPlan?.IdPricingPlan) return;
-        const data = {
-            IdUser: userId,
-            IdPricingPlan: selectedPlan.IdPricingPlan
-        }
-        removeUserSubscription(data);
-    };
-
-    const resetForm = () => {
-        setFormData({
-            PlanName: '',
-            PlanDescription: '',
-            Price: 0,
-            IsActive: 1,
-            BillingCycle: 'Monthly'
+        if (!selectedProfile) return;
+        setForm({
+            PlanName: selectedProfile.PlanName ?? '',
+            Price: selectedProfile.Price != null ? String(selectedProfile.Price) : '',
+            StartDate: selectedProfile.StartDate ? moment(selectedProfile.StartDate).format('YYYY-MM-DD') : '',
+            EndDate: selectedProfile.EndDate ? moment(selectedProfile.EndDate).format('YYYY-MM-DD') : '',
         });
-        setSelectedPlan(null);
+    }, [selectedProfile]);
+
+    const { mutate: save, isPending: saving } = useMutation({
+        mutationFn: (data: Parameters<typeof setCoachingPlan>[0]) => setCoachingPlan(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['coach-clients-plans'] });
+            queryClient.invalidateQueries({ queryKey: ['client-profile-plan', selectedUser?.IdUser] });
+            queryClient.invalidateQueries({ queryKey: ['coaching-history', selectedUser?.IdUser] });
+            toast.success('Coaching plan saved!');
+            setSelectedUser(null);
+            setForm(EMPTY_FORM);
+        },
+        onError: () => toast.error('Failed to save plan'),
+    });
+
+    const handleSave = () => {
+        if (!form.PlanName.trim() || !form.StartDate || !form.EndDate) {
+            toast.error('Fill in all fields');
+            return;
+        }
+        save({
+            IdUser: selectedUser!.IdUser!,
+            PlanName: form.PlanName.trim(),
+            Price: parseFloat(form.Price) || 0,
+            StartDate: form.StartDate,
+            EndDate: form.EndDate,
+            PaidAmount: parseFloat(form.Price) || 0,
+        });
     };
 
-    // Format price display
-    const formatPrice = (price: number, cycle: string) => {
-        if (price && cycle)
-            return `€${price}/${cycle === 'Yearly' ? 'yr' : 'mo'}`;
-        else
-            return '€0000'
+    const filtered = clients.filter(c =>
+        `${c.FirstName} ${c.LastName} ${c.EmailID}`.toLowerCase().includes(search.toLowerCase())
+    );
+
+    const statusInfo = (c: IUser) => {
+        if (!c.EndDate) return { label: 'No plan', color: 'text-gray-400', bg: 'bg-gray-50', icon: <Clock size={12} /> };
+        const days = moment(c.EndDate).diff(moment().startOf('day'), 'days');
+        if (days < 0) return { label: 'Expired', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle size={12} /> };
+        if (days <= 10) return { label: `${days}d left`, color: 'text-amber-600', bg: 'bg-amber-50', icon: <AlertTriangle size={12} /> };
+        return { label: `${days}d left`, color: 'text-green-600', bg: 'bg-green-50', icon: <CheckCircle size={12} /> };
     };
 
-
-    // Subscription Assignment Modal
-    if (showSubscriptionAssignment && selectedPlan && Array.isArray(assignedSubscriptions)) {
+    // ── Slide-up form panel ───────────────────────────────────────────────────
+    if (selectedUser) {
         return (
-            <div className="p-4 pb-20">
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-xl font-bold">Assign Subscriptions to {selectedPlan.PlanName}</h1>
-                    <button
-                        onClick={() => {
-                            setShowSubscriptionAssignment(false);
-                            setUserSearchTerm('');
-                        }}
-                        className="p-2 hover:bg-gray-100 rounded-lg"
-                    >
-                        <X size={20} />
-                    </button>
-                </div>
+            <div className="min-h-screen bg-gray-50 flex flex-col">
+                <AdminPageHeader
+                    title="Set Coaching Plan"
+                    subtitle={`${selectedUser.FirstName} ${selectedUser.LastName}`}
+                    onBack={() => { setSelectedUser(null); setForm(EMPTY_FORM); }}
+                />
 
-                <div className="space-y-4">
-                    <p className="text-gray-600">Select users to assign this subscription plan:</p>
-
-                    {/* Search Bar */}
-                    <div className="relative">
-                        <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Search users by name or email..."
-                            value={userSearchTerm}
-                            onChange={(e) => setUserSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                    </div>
-
-                    {assignedSubscriptions?.map((user) => (
-                        <div key={user.IdUser} className="bg-white rounded-lg border p-4 flex items-center justify-between">
-                            <div>
-                                <h3 className="font-medium">{user.FirstName}</h3>
-                                <p className="text-sm text-gray-600">{user.EmailID}</p>
-                            </div>
-                            {(user.IdSub) ? (
-                                <button
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                                    onClick={() => { handleRemoveSubscription(user.IdUser!) }}
-                                >
-                                    Remove
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => {
-                                        handleAssignSubscription(user.IdUser);
-                                    }}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                >
-                                    Assign
-                                </button>
-                            )}
-                        </div>
-                    ))}
-
-                </div>
-            </div>
-        );
-    }
-
-    // Rest of your existing code for forms and pricing plans list...
-    // Form Component
-    if (showAddForm || showEditForm) {
-        return (
-            <div className="p-4 pb-20">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-xl font-bold">
-                        {showEditForm ? 'Edit Pricing Plan' : 'Add New Pricing Plan'}
-                    </h1>
-                    <button
-                        onClick={() => {
-                            setShowAddForm(false);
-                            setShowEditForm(false);
-                            resetForm();
-                        }}
-                        className="p-2 hover:bg-gray-100 rounded-lg"
-                    >
-                        <X size={20} />
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Plan Name */}
-                    <div className="bg-white rounded-lg border p-6">
-                        <h3 className="text-lg font-semibold mb-4">Plan Information</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Plan Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.PlanName}
-                                    onChange={(e) => setFormData((prev: ISubscriptionHistory) => ({
-                                        ...prev,
-                                        PlanName: e.target.value
-                                    }))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="e.g., Basic, Pro, Enterprise"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Plan Description *
-                                </label>
-                                <textarea
-                                    required
-                                    rows={3}
-                                    value={formData.PlanDescription}
-                                    onChange={(e) => setFormData((prev: ISubscriptionHistory) => ({
-                                        ...prev,
-                                        PlanDescription: e.target.value
-                                    }))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Describe what this plan includes..."
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Pricing & Billing */}
-                    <div className="bg-white rounded-lg border p-6">
-                        <h3 className="text-lg font-semibold mb-4">Pricing & Billing</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Price *
-                                </label>
-                                <div className="relative">
-                                    <EuroIcon size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                    <input
-                                        type="number"
-                                        required
-                                        min="0"
-                                        step="0.01"
-                                        value={formData.Price}
-                                        onChange={(e) => setFormData((prev: ISubscriptionHistory) => ({
-                                            ...prev,
-                                            Price: parseFloat(e.target.value) || 0
-                                        }))}
-                                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="0.00"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Billing Cycle *
-                                </label>
-                                <select
-                                    required
-                                    value={formData.BillingCycle}
-                                    onChange={(e) => setFormData((prev: ISubscriptionHistory) => ({
-                                        ...prev,
-                                        BillingCycle: e.target.value as 'Monthly' | 'Yearly'
-                                    }))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="Monthly">Monthly</option>
-                                    <option value="Yearly">Yearly</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Price Preview */}
-                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                            <p className="text-sm text-gray-600">Price Preview:</p>
-                            <p className="text-lg font-semibold text-gray-800">
-
-                                {formatPrice(formData.Price!, formData.BillingCycle!)}
+                <div className="p-4 space-y-4">
+                    {/* Current plan summary */}
+                    {selectedProfile?.PlanName && (
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+                            <p className="text-xs text-gray-500 mb-1">Current plan</p>
+                            <p className="font-semibold text-gray-800">{selectedProfile.PlanName}</p>
+                            <p className="text-sm text-gray-500">
+                                {selectedProfile.StartDate ? moment(selectedProfile.StartDate).format('DD MMM YYYY') : '—'}
+                                {' → '}
+                                {selectedProfile.EndDate ? moment(selectedProfile.EndDate).format('DD MMM YYYY') : '—'}
+                                {selectedProfile.Price != null ? ` · €${selectedProfile.Price}` : ''}
                             </p>
-                            {formData.BillingCycle === 'Yearly' && (
-                                <p className="text-sm text-gray-500">
-                                    €{(formData.Price! / 12).toFixed(2)}/month equivalent
-                                </p>
-                            )}
                         </div>
+                    )}
+
+                    {/* Form */}
+                    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-4">
+                        <p className="text-sm font-semibold text-gray-800">
+                            {selectedProfile?.PlanName ? 'Update / New Period' : 'Add Coaching Plan'}
+                        </p>
+
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Plan Name</label>
+                            <input
+                                type="text"
+                                placeholder="e.g. 3-Month Transformation"
+                                value={form.PlanName}
+                                onChange={e => setForm(f => ({ ...f, PlanName: e.target.value }))}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Amount (€)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                value={form.Price}
+                                onChange={e => setForm(f => ({ ...f, Price: e.target.value }))}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Start Date</label>
+                                <input
+                                    type="date"
+                                    value={form.StartDate}
+                                    onChange={e => setForm(f => ({ ...f, StartDate: e.target.value }))}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">End Date</label>
+                                <input
+                                    type="date"
+                                    value={form.EndDate}
+                                    onChange={e => setForm(f => ({ ...f, EndDate: e.target.value }))}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Duration preview */}
+                        {form.StartDate && form.EndDate && moment(form.EndDate).isAfter(form.StartDate) && (
+                            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg text-sm text-blue-700">
+                                <Calendar size={14} />
+                                {moment(form.EndDate).diff(moment(form.StartDate), 'days')} days coaching period
+                            </div>
+                        )}
+
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-60"
+                        >
+                            <Save size={15} />
+                            {saving ? 'Saving…' : 'Save Plan'}
+                        </button>
                     </div>
 
-
-                    {/* Submit Button */}
-                    <div className="flex gap-3">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setShowAddForm(false);
-                                setShowEditForm(false);
-                                resetForm();
-                            }}
-                            className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                        >
-                            {showEditForm ? 'Update Plan' : 'Add Plan'}
-                        </button>
-                    </div>
-                </form>
+                    {/* Payment History */}
+                    {history.length > 0 && (
+                        <div className="space-y-2 pb-8">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">Payment History</p>
+                            {history.map((record, idx) => {
+                                const days = record.EndDate
+                                    ? moment(record.EndDate).diff(moment().startOf('day'), 'days')
+                                    : null;
+                                const isActive = days !== null && days >= 0;
+                                return (
+                                    <div key={record.IdPlan ?? idx} className={`bg-white rounded-xl border shadow-sm p-4 ${isActive ? 'border-green-200' : 'border-gray-100'}`}>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <p className="font-semibold text-gray-800 text-sm">{record.PlanName}</p>
+                                            {isActive ? (
+                                                <span className="flex items-center gap-1 text-green-700 bg-green-100 px-2 py-0.5 text-xs font-semibold rounded-full">
+                                                    <CheckCircle size={11} /> Active
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center gap-1 text-gray-500 bg-gray-100 px-2 py-0.5 text-xs font-semibold rounded-full">
+                                                    <XCircle size={11} /> Expired
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                                            <span>€{record.Price ?? 0}</span>
+                                            <span>{record.StartDate ? moment(record.StartDate).format('DD MMM YY') : '—'} → {record.EndDate ? moment(record.EndDate).format('DD MMM YY') : '—'}</span>
+                                            {isActive && days !== null && <span className="text-blue-600 font-medium">{days}d left</span>}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
             </div>
         );
     }
 
+    // ── Client list ───────────────────────────────────────────────────────────
     return (
-        <div className="p-4 pb-20">
-            <AdminPageHeader title="Pricing Plans" subtitle="FitwithPK Admin" right={
-                <button
-                    onClick={() => setShowAddForm(true)}
-                    className="px-3 py-1.5 bg-white/20 text-white rounded-lg hover:bg-white/30 flex items-center gap-1.5 text-sm font-medium"
-                >
-                    <Plus size={16} />
-                    Add Plan
-                </button>
-            } />
+        <div className="min-h-screen bg-gray-50 pb-24">
+            <AdminPageHeader title="Coaching Plans" subtitle="Manage client plans" />
 
-            {/* Pricing Plans Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {pricingPlans?.length === 0 ? (
-                    <div className="col-span-full text-center py-12">
-                        <EuroIcon size={48} className="mx-auto mb-4 text-gray-400" />
-                        <h3 className="text-lg font-medium text-gray-600 mb-2">No pricing plans added yet</h3>
-                        <p className="text-gray-500 mb-4">Start by creating your first pricing plan</p>
-                        <button
-                            onClick={() => setShowAddForm(true)}
-                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                        >
-                            Create First Plan
-                        </button>
-                    </div>
+            <div className="p-4 space-y-3">
+                {/* Search */}
+                <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search clients…"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+
+                {isLoading ? (
+                    <div className="text-center py-12 text-gray-400 text-sm">Loading clients…</div>
+                ) : filtered.length === 0 ? (
+                    <div className="text-center py-12 text-gray-400 text-sm">No clients found</div>
                 ) : (
-                    pricingPlans?.map((plan) => (
-                        <div
-                            key={plan.IdPricingPlan}
-                            className={`bg-white rounded-lg border-2 overflow-hidden transition-all hover:shadow-lg ${plan.IsActive ? 'border-green-200' : 'border-gray-200'
-                                }`}
-                        >
-                            {/* Status Badge */}
-                            <div className={`px-4 py-2 text-xs font-medium ${plan.IsActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                                }`}>
-                                {plan.IsActive ? 'Active' : 'Inactive'}
-                            </div>
-
-                            {/* Plan Content */}
-                            <div className="p-6">
-                                {/* Plan Header */}
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="flex-1">
-                                        <h3 className="text-xl font-bold text-gray-900">{plan.PlanName}</h3>
-                                        <p className="text-3xl font-bold text-blue-600 mt-2">
-                                            {formatPrice(plan.Price!, plan.BillingCycle!)}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex items-center gap-1 mr-4">
-                                            <Calendar size={16} className="text-gray-400" />
-                                            <span className="text-sm text-gray-500">{plan.BillingCycle}</span>
-                                        </div>
-                                        <div className="flex gap-1">
-                                            <button
-                                                onClick={() => startEdit(plan)}
-                                                className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                                            >
-                                                <Edit size={16} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(plan)}
-                                                className="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
+                    filtered.map(client => {
+                        const status = statusInfo(client);
+                        return (
+                            <button
+                                key={client.IdUser}
+                                onClick={() => { setSelectedUser(client); setForm(EMPTY_FORM); }}
+                                className="w-full bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-3 hover:shadow-md transition-shadow text-left"
+                            >
+                                {/* Avatar */}
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-white text-sm font-bold">
+                                        {(client.FirstName?.[0] ?? '') + (client.LastName?.[0] ?? '')}
+                                    </span>
                                 </div>
 
-                                {/* Plan Description */}
-                                <p className="text-gray-600 mb-6 line-clamp-3">{plan.PlanDescription}</p>
-
-                                {/* Actions */}
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => startSubscriptionAssignment(plan)}
-                                        className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition-colors"
-                                    >
-                                        Assign Subscription
-                                    </button>
+                                {/* Info */}
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-gray-900 text-sm truncate">
+                                        {client.FirstName} {client.LastName}
+                                    </p>
+                                    {client.PlanName ? (
+                                        <p className="text-xs text-gray-500 truncate">{client.PlanName} · {client.EndDate ? moment(client.EndDate).format('DD MMM YYYY') : '—'}</p>
+                                    ) : (
+                                        <p className="text-xs text-gray-400">No plan set</p>
+                                    )}
                                 </div>
-                            </div>
-                        </div>
-                    ))
+
+                                {/* Status */}
+                                <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${status.bg} ${status.color} flex-shrink-0`}>
+                                    {status.icon}
+                                    {status.label}
+                                </div>
+
+                                <ChevronRight size={16} className="text-gray-300 flex-shrink-0" />
+                            </button>
+                        );
+                    })
                 )}
             </div>
 
-            {/* Bottom Navigation */}
             <MobileAdminNav />
         </div>
     );

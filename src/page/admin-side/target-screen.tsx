@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   Target, Save, Check, User, ArrowLeft, FileText, Upload, Eye, Download,
   Utensils, Dumbbell, X, ChevronLeft, ChevronRight, Calendar,
-  BarChart2, Footprints, Droplets, Moon
+  BarChart2, Footprints, Droplets, Moon, MoveHorizontal
 } from "lucide-react";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { setBaseUrl } from "../../services/HttpService";
@@ -33,7 +33,7 @@ interface UserTarget {
   sleep: number;
 }
 
-type TabId = "analytics" | "targets" | "plans";
+type TabId = "analytics" | "targets";
 
 export interface x_metric {
   key: string;
@@ -54,7 +54,6 @@ const METRICS: x_metric[] = [
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "analytics", label: "Analytics", icon: <BarChart2 size={16} /> },
   { id: "targets",   label: "Targets",   icon: <Target size={16} /> },
-  { id: "plans",     label: "Plans",     icon: <FileText size={16} /> },
 ];
 
 // ── TargetSlider ──────────────────────────────────────────────────────────────
@@ -90,11 +89,38 @@ function TargetSlider({ label, emoji, value, min, max, step, unit, color, bgColo
           <p className="text-2xl font-bold text-gray-900">{display}</p>
         </div>
       </div>
-      <div className="relative h-3 rounded-full bg-gray-100">
+
+      {/* Slide hint label */}
+      <div className="flex items-center gap-1 mb-2">
+        <MoveHorizontal size={11} className="text-gray-400" />
+        <span className="text-[10px] text-gray-400 font-medium">Slide to adjust</span>
+      </div>
+
+      {/* Track + thumb + invisible range input */}
+      <div className="relative h-5 flex items-center">
+        {/* Track background */}
+        <div className="absolute left-0 right-0 h-3 rounded-full bg-gray-100" />
+
+        {/* Filled portion */}
         <div
-          className="absolute top-0 left-0 h-3 rounded-full transition-all"
+          className="absolute left-0 h-3 rounded-full transition-all"
           style={{ width: `${pct}%`, backgroundColor: color }}
         />
+
+        {/* Visible thumb handle */}
+        <div
+          className="absolute flex items-center justify-center w-7 h-7 rounded-full shadow-md border-2 border-white -translate-x-1/2 transition-all"
+          style={{ left: `${pct}%`, backgroundColor: color }}
+        >
+          {/* drag lines indicator */}
+          <div className="flex gap-[3px]">
+            <div className="w-[2px] h-3 rounded-full bg-white/70" />
+            <div className="w-[2px] h-3 rounded-full bg-white/70" />
+            <div className="w-[2px] h-3 rounded-full bg-white/70" />
+          </div>
+        </div>
+
+        {/* Invisible native input sits on top for interaction */}
         <input
           type="range"
           min={min}
@@ -102,10 +128,12 @@ function TargetSlider({ label, emoji, value, min, max, step, unit, color, bgColo
           step={step}
           value={value}
           onChange={e => onChange(parseFloat(e.target.value))}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          className="absolute inset-0 w-full opacity-0 cursor-grab active:cursor-grabbing h-full"
+          style={{ touchAction: "none" }}
         />
       </div>
-      <div className="flex justify-between text-xs text-gray-400 mt-1">
+
+      <div className="flex justify-between text-xs text-gray-400 mt-2">
         <span>{min.toLocaleString()}</span>
         <span>{max.toLocaleString()}</span>
       </div>
@@ -387,59 +415,36 @@ export default function UserTargetsScreen() {
     setEndDate(ne.toISOString().split("T")[0]);
   };
 
-  // ── Client selection screen ────────────────────────────────────────────────
+  // ── Insights landing screen (no client selected) ──────────────────────────
 
   if (!selectedClient) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-20">
-        <AdminPageHeader title="Targets & Plans" subtitle="FitwithPK Admin" />
+      <div className="min-h-screen bg-gray-50 pb-24">
+        <AdminPageHeader title="Insights" subtitle="FitwithPK Admin" />
 
         <div className="p-4">
-          {/* Page header */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md">
-              <Target className="text-white" size={22} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Insights & Targets</h1>
-              <p className="text-sm text-gray-500">Select a client to manage</p>
-            </div>
-          </div>
 
-          {/* Analytics is available without a client */}
-          <button
-            onClick={() => setActiveTab("analytics")}
-            className="w-full mb-4 bg-white border rounded-xl p-4 flex items-center gap-4 hover:shadow-md transition-shadow text-left"
-          >
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-              <BarChart2 className="text-blue-600" size={20} />
+          {/* Client list */}
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-1">Select a Client</p>
+            <div className="space-y-2.5">
+              {coach_client_list.map(client => (
+                <button
+                  key={client.IdUser}
+                  className="w-full bg-white p-4 rounded-xl border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow text-left"
+                  onClick={() => { setSelectedClient(client); setActiveTab("targets"); }}
+                >
+                  <div className="w-11 h-11 bg-gradient-to-br from-violet-100 to-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-violet-700 font-bold text-sm">{client.FirstName?.[0]}{client.LastName?.[0]}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 truncate">{client.FirstName} {client.LastName}</p>
+                    <p className="text-xs text-gray-400 truncate">{client.EmailID}</p>
+                  </div>
+                  <ChevronRight size={18} className="text-gray-400 flex-shrink-0" />
+                </button>
+              ))}
             </div>
-            <div className="flex-1">
-              <p className="font-semibold text-gray-800">View Analytics</p>
-              <p className="text-xs text-gray-500">Weekly progress charts for any client</p>
-            </div>
-            <ChevronRight size={18} className="text-gray-400" />
-          </button>
-
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">Clients — Targets & Plans</p>
-
-          <div className="space-y-3">
-            {coach_client_list.map(client => (
-              <button
-                key={client.IdUser}
-                className="w-full bg-white p-4 rounded-xl border flex items-center gap-4 hover:shadow-md transition-shadow text-left"
-                onClick={() => { setSelectedClient(client); setActiveTab("targets"); }}
-              >
-                <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-purple-100 rounded-full flex items-center justify-center">
-                  <span className="text-violet-700 font-bold text-sm">{client.FirstName?.[0]}{client.LastName?.[0]}</span>
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-800">{client.FirstName} {client.LastName}</p>
-                  <p className="text-xs text-gray-500">{client.EmailID}</p>
-                </div>
-                <ChevronRight size={18} className="text-gray-400" />
-              </button>
-            ))}
           </div>
         </div>
 
@@ -452,7 +457,7 @@ export default function UserTargetsScreen() {
 
   return (
     <>
-      <AdminPageHeader title="Targets & Plans" subtitle="FitwithPK Admin" />
+      <AdminPageHeader title="Insights" subtitle="FitwithPK Admin" />
 
       <div className="min-h-screen bg-gray-50 pb-24">
         {/* Page header */}
@@ -668,50 +673,6 @@ export default function UserTargetsScreen() {
             </div>
           )}
 
-          {/* ── Plans Tab ─────────────────────────────────────────────────── */}
-          {activeTab === "plans" && (
-            <div className="space-y-4">
-              <PlanSection
-                title="Diet Plans"
-                icon={<Utensils size={16} className="text-green-600" />}
-                accent="bg-green-600"
-                accentBg="bg-green-50"
-                accentBorder="border-green-200"
-                plans={dietPlans}
-                planName={dietPlanName}
-                onUpload={() => handleFileUpload("diet")}
-                onView={handleViewPDF}
-                onDownload={handleDownloadPDF}
-                onRemove={id => setDietPlans(p => p.filter(x => x.id !== id))}
-              />
-
-              <PlanSection
-                title="Workout Plans"
-                icon={<Dumbbell size={16} className="text-purple-600" />}
-                accent="bg-purple-600"
-                accentBg="bg-purple-50"
-                accentBorder="border-purple-200"
-                plans={workoutPlans}
-                planName={workoutPlanName}
-                onUpload={() => handleFileUpload("workout")}
-                onView={handleViewPDF}
-                onDownload={handleDownloadPDF}
-                onRemove={id => setWorkoutPlans(p => p.filter(x => x.id !== id))}
-              />
-
-              <button
-                onClick={handleSavePlans}
-                disabled={isSavingPlans}
-                className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
-                  plansSaved
-                    ? "bg-green-500 text-white"
-                    : "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700"
-                }`}
-              >
-                {plansSaved ? <><Check size={18} /> Saved!</> : isSavingPlans ? <span className="animate-pulse">Saving…</span> : <><Save size={18} /> Save Plans</>}
-              </button>
-            </div>
-          )}
 
         </div>
       </div>

@@ -43,6 +43,8 @@ export const RENDER_URL = {
     STUDENT_WORKOUT: '/student-workout',
     ADMIN_SUPPLEMENTS: '/admin-supplements',
     STUDENT_SUPPLEMENTS: '/student-supplements',
+    STUDENT_NOTIFICATIONS: '/student-notifications',
+    ADMIN_NOTIFICATIONS: '/admin-notifications',
     VIEW_STUDENT: '/student',
     DATA_MANAGEMENT: '/data-management',
     STAFFS: '/staffs',
@@ -79,14 +81,8 @@ export const API_URL = {
     ASSIGN_COACH_STUDENT: "/user/assignCoachToStudent",
     REMOVE_COACH_STUDENT: "/user/removeCoachToStudent",
     ASSIGNED_COACH_LIST: "/user/getAllCoachAssignedUser",
-    GET_ASSIGNED_SUBSCRIPTION : "/user/getSubscriptionAssignedList",
-    SET_SUBSCRIPTION : "/user/setSubscriptionToUser",
-    INSERT_PRICING_PLAN:"/user/addNewPricingPlan",
-    DELETE_PRICING_PLAN:"/user/deleteNewPricingPlan",
-    REMOVE_SUBSCRIPTION:"/user/removeSubscriptionFromUser",
-    GET_SUBSCRIPTION_HISTORY: "/user/getSubscriptionHistory",
-    UPDATE_SUBSCRIPTION_HISTORY: "/user/updateSubscriptionHistory",
-    GET_ALL_PRICING_PLANS: "/user/getAllPricingPlanList",
+    SET_COACHING_PLAN: "/user/setCoachingPlan",
+    GET_COACHING_HISTORY: "/user/getCoachingHistory",
     GET_PROFILE_DETAILS: "/student/getStudentProfile",
     GET_SINGLE_DAY: '/student/getSingleDayUpdate',
     GET_DAILY_UPDATES: '/student/getStudentUpdate',
@@ -152,6 +148,9 @@ export const API_URL = {
     GET_MY_MEAL_QUERIES: '/mealquery/getMyQ',
     GET_MEAL_QUERIES_FOR_CLIENT: '/mealquery/getForClient',
     REPLY_MEAL_QUERY: '/mealquery/reply',
+    GET_PENDING_QUERIES_FOR_COACH: '/mealquery/getPendingForCoach',
+    GET_ALL_MY_QUERIES: '/mealquery/getAllMyQ',
+    GET_ALL_QUERIES_FOR_CLIENT: '/mealquery/getAllForClient',
 
     // ── Workout Plan (Admin) ──────────────────────────────────────
     GET_WORKOUTS_FOR_CLIENT: '/workout/getForClient',
@@ -198,8 +197,9 @@ export const API_URL = {
     CREATE_SUPPLEMENT:          '/supplement/create',
     UPDATE_SUPPLEMENT:          '/supplement/update',
     DELETE_SUPPLEMENT:          '/supplement/delete',
-    GET_SUPPLEMENT_CLIENT_LOGS: '/supplement/getClientLogs',
-    GET_SUPPLEMENT_ADHERENCE:   '/supplement/adherence',
+    GET_SUPPLEMENT_CLIENT_LOGS:  '/supplement/getClientLogs',
+    GET_SUPPLEMENT_ADHERENCE:    '/supplement/adherence',
+    GET_SUPPLEMENT_DETAIL_LOGS:  '/supplement/supplementDetailLogs',
 
     // ── Supplements (Client) ──────────────────────────────────────
     GET_MY_SUPPLEMENTS:              '/supplement/getMine',
@@ -210,4 +210,6 @@ export const API_URL = {
     // ── Push Notifications ────────────────────────────────────────
     SAVE_PUSH_SUBSCRIPTION: '/notification/saveSubscription',
     SEND_REMINDER: '/notification/sendReminder',
+    NOTIFY_COACH_QUERY: '/notification/notifyCoachQuery',
+    COACH_SEND_MESSAGE: '/mealquery/coachSend',
 }

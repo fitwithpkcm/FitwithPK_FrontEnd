@@ -34,9 +34,12 @@ export default function UserDailyDetailView({ userId, onBack }: UserDetailViewPr
     setBaseUrl(BASE_URL);
   }, []);
 
+  const yesterday = moment(currentDate).subtract(1, "days").format("DD-MM-YYYY");
+
   const { data: UserListWithUpdates } = useQuery<IUpdatesForUser[]>({
-    queryKey: ["coach-userlist"],
-    queryFn: () => getUserListWithUpdates_ForCoach({ Day: moment(currentDate).format("DD-MM-YYYY") }).then(res => res.data.data)
+    queryKey: ["coach-userlist", yesterday],
+    queryFn: () => getUserListWithUpdates_ForCoach({ Day: yesterday }).then(res => res.data.data),
+    staleTime: 0,
   });
 
   const { data: dailyUpdates = [] } = useQuery<IDailyStats[]>({
@@ -45,12 +48,11 @@ export default function UserDailyDetailView({ userId, onBack }: UserDetailViewPr
   });
 
   useEffect(() => {
-    // Find the user based on ID
     const foundUser = UserListWithUpdates?.find(u => u.IdUser === userId);
     if (foundUser) {
       setUser(foundUser);
     }
-  }, [userId]);
+  }, [userId, UserListWithUpdates]);
 
   if (!user) {
     return (

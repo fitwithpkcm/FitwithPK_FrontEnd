@@ -1,7 +1,7 @@
 import { httpCall } from "./HttpService";
 import { API_URL } from "../common/Urls";
 import { CoachStudentAssign, ICoach } from "../interface/models/Coach";
-import { ISubscriptionHistory, IUser } from "../interface/models/User";
+import { IUser, ICoachingPlan } from "../interface/models/User";
 
 export const getMyCoachDetails = (params: unknown) => {
     return httpCall({
@@ -36,12 +36,12 @@ export const getAlreadyAssignedList = (params: unknown) => {
 };
 
 
-export const getSubscriptionHistroy = (params: unknown) => {
+export const getCoachingHistory = (params: { IdUser: number }) => {
     return httpCall({
-        url: API_URL.GET_SUBSCRIPTION_HISTORY,
+        url: API_URL.GET_COACHING_HISTORY,
         method: "post",
         data: params
-    }).then((response: ApiResponse<ISubscriptionHistory[]>) => {
+    }).then((response: ApiResponse<ICoachingPlan[]>) => {
         return response;
     });
 };

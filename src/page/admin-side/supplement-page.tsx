@@ -20,11 +20,12 @@ import { setBaseUrl } from "../../services/HttpService";
 import { getUserListForACoach } from "../../services/AdminServices";
 import {
   getSupplementsForClient, createSupplement, updateSupplement,
-  deleteSupplement, getSupplementAdherence,
+  deleteSupplement, getSupplementAdherence, getSupplementDetailLogs,
 } from "../../services/SupplementService";
 import {
   ISupplement, ISupplementAdherence,
   SUPPLEMENT_TIMINGS, TIMING_COLORS, TIMING_ICONS, SupplementTiming,
+  DAYS_OF_WEEK, SupplementFrequency,
 } from "../../interface/ISupplement";
 import { IUser } from "../../interface/models/User";
 
@@ -36,7 +37,47 @@ const DURATION_OPTIONS = [
 ];
 
 function blank(IdUser: number): ISupplement {
-  return { IdUser, Name: "", Dose: "", Timing: "Morning", Duration: "", ReminderTime: "", Notes: "" };
+  return { IdUser, Name: "", Dose: "", Timing: "Morning", Duration: "", ReminderTime: "", Notes: "", Frequency: "Daily", DaysOfWeek: "" };
+}
+
+function parseDays(val: string | undefined): number[] {
+  if (!val) return [];
+  return val.split(',').map(Number).filter(n => !isNaN(n));
+}
+
+function formatDaySchedule(s: ISupplement): string {
+  if (s.Frequency !== 'Weekly' || !s.DaysOfWeek) return 'Daily';
+  const days = parseDays(s.DaysOfWeek).map(d => DAYS_OF_WEEK.find(x => x.value === d)?.label ?? '').filter(Boolean);
+  return `Weekly · ${days.join(', ')}`;
+}
+
+function durationToWeeks(duration: string | undefined): number | null {
+  if (!duration) return null;
+  const weeks = duration.match(/^(\d+)\s*weeks?$/i);
+  if (weeks) return parseInt(weeks[1]);
+  const days = duration.match(/^(\d+)\s*days?$/i);
+  if (days) return Math.floor(parseInt(days[1]) / 7);
+  return null;
+}
+
+function buildSchedulePreview(form: ISupplement): string | null {
+  if (form.Frequency !== 'Weekly') return null;
+  const selectedDays = parseDays(form.DaysOfWeek);
+  if (selectedDays.length === 0) return null;
+
+  const dayNames = selectedDays
+    .map(d => DAYS_OF_WEEK.find(x => x.value === d)?.label ?? '')
+    .filter(Boolean)
+    .join(' & ');
+
+  const totalWeeks = durationToWeeks(form.Duration);
+  if (!totalWeeks) {
+    return `Every ${dayNames} — ongoing`;
+  }
+
+  const totalDoses = totalWeeks * selectedDays.length;
+  const endDate = moment().add(totalWeeks, 'weeks').subtract(1, 'day');
+  return `Every ${dayNames} for ${totalWeeks} weeks = ${totalDoses} dose${totalDoses !== 1 ? 's' : ''}, ends ${endDate.format('D MMM YYYY')}`;
 }
 
 // ── Supplement Form Dialog ────────────────────────────────────────
@@ -120,6 +161,62 @@ function SupplementFormDialog({
           </div>
 
           <div>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Frequency</label>
+            <div className="flex gap-2">
+              {(['Daily', 'Weekly'] as SupplementFrequency[]).map(f => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => { set("Frequency", f); if (f === 'Daily') set("DaysOfWeek", ""); }}
+                  className={`flex-1 py-1.5 rounded-md text-sm border transition-colors ${form.Frequency === f ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'}`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {form.Frequency === 'Weekly' && (
+            <div>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Days of the Week</label>
+              <div className="flex gap-1.5">
+                {DAYS_OF_WEEK.map(({ label, value }) => {
+                  const selected = parseDays(form.DaysOfWeek).includes(value);
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        const current = parseDays(form.DaysOfWeek);
+                        const next = selected ? current.filter(d => d !== value) : [...current, value].sort((a, b) => a - b);
+                        set("DaysOfWeek", next.join(','));
+                      }}
+                      className={`flex-1 py-1.5 rounded-md text-xs font-medium border transition-colors ${selected ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'}`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {parseDays(form.DaysOfWeek).length === 0 && (
+                <p className="text-[10px] text-red-400 mt-1">Select at least one day</p>
+              )}
+            </div>
+          )}
+
+          {form.Frequency === 'Weekly' && parseDays(form.DaysOfWeek).length > 0 && (() => {
+            const preview = buildSchedulePreview(form);
+            return preview ? (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg px-3 py-2">
+                <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">📅 {preview}</p>
+                {!durationToWeeks(form.Duration) && (
+                  <p className="text-[10px] text-blue-400 mt-0.5">Set a duration above to see end date & total doses</p>
+                )}
+              </div>
+            ) : null;
+          })()}
+
+          <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Notes</label>
             <Input value={form.Notes ?? ""} onChange={e => set("Notes", e.target.value)} placeholder="e.g. Take with food" />
           </div>
@@ -127,7 +224,7 @@ function SupplementFormDialog({
 
         <DialogFooter className="gap-2">
           <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button size="sm" onClick={() => onSave(form)} disabled={saving || !form.Name.trim()}>
+          <Button size="sm" onClick={() => onSave(form)} disabled={saving || !form.Name.trim() || (form.Frequency === 'Weekly' && parseDays(form.DaysOfWeek).length === 0)}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
             Save
           </Button>
@@ -148,6 +245,78 @@ function AdherenceBar({ pct }: { pct: number }) {
   );
 }
 
+// ── Supplement Detail Modal ───────────────────────────────────────
+
+interface DetailLog { LogDate: string; IsTaken: number; TakenAt?: string; Notes?: string; }
+
+function SupplementDetailModal({
+  open, supplement, clientId, onClose,
+}: {
+  open: boolean;
+  supplement: ISupplementAdherence | null;
+  clientId: number;
+  onClose: () => void;
+}) {
+  const { data, isLoading } = useQuery<DetailLog[]>({
+    queryKey: ["supplement-detail-logs", supplement?.IdSupplement, clientId],
+    queryFn: () =>
+      getSupplementDetailLogs({ IdSupplement: supplement!.IdSupplement, IdUser: clientId, days: 30 })
+        .then(r => r.data.data),
+    enabled: open && !!supplement,
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="max-w-sm mx-4 rounded-2xl dark:bg-gray-900 max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="text-base flex items-center gap-2">
+            <span>{TIMING_ICONS[supplement?.Timing as SupplementTiming] ?? "💊"}</span>
+            {supplement?.Name}
+          </DialogTitle>
+          <p className="text-xs text-gray-400">{supplement?.Timing} · last 30 days</p>
+        </DialogHeader>
+
+        <div className="overflow-y-auto flex-1 -mx-6 px-6">
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="animate-spin text-gray-400" size={20} /></div>
+          ) : !data?.length ? (
+            <p className="text-sm text-gray-400 text-center py-8">No logs recorded yet.</p>
+          ) : (
+            <div className="space-y-2 py-2">
+              {data.map((log, i) => {
+                const taken = log.IsTaken === 1;
+                const [d, m, y] = log.LogDate.split('-');
+                const displayDate = moment(`${y}-${m}-${d}`).format('ddd, D MMM');
+                const takenTime = log.TakenAt ? moment(log.TakenAt).format('h:mm a') : null;
+                return (
+                  <div key={i} className={`flex items-center justify-between rounded-lg px-3 py-2.5 ${taken ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center ${taken ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
+                        {taken ? <Check size={14} /> : <X size={14} />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{displayDate}</p>
+                        {log.Notes && <p className="text-xs text-gray-400">{log.Notes}</p>}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {taken ? (
+                        <p className="text-xs text-green-600 font-medium">{takenTime ?? 'Taken'}</p>
+                      ) : (
+                        <p className="text-xs text-red-500 font-medium">Missed</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────
 
 export default function AdminSupplementPage() {
@@ -157,6 +326,8 @@ export default function AdminSupplementPage() {
   const [tab, setTab] = useState<"supplements" | "adherence">("supplements");
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ISupplement | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailSupplement, setDetailSupplement] = useState<ISupplementAdherence | null>(null);
 
   // ── queries ───────────────────────────────────────────────────
 
@@ -331,6 +502,9 @@ export default function AdminSupplementPage() {
                                   <Clock className="h-3 w-3" />{s.Duration}
                                 </span>
                               )}
+                              <span className="text-[11px] text-blue-500 dark:text-blue-400 font-medium">
+                                🔁 {formatDaySchedule(s)}
+                              </span>
                               {s.ReminderTime && (
                                 <span className="text-[11px] text-blue-500 dark:text-blue-400">⏰ {s.ReminderTime}</span>
                               )}
@@ -376,23 +550,36 @@ export default function AdminSupplementPage() {
               <div className="space-y-2">
                 {adherence.map(a => {
                   const pct = a.TotalDays > 0 ? Math.round((a.DaysTaken / a.TotalDays) * 100) : 0;
+                  const missed = a.TotalDays - a.DaysTaken;
                   return (
-                    <Card key={a.IdSupplement} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <Card key={a.IdSupplement} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm cursor-pointer active:scale-[0.98] transition-transform" onClick={() => { setDetailSupplement(a); setDetailOpen(true); }}>
                       <CardContent className="px-4 py-3">
-                        <div className="flex items-center justify-between mb-1">
+                        {/* Header row */}
+                        <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <span className="text-sm">{TIMING_ICONS[a.Timing as SupplementTiming] ?? "💊"}</span>
                             <div>
                               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{a.Name}</p>
-                              <p className="text-[10px] text-gray-400">{a.Timing}</p>
+                              <p className="text-[10px] text-gray-400">{a.Timing} · {a.TotalDays} days tracked</p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className={`text-sm font-bold ${pct >= 80 ? "text-green-600" : pct >= 50 ? "text-amber-500" : "text-red-500"}`}>{pct}%</p>
-                            <p className="text-[10px] text-gray-400">{a.DaysTaken}/{a.TotalDays} days</p>
+                          <p className={`text-lg font-bold ${pct >= 80 ? "text-green-600" : pct >= 50 ? "text-amber-500" : "text-red-500"}`}>{pct}%</p>
+                        </div>
+
+                        {/* Progress bar */}
+                        <AdherenceBar pct={pct} />
+
+                        {/* Taken / Missed pills */}
+                        <div className="flex gap-2 mt-2">
+                          <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full px-3 py-1 flex-1 justify-center">
+                            <Check size={12} />
+                            <span className="text-xs font-semibold">{a.DaysTaken} taken</span>
+                          </div>
+                          <div className="flex items-center gap-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full px-3 py-1 flex-1 justify-center">
+                            <X size={12} />
+                            <span className="text-xs font-semibold">{missed} missed</span>
                           </div>
                         </div>
-                        <AdherenceBar pct={pct} />
                       </CardContent>
                     </Card>
                   );
@@ -412,6 +599,15 @@ export default function AdminSupplementPage() {
           onClose={() => setEditorOpen(false)}
           onSave={handleSave}
           saving={saving}
+        />
+      )}
+
+      {selectedClient && (
+        <SupplementDetailModal
+          open={detailOpen}
+          supplement={detailSupplement}
+          clientId={selectedClient}
+          onClose={() => setDetailOpen(false)}
         />
       )}
     </div>

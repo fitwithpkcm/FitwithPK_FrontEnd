@@ -48,27 +48,18 @@ export interface IUserOnBoardAttributes {
 }
 
 
-export interface ISubscription {
-  IdSub?: number;
-  IdPricingPlan?: number;
+export interface ICoachingPlan {
+  IdPlan?: number;
   IdUser?: number;
+  PlanName?: string;
+  Price?: number;
+  PaidAmount?: number;
   StartDate?: string;
   EndDate?: string;
-  IsActiveStatus?: number;
-  BufferDay?: string;
-  PaidDate?: string;
-  PaidAmount?: number;
-  TotalDue?: number;
-  PlanName?: string,
-  IsExpired?: number,
-  BalanceAmount?: number,
-  PlanDescription?: string
-  Price?: number
-  BillingCycle?: string,
- 
+  CreatedAt?: string;
 }
 
-export interface IprofileInfo extends ISubscription {
+export interface IprofileInfo extends ICoachingPlan {
   Address?: string;
   Profession?: string;
   DateOfBirth?: string;
@@ -98,23 +89,3 @@ export interface SuperAdminResponse {
 }
 
 
-export interface ISubscriptionHistory {
-  IdSubHistroy?: number
-  IdSub?: number
-  IdUser?: number
-  PaidDate?: string
-  PaidAmount?: number
-  BufferDay?: number
-  TotalDue?: number
-  DueDate?: string
-  IdPricingPlan?: number
-  StartDate?: string
-  EndDate?: string
-  IsAlive?: number
-  PlanName?: string
-  PlanDescription?: string
-  Price?: number
-  IsActive?: number
-  BillingCycle?: string,
-  BalanceAmount?: number
-}

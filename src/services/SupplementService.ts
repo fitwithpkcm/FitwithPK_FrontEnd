@@ -22,6 +22,9 @@ export const getSupplementClientLogs = (params: { IdUser: number; LogDate: strin
 export const getSupplementAdherence = (params: { IdUser: number; days?: number }) =>
   httpCall({ method: "post", url: API_URL.GET_SUPPLEMENT_ADHERENCE, data: params });
 
+export const getSupplementDetailLogs = (params: { IdSupplement: number; IdUser: number; days?: number }) =>
+  httpCall({ method: "post", url: API_URL.GET_SUPPLEMENT_DETAIL_LOGS, data: params });
+
 // ── Client ────────────────────────────────────────────────────────
 
 export const getMySupplements = () =>

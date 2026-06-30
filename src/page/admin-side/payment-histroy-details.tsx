@@ -1,279 +1,113 @@
-import React, { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  Mail,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Edit3,
-  Save,
-  X,
-} from "lucide-react";
+import React, { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { CheckCircle, XCircle, Calendar } from "lucide-react";
 import { setBaseUrl } from "../../services/HttpService";
 import { BASE_URL } from "../../common/Constant";
-import { ISubscriptionHistory, IUser } from "../../interface/models/User";
-import {
-  getLoggedUserDetails,
-  getSubscriptionHistroy,
-} from "../../services/ProfileService";
+import { ICoachingPlan, IUser } from "../../interface/models/User";
+import { getLoggedUserDetails, getCoachingHistory } from "../../services/ProfileService";
 import moment from "moment";
-import { setUpdatePaymentHistory } from "../../services/AdminServices";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AdminPageHeader } from "../../components/layout/page-header";
 
 export default function PaymentHistoryScreen() {
-
   const navigate = useNavigate();
   const location = useLocation();
   const selectedUserID = location.state?.selectedUserID;
 
-  useEffect(() => {
-    setBaseUrl(BASE_URL);
-  }, []);
-
-  const queryClient = useQueryClient();
+  useEffect(() => { setBaseUrl(BASE_URL); }, []);
 
   const { data: profileData } = useQuery<Partial<IUser> | undefined>({
-    queryKey: [`subscription_date_${selectedUserID}`],
+    queryKey: [`profile_${selectedUserID}`],
     queryFn: async () => {
       const res = await getLoggedUserDetails({ IdUser: selectedUserID });
       return res.data.data[0];
     },
   });
 
-  const { data: subscriptionHistroyData = [] } = useQuery<
-    ISubscriptionHistory[]
-  >({
-    queryKey: [`subscription_history_${selectedUserID}`],
+  const { data: history = [] } = useQuery<ICoachingPlan[]>({
+    queryKey: [`coaching_history_${selectedUserID}`],
     queryFn: async () => {
-      const res = await getSubscriptionHistroy({ IdUser: selectedUserID });
-      return res.data.data;
+      const res = await getCoachingHistory({ IdUser: selectedUserID });
+      return res.data.data ?? [];
     },
   });
 
-  const [editIndex, setEditIndex] = useState<number | null>(null);
-  const [editedData, setEditedData] = useState<Record<string, number>>({});
-
-  const handleEdit = (index: number, data: ISubscriptionHistory) => {
-    setEditIndex(index);
-    setEditedData({
-      PaidAmount: data.PaidAmount!,
-      BufferDay: data.BufferDay!,
-    });
-  };
-
-  const handleCancel = () => {
-    setEditIndex(null);
-    setEditedData({});
-  };
-
-  const handleSave = (id: number) => {
-    console.log("Saving updated data:", { id, ...editedData });
-
-    updatePaymentHistoryDetails({
-      IdSubHistroy: id,
-      ...editedData
-    })
-
-    setEditIndex(null);
-
-  };
-
-
-  const { mutate: updatePaymentHistoryDetails } = useMutation({
-    mutationFn: async (data: unknown) => {
-      const response = await setUpdatePaymentHistory(data)
-      return response
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`subscription_history_${selectedUserID}`] });
-
-    },
-    onError: (error) => {
-      console.error('Error saving payment history:', error);
+  const statusBadge = (record: ICoachingPlan) => {
+    if (!record.EndDate) return null;
+    const days = moment(record.EndDate).diff(moment().startOf('day'), 'days');
+    if (days >= 0) {
+      return (
+        <span className="flex items-center gap-1 text-green-700 bg-green-100 px-2.5 py-1 text-xs font-semibold rounded-full">
+          <CheckCircle size={12} /> Active
+        </span>
+      );
     }
-  });
-
-
-  const renderStatusBadge = (data: ISubscriptionHistory) => {
-    if (data.PaidAmount === 0)
-      return (
-        <span className="flex items-center gap-1 text-amber-600 bg-amber-100 px-2 py-1 text-xs font-medium rounded-full">
-          <Clock size={14} /> Pending
-        </span>
-      );
-
-    if (data.BalanceAmount! > 0)
-      return (
-        <span className="flex items-center gap-1 text-red-600 bg-red-100 px-2 py-1 text-xs font-medium rounded-full">
-          <XCircle size={14} /> Partial
-        </span>
-      );
-
     return (
-      <span className="flex items-center gap-1 text-green-600 bg-green-100 px-2 py-1 text-xs font-medium rounded-full">
-        <CheckCircle size={14} /> Paid
+      <span className="flex items-center gap-1 text-gray-500 bg-gray-100 px-2.5 py-1 text-xs font-semibold rounded-full">
+        <XCircle size={12} /> Expired
       </span>
     );
   };
 
-  const renderPaymentDetail = () => (
-    <div className="mt-4 flex flex-col gap-4">
-      {subscriptionHistroyData.map((data, idx) => {
-        const isEditing = editIndex === idx;
-
-        return (
-          <div
-            key={idx}
-            className={`relative bg-white border rounded-xl shadow-sm hover:shadow-md transition-all duration-200 p-5 ${data.IsAlive ? "border-blue-400 bg-blue-50/30" : "border-gray-100"
-              }`}
-          >
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800">
-                  {data.PlanName}
-                </h3>
-                <p className="text-sm text-gray-500">{data.PlanDescription}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {renderStatusBadge(data)}
-
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={() => handleSave(data.IdSubHistroy!)}
-                      className="p-1.5 rounded-lg bg-green-100 hover:bg-green-200 text-green-700"
-                    >
-                      <Save size={16} />
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      className="p-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-600"
-                    >
-                      <X size={16} />
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => handleEdit(idx, data)}
-                    className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700"
-                  >
-                    <Edit3 size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <p className="text-gray-500">Start Date</p>
-                <p className="font-medium">
-                  {moment(data.StartDate).format("DD MMM YYYY")}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-gray-500">End Date</p>
-                <p className="font-medium">
-                  {moment(data.EndDate).format("DD MMM YYYY")}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-gray-500">Paid Date</p>
-                <p className="font-medium">
-                  {data.PaidDate
-                    ? moment(data.PaidDate).format("DD MMM YYYY")
-                    : "-"}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-gray-500">Buffer Days</p>
-                {isEditing ? (
-                  <input
-                    type="number"
-                    value={editedData.BufferDay}
-                    onChange={(e) =>
-                      setEditedData({
-                        ...editedData,
-                        BufferDay: Number(e.target.value),
-                      })
-                    }
-                    className="w-full border rounded-lg px-2 py-1 text-gray-800 focus:ring-2 focus:ring-blue-400 outline-none"
-                  />
-                ) : (
-                  <p className="font-medium">{data.BufferDay}</p>
-                )}
-              </div>
-
-              <div>
-                <p className="text-gray-500">Total</p>
-                <p className="font-medium text-gray-800">₹{data.TotalDue}</p>
-              </div>
-
-              <div>
-                <p className="text-gray-500">Paid Amount</p>
-                {isEditing ? (
-                  <input
-                    type="number"
-                    value={editedData.PaidAmount}
-                    onChange={(e) =>
-                      setEditedData({
-                        ...editedData,
-                        PaidAmount: Number(e.target.value),
-                      })
-                    }
-                    className="w-full border rounded-lg px-2 py-1 text-gray-800 focus:ring-2 focus:ring-blue-400 outline-none"
-                  />
-                ) : (
-                  <p className="font-medium text-green-700">
-                    ₹{data.PaidAmount}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <p className="text-gray-500">Balance Due</p>
-                <p className="font-medium text-red-600">₹{data.BalanceAmount}</p>
-              </div>
-
-
-            </div>
-
-            {data.IsAlive ? (
-              <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs px-3 py-1 rounded-full shadow">
-                Active
-              </div>
-            ) : null}
-          </div>
-        );
-      })}
-    </div>
-  );
-
   return (
-    <div className="h-full w-full bg-gray-50 min-h-screen flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <AdminPageHeader
-        title="Payment History"
+        title="Coaching History"
         subtitle={profileData ? `${profileData.FirstName} ${profileData.LastName}` : undefined}
         onBack={() => navigate(-1)}
       />
-      <div className="p-4 md:p-6">
 
-      <div>
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-800">
-            Payment History
-          </h3>
-          <span className="text-sm text-gray-500">
-            {subscriptionHistroyData.length} Records
-          </span>
-        </div>
+      <div className="p-4 space-y-3">
+        {history.length === 0 ? (
+          <div className="text-center py-16 text-gray-400">
+            <Calendar size={40} className="mx-auto mb-3 opacity-40" />
+            <p className="text-sm">No coaching periods yet</p>
+          </div>
+        ) : (
+          history.map((record, idx) => {
+            const daysLeft = record.EndDate
+              ? moment(record.EndDate).diff(moment().startOf('day'), 'days')
+              : null;
+            const isActive = daysLeft !== null && daysLeft >= 0;
 
-        {renderPaymentDetail()}
-      </div>
+            return (
+              <div
+                key={record.IdPlan ?? idx}
+                className={`bg-white rounded-xl border shadow-sm p-4 ${isActive ? 'border-green-300' : 'border-gray-100'}`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <p className="font-semibold text-gray-900">{record.PlanName || 'Coaching Plan'}</p>
+                  {statusBadge(record)}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="bg-gray-50 rounded-lg p-2.5">
+                    <p className="text-xs text-gray-500">Amount</p>
+                    <p className="font-semibold text-gray-800">€{record.Price ?? 0}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2.5">
+                    <p className="text-xs text-gray-500">Start Date</p>
+                    <p className="font-medium text-gray-800">
+                      {record.StartDate ? moment(record.StartDate).format('DD MMM YYYY') : '—'}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2.5">
+                    <p className="text-xs text-gray-500">End Date</p>
+                    <p className="font-medium text-gray-800">
+                      {record.EndDate ? moment(record.EndDate).format('DD MMM YYYY') : '—'}
+                    </p>
+                  </div>
+                  {isActive && daysLeft !== null && (
+                    <div className="bg-blue-50 rounded-lg p-2.5">
+                      <p className="text-xs text-blue-600">Days Left</p>
+                      <p className="font-bold text-blue-700">{daysLeft} days</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

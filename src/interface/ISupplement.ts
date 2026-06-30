@@ -21,6 +21,18 @@ export const TIMING_COLORS: Record<SupplementTiming, string> = {
   'Bedtime':      'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
 };
 
+export type SupplementFrequency = 'Daily' | 'Weekly';
+
+export const DAYS_OF_WEEK = [
+  { label: 'Sun', value: 0 },
+  { label: 'Mon', value: 1 },
+  { label: 'Tue', value: 2 },
+  { label: 'Wed', value: 3 },
+  { label: 'Thu', value: 4 },
+  { label: 'Fri', value: 5 },
+  { label: 'Sat', value: 6 },
+] as const;
+
 export interface ISupplement {
   IdSupplement?: number;
   IdCoach?: number;
@@ -28,9 +40,11 @@ export interface ISupplement {
   Name: string;
   Dose?: string;
   Timing: SupplementTiming;
-  Duration?: string;      // e.g. '30 days', '8 weeks', 'Ongoing'
-  ReminderTime?: string;  // HH:MM
+  Duration?: string;
+  ReminderTime?: string;
   Notes?: string;
+  Frequency?: SupplementFrequency;
+  DaysOfWeek?: string;   // comma-separated day numbers e.g. "1,3,5"
   IsActive?: number;
   CreatedAt?: string;
 }

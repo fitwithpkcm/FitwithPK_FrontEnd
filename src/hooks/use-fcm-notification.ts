@@ -28,7 +28,14 @@ export function useFcmNotification(): {
   status: FcmStatus;
   requestPermission: () => Promise<void>;
 } {
-  const [status, setStatus] = useState<FcmStatus>('idle');
+  // Initialise immediately from the browser's stored permission so the banner
+  // never flickers on app open when the user already granted permission.
+  const [status, setStatus] = useState<FcmStatus>(() => {
+    if (!('Notification' in window)) return 'unsupported';
+    if (Notification.permission === 'granted') return 'granted';
+    if (Notification.permission === 'denied') return 'denied';
+    return 'idle';
+  });
 
   const requestPermission = async () => {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) {
@@ -51,11 +58,14 @@ export function useFcmNotification(): {
     }
   };
 
-  // Auto-register if already granted
+  // Silently refresh token in background when permission is already granted.
+  // Does NOT touch status so the banner stays hidden.
   useEffect(() => {
-    if (!('Notification' in window)) { setStatus('unsupported'); return; }
-    if (Notification.permission === 'denied') { setStatus('denied'); return; }
-    if (Notification.permission === 'granted') { requestPermission(); }
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    getFcmToken()
+      .then(token => { if (token) saveTokenToBackend(token).catch(() => {}); })
+      .catch(() => {});
   }, []);
 
   // Foreground message handler — show toast

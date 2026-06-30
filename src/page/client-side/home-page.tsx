@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Droplet, Sun, Moon, Trophy, Dumbbell, Flame, X, CreditCard, Pill, Check, Clock, Pencil } from "lucide-react";
+import { Droplet, Sun, Moon, Trophy, Dumbbell, Flame, X, CreditCard, Pill, Check, Clock, Pencil, Bell, MessageCircle, Send, Loader2, RefreshCw, ChevronLeft } from "lucide-react";
 import { formatDate, calculatePercentage, isEmpty } from "../../lib/utils";
 import { Link } from "wouter";
 import { MobileNav } from "../../components/layout/mobile-nav";
@@ -26,8 +26,10 @@ import { IdDietPlan } from "../../interface/IDietPlan";
 import { IUser } from "@/interface/models/User";
 import { getLoggedUserDetails } from "@/services/ProfileService";
 import { useFcmNotification } from "@/hooks/use-fcm-notification";
+import { useNotifications } from "@/hooks/use-notifications";
 import { getMySupplements, getMySupplementLogs, logSupplement, updateSupplementReminderTime } from "@/services/SupplementService";
 import { ISupplement, ISupplementLog, SUPPLEMENT_TIMINGS, TIMING_ICONS } from "@/interface/ISupplement";
+import { IMealQuery, getMyMealQueries, askMealQuery, notifyCoachQuery } from "../../services/MealQueryService";
 
 import toast from 'react-hot-toast';
 
@@ -53,6 +55,7 @@ export default function HomePage() {
 
   // Register Web Push subscription so coach can send reminders to this client
   const { status: pushStatus, requestPermission: enablePush } = useFcmNotification();
+  const { unreadCount } = useNotifications();
 
   if (user?.info.EmailID == "devumani10@gmail.com" || user?.info.EmailID == "devumani3@gmail.com") {
     alert("Odikko Nee");
@@ -77,11 +80,17 @@ export default function HomePage() {
   const [chartDataType, setChartDataType] = useState<'Steps_Percent' | 'Water_Percent' | 'Sleep_Percent'>('Steps_Percent');
   const [chartInfoVisible, setChartInfoVisible] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [showExpiredBanner, setShowExpiredBanner] = useState(false);
   const [sleepStartAngle, setSleepStartAngle] = useState(0); // degrees, 0 = 12 o'clock, clockwise
   const [suppDrawerOpen, setSuppDrawerOpen] = useState(false);
   const [editingTimeId, setEditingTimeId] = useState<number | null>(null);
   const [editingTimeValue, setEditingTimeValue] = useState("");
   const draggingHandle = useRef<'start' | 'end' | null>(null);
+
+  // Coach chat
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatQuestion, setChatQuestion] = useState("");
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
 
 
 
@@ -124,6 +133,33 @@ export default function HomePage() {
   });
 
   const suppTakenCount = suppLogs.filter(l => l.IsTaken === 1).length;
+
+  const { data: allMyQueries = [], refetch: refetchChat, isFetching: chatFetching } = useQuery<IMealQuery[]>({
+    queryKey: ["all-my-queries"],
+    queryFn: async () => {
+      const res = await getMyMealQueries({}) as any;
+      const d = res.data?.data;
+      return Array.isArray(d) ? d : [];
+    },
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: chatOpen ? 15000 : 60000,
+  });
+
+  const chatUnread = allMyQueries.filter(q => q.Answer).length;
+
+  const askCoachMutation = useMutation({
+    mutationFn: (question: string) =>
+      askMealQuery({ QueryDate: moment().format("DD-MM-YYYY"), Question: question }),
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ["all-my-queries"] });
+      setChatQuestion("");
+      toast.success("Question sent to your coach!");
+      const idQuery = res?.data?.data?.IdQuery;
+      if (idQuery) notifyCoachQuery({ IdQuery: idQuery }).catch(() => {});
+    },
+    onError: () => toast.error("Failed to send question"),
+  });
 
   //constructor basil
   useEffect(() => {
@@ -198,68 +234,13 @@ export default function HomePage() {
 
 
   useEffect(() => {
-    if (loggedUserDetails) {
-      if (loggedUserDetails.ActiveStatus == ACCESS_STATUS.PAYMENT_FAILED.NUMBER) {
-        //setPaymentFailedAlert(true);
-        toast.custom(
-          (t) => (
-            <div
-              className={`${t.visible ? 'animate-enter' : 'animate-leave'
-                } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-4 border-red-500`}
-            >
-              <div className="flex-1 w-0 p-4">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 pt-0.5">
-                    <CreditCard className="h-6 w-6 text-red-500" />
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      Payment Required
-                    </p>
-                    <p className="mt-1 text-sm text-gray-600">
-                      Your subscription payment is overdue. Please update your payment.
-                    </p>
-                    <div className="mt-3 flex space-x-4">
-                      <button
-                        onClick={() => {
-                          // Add your payment action here
-                          console.log('Redirect to payment');
-                          toast.dismiss(t.id);
-                        }}
-                        className="bg-red-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-red-700 transition-colors"
-                        style={{ visibility: "hidden" }}
-                      >
-                        Update
-                      </button>
-                      <button
-                        onClick={() => toast.dismiss(t.id)}
-                        className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-sm font-medium hover:bg-gray-300 transition-colors"
-                      >
-                        Remind Me Later
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex border-l border-gray-200">
-                <button
-                  onClick={() => toast.dismiss(t.id)}
-                  className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-500 hover:text-gray-700 focus:outline-none"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-          ),
-          {
-            id: 'payment-required',
-            duration: Infinity,
-            position: 'top-right',
-          }
-        );
-      }
+    if (!loggedUserDetails) return;
+    const isExpired = loggedUserDetails.EndDate
+      ? moment(loggedUserDetails.EndDate).isBefore(moment(), 'day')
+      : false;
+    if (isExpired) {
+      setShowExpiredBanner(true);
     }
-
   }, [loggedUserDetails]);
 
 
@@ -550,7 +531,9 @@ export default function HomePage() {
 
   {/* Streak + motivational helpers */}
   const streakDays = Array.isArray(dailyUpdatesForWeek)
-    ? dailyUpdatesForWeek.filter((d: IDailyStats) => Number(d.Steps) > 0 || Number(d.Water) > 0).length
+    ? dailyUpdatesForWeek.filter((d: IDailyStats) =>
+        Number(d.Steps) > 0 && Number(d.Water) > 0 && Number(d.Sleep) > 0
+      ).length
     : 0;
   const motivations = [
     "Every rep counts. Keep pushing!",
@@ -583,6 +566,19 @@ export default function HomePage() {
                 onCheckedChange={() => setTheme(theme === "dark" ? "light" : "dark")}
               />
             </div>
+
+            {/* Notification bell with badge */}
+            <Link href={RENDER_URL.STUDENT_NOTIFICATIONS}>
+              <div className="relative h-9 w-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/30 cursor-pointer">
+                <Bell className="h-4 w-4 text-white" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] bg-red-500 rounded-full flex items-center justify-center text-[11px] font-bold text-white px-1 leading-none border-2 border-white shadow-md">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </div>
+            </Link>
+
             <Link href={RENDER_URL.STUDENT_ONBOARD}>
               <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/30 cursor-pointer">
                 <span className="text-white font-semibold text-sm">
@@ -592,6 +588,7 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
+
         {streakDays > 0 && (
           <div className="mt-3 inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
             <Flame className="h-3.5 w-3.5 text-amber-400" />
@@ -601,6 +598,31 @@ export default function HomePage() {
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 py-5 pb-24 sm:px-6 bg-gray-50 dark:bg-gray-950">
+
+        {/* Payment expired banner */}
+        {showExpiredBanner && (
+          <div className="flex items-start justify-between gap-3 rounded-xl px-4 py-3 mb-4 border border-red-200 bg-white shadow-sm border-l-4 border-l-red-500">
+            <div className="flex items-start gap-3 flex-1">
+              <CreditCard className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-900">Payment Required</p>
+                <p className="text-sm text-blue-600 mt-0.5">Your subscription payment is overdue. Please update your payment.</p>
+                <button
+                  onClick={() => setShowExpiredBanner(false)}
+                  className="mt-2 px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 active:bg-gray-300 transition-colors"
+                >
+                  Remind Me Later
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowExpiredBanner(false)}
+              className="text-gray-400 hover:text-gray-600 flex-shrink-0 mt-0.5"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Notification banner — visible until subscribed or dismissed */}
         {pushStatus !== 'granted' && !bannerDismissed && (
@@ -925,6 +947,111 @@ export default function HomePage() {
       </main>
 
       <MobileNav />
+
+      {/* ── Ask Coach FAB ── */}
+      <button
+        onClick={() => setChatOpen(true)}
+        className="fixed bottom-20 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-blue-900 transition-all active:scale-95"
+      >
+        <MessageCircle className="h-6 w-6 text-white" />
+        {chatUnread > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+            {chatUnread}
+          </span>
+        )}
+      </button>
+
+      {/* ── Coach Chat ── */}
+      {chatOpen && (
+        <div className="fixed inset-0 z-40 flex flex-col bg-white dark:bg-gray-900">
+          {/* header */}
+          <div className="flex items-center gap-3 px-4 py-3 bg-blue-600 flex-shrink-0">
+            <button onClick={() => setChatOpen(false)} className="p-1.5 text-white/80 hover:text-white">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-sm">PK</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-semibold text-sm">Your Coach</p>
+              <p className="text-blue-200 text-[10px]">Ask anything about your fitness or meals</p>
+            </div>
+            <button onClick={() => refetchChat()} className="p-2 text-white/70 hover:text-white">
+              <RefreshCw className={`h-4 w-4 ${chatFetching ? "animate-spin" : ""}`} />
+            </button>
+          </div>
+
+          {/* messages — flat bubbles */}
+          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 bg-gray-50 dark:bg-gray-950">
+            {allMyQueries.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full text-center gap-3">
+                <MessageCircle className="h-14 w-14 text-gray-200 dark:text-gray-700" />
+                <p className="text-sm font-semibold text-gray-400 dark:text-gray-500">No messages yet</p>
+                <p className="text-xs text-gray-400 dark:text-gray-600">Send your first message below</p>
+              </div>
+            )}
+            {allMyQueries.flatMap(q => {
+              const msgs = [];
+              if (q.Question) msgs.push({ key: `q-${q.IdQuery}`, text: q.Question, sender: 'me' as const, time: q.CreatedAt ?? '' });
+              if (q.Answer)   msgs.push({ key: `a-${q.IdQuery}`, text: q.Answer,   sender: 'coach' as const, time: q.AnsweredAt ?? '' });
+              return msgs;
+            }).sort((a, b) => a.time.localeCompare(b.time)).map((msg, i, arr) => {
+              const isMe = msg.sender === 'me';
+              const prev = arr[i - 1];
+              const showDate = !prev || moment(msg.time).format('YYYY-MM-DD') !== moment(prev.time).format('YYYY-MM-DD');
+              return (
+                <React.Fragment key={msg.key}>
+                  {showDate && msg.time && (
+                    <div className="flex justify-center py-2">
+                      <span className="text-[10px] bg-gray-200 dark:bg-gray-800 text-gray-500 px-3 py-0.5 rounded-full">
+                        {moment(msg.time).calendar(null, { sameDay: '[Today]', lastDay: '[Yesterday]', other: 'ddd, MMM D' })}
+                      </span>
+                    </div>
+                  )}
+                  <div className={`flex ${isMe ? "justify-end" : "justify-start"} items-end gap-1.5`}>
+                    {!isMe && (
+                      <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0 mb-0.5">
+                        <span className="text-[9px] font-bold text-blue-600">PK</span>
+                      </div>
+                    )}
+                    <div className={`max-w-[75%] px-3.5 py-2.5 text-sm shadow-sm ${
+                      isMe
+                        ? "bg-blue-600 text-white rounded-2xl rounded-br-sm"
+                        : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-2xl rounded-bl-sm"
+                    }`}>
+                      <p className="leading-relaxed">{msg.text}</p>
+                      {msg.time && (
+                        <p className={`text-[10px] mt-0.5 ${isMe ? "opacity-60 text-right" : "text-gray-400"}`}>
+                          {moment(msg.time).format("h:mm a")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </React.Fragment>
+              );
+            })}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* input */}
+          <div className="flex-shrink-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-3 flex items-end gap-2">
+            <textarea
+              className="flex-1 min-h-[44px] max-h-[120px] px-3.5 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none focus:ring-2 focus:ring-blue-300 outline-none"
+              placeholder="Type a message…"
+              value={chatQuestion}
+              onChange={e => setChatQuestion(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (chatQuestion.trim()) askCoachMutation.mutate(chatQuestion); } }}
+            />
+            <button
+              disabled={!chatQuestion.trim() || askCoachMutation.isPending}
+              onClick={() => askCoachMutation.mutate(chatQuestion)}
+              className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white transition-all active:scale-95"
+            >
+              {askCoachMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Supplement Drawer ── */}
       {suppDrawerOpen && (

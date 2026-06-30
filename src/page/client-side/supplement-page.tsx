@@ -40,11 +40,14 @@ function isDueNow(reminderTime?: string): boolean {
 
 function fireNotification(name: string, dose: string, timing: string) {
   if (Notification.permission !== "granted") return;
-  new Notification("💊 Supplement Reminder", {
-    body: `Time to take your ${name}${dose ? ` — ${dose}` : ""} (${timing})`,
-    icon: "/icons/icon-192x192.png",
-    tag: `supp-${name}`,
-  });
+  // new Notification() is banned in PWA/SW contexts on Android; must use registration.showNotification()
+  navigator.serviceWorker.ready.then(reg => {
+    reg.showNotification("💊 Supplement Reminder", {
+      body: `Time to take your ${name}${dose ? ` — ${dose}` : ""} (${timing})`,
+      icon: "/icons/icon-192x192.png",
+      tag: `supp-${name}`,
+    });
+  }).catch(() => {});
 }
 
 // ── Main Page ─────────────────────────────────────────────────────
@@ -118,15 +121,27 @@ export default function SupplementPage({ embedded = false }: { embedded?: boolea
       toast.error("Please allow notifications in your browser settings.");
   };
 
+  // ── filter supplements scheduled for the selected date ───────────
+
+  const selectedDayOfWeek = moment(selectedDate, "DD-MM-YYYY").day(); // 0=Sun … 6=Sat
+
+  const scheduledSupplements = supplements.filter(s => {
+    if (!s.Frequency || s.Frequency === 'Daily') return true;
+    if (s.Frequency === 'Weekly' && s.DaysOfWeek) {
+      return s.DaysOfWeek.split(',').map(Number).includes(selectedDayOfWeek);
+    }
+    return true;
+  });
+
   // ── group by timing ───────────────────────────────────────────────
 
   const grouped = SUPPLEMENT_TIMINGS.reduce((acc, t) => {
-    acc[t] = supplements.filter(s => s.Timing === t);
+    acc[t] = scheduledSupplements.filter(s => s.Timing === t);
     return acc;
   }, {} as Record<string, ISupplement[]>);
 
-  const totalCount  = supplements.length;
-  const takenCount  = logs.filter(l => l.IsTaken === 1).length;
+  const totalCount  = scheduledSupplements.length;
+  const takenCount  = logs.filter(l => l.IsTaken === 1 && scheduledSupplements.some(s => s.IdSupplement === l.IdSupplement)).length;
   const allTaken    = totalCount > 0 && takenCount >= totalCount;
 
   if (embedded) {

@@ -1,7 +1,7 @@
 import { httpCall, httpUpload } from "./HttpService";
 import { API_URL } from "../common/Urls";
 import { IWeeklyUpdatesForUser } from "../interface/IWeeklyUpdates";
-import { ISubscriptionHistory, IUser, SuperAdminResponse } from "../interface/models/User";
+import { IUser, SuperAdminResponse } from "../interface/models/User";
 import { IUpdatesForUser } from "../interface/IDailyUpdates";
 import { ICoach } from "../interface/models/Coach";
 
@@ -140,46 +140,8 @@ export const isSuperAdminApi = (params: unknown): Promise<ApiResponse<SuperAdmin
     });
 };
 
-export const setUpdatePaymentHistory = (params: unknown): Promise<ApiResponse<unknown>> => {
-    return httpCall({
-        url: API_URL.UPDATE_SUBSCRIPTION_HISTORY,
-        method: "post",
-        data: params
-    }).then((response: ApiResponse<unknown>) => {
-        return response;
-    });
-};
 
 
-export const insertPricingPlans = (params: unknown): Promise<ApiResponse<unknown>> => {
-    return httpCall({
-        url: API_URL.INSERT_PRICING_PLAN,
-        method: "post",
-        data: params
-    }).then((response: ApiResponse<unknown>) => {
-        return response;
-    });
-};
-
-export const deletePricingPlans = (params: unknown): Promise<ApiResponse<unknown>> => {
-    return httpCall({
-        url: API_URL.DELETE_PRICING_PLAN,
-        method: "post",
-        data: params
-    }).then((response: ApiResponse<unknown>) => {
-        return response;
-    });
-};
-
-export const getAllPricingPlans = (params: unknown): Promise<ApiResponse<ISubscriptionHistory[]>> => {
-    return httpCall({
-        url: API_URL.GET_ALL_PRICING_PLANS,
-        method: "post",
-        data: params
-    }).then((response: ApiResponse<ISubscriptionHistory[]>) => {
-        return response;
-    });
-};
 
 
 export const sendReminderNotification = (params: { IdUser: number }): Promise<ApiResponse<unknown>> => {
@@ -190,35 +152,18 @@ export const sendReminderNotification = (params: { IdUser: number }): Promise<Ap
     });
 };
 
-export const getAllSubscriptionAssigned = (params: unknown): Promise<ApiResponse<IUser[]>> => {
-    return httpCall({
-        url: API_URL.GET_ASSIGNED_SUBSCRIPTION,
-        method: "post",
-        data: params
-    }).then((response: ApiResponse<IUser[]>) => {
-        return response;
-    });
+
+export const setCoachingPlan = (params: {
+    IdUser: number;
+    PlanName: string;
+    Price: number;
+    StartDate: string;
+    EndDate: string;
+    PaidAmount: number;
+}): Promise<ApiResponse<unknown>> => {
+    return httpCall({ url: API_URL.SET_COACHING_PLAN, method: 'post', data: params });
 };
 
-export const setSubscriptionToUser = (params: unknown): Promise<ApiResponse<unknown>> => {
-    return httpCall({
-        url: API_URL.SET_SUBSCRIPTION,
-        method: "post",
-        data: params
-    }).then((response: ApiResponse<unknown>) => {
-        return response;
-    });
-};
-
-export const removeSubscriptionFromUser = (params: unknown): Promise<ApiResponse<unknown>> => {
-    return httpCall({
-        url: API_URL.REMOVE_SUBSCRIPTION,
-        method: "post",
-        data: params
-    }).then((response: ApiResponse<unknown>) => {
-        return response;
-    });
-};
 
 
 

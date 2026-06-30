@@ -63,6 +63,7 @@ const USERS = [
 
 export default function SimpleTrackingView() {
   const [activeTab, setActiveTab] = useState("all");
+  const [activeWeeklyTab, setActiveWeeklyTab] = useState("all");
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"daily" | "weekly">("daily");
 
@@ -82,13 +83,15 @@ export default function SimpleTrackingView() {
   // Fetch user list with their update status for yesterday
   const { data: UserListWithUpdates } = useQuery<IUpdatesForUser[]>({
     queryKey: ["coach-userlist", yesterday],
-    queryFn: () => getUserListWithUpdates_ForCoach({ Day: yesterday }).then(res => res.data.data)
+    queryFn: () => getUserListWithUpdates_ForCoach({ Day: yesterday }).then(res => res.data.data),
+    staleTime: 0,
   });
 
   //fetch weekly 
   const { data: UserListWithWeeklyUpdates } = useQuery<IWeeklyUpdatesForUser[]>({
     queryKey: ["coach-userlist-weekly"],
-    queryFn: () => getUserListWithWeeklyUpdates_ForCoach(0).then(res => res.data.data)
+    queryFn: () => getUserListWithWeeklyUpdates_ForCoach(0).then(res => res.data.data),
+    staleTime: 0,
   });
 
 
@@ -163,6 +166,23 @@ export default function SimpleTrackingView() {
   const updatedCount = UserListWithUpdates?.filter(isComplete).length ?? 0;
   const missedCount = (UserListWithUpdates?.length ?? 0) - updatedCount;
 
+  const isWeeklyComplete = (user: IWeeklyUpdatesForUser): boolean => {
+    if (!user.IdWeeklyStats || !user.DateRange) return false;
+    const [day, month, year] = user.DateRange.split('-').map(Number);
+    const updateDate = new Date(year, month - 1, day);
+    const daysDiff = (currentDate.getTime() - updateDate.getTime()) / (1000 * 60 * 60 * 24);
+    return daysDiff <= 7;
+  };
+
+  const weeklyUpdatedCount = UserListWithWeeklyUpdates?.filter(isWeeklyComplete).length ?? 0;
+  const weeklyMissedCount = (UserListWithWeeklyUpdates?.length ?? 0) - weeklyUpdatedCount;
+
+  const filteredWeeklyUsers = UserListWithWeeklyUpdates?.filter(user => {
+    if (activeWeeklyTab === "updated") return isWeeklyComplete(user);
+    if (activeWeeklyTab === "missed") return !isWeeklyComplete(user);
+    return true;
+  });
+
   // Handle user selection
   const handleSelectUser = (userId: number) => {
     setSelectedUserId(userId);
@@ -182,11 +202,12 @@ export default function SimpleTrackingView() {
 
   return (
     <>
-      <AdminPageHeader
-        title="Client Tracking"
-        subtitle="FitwithPK Admin"
-        onBack={selectedUserId ? () => handleBackToList() : undefined}
-      />
+      {!selectedUserId && (
+        <AdminPageHeader
+          title="Client Tracking"
+          subtitle="FitwithPK Admin"
+        />
+      )}
 
       <div className="mb-14 p-4 h-full w-full">
         {selectedUserId ? (
@@ -344,19 +365,61 @@ export default function SimpleTrackingView() {
                 </div>
               </>
             ) : (
-              // Weekly view mode - show a prompt to select a user
               <div>
-                <div className="text-center mb-6">
-                  <Calendar size={40} className="mx-auto text-gray-400 mb-4" />
-                  <h3 className="font-medium mb-2">Select a User</h3>
-                  <p className="text-gray-500 text-sm">
-                    Please select a user to view their weekly progress, body measurements, and progress photos.
-                  </p>
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div
+                    className="bg-green-50 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-green-100 transition-colors"
+                    onClick={() => setActiveWeeklyTab('updated')}
+                  >
+                    <div>
+                      <p className="text-sm text-gray-600">Updated This Week</p>
+                      <p className="text-2xl font-bold">{weeklyUpdatedCount}</p>
+                    </div>
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <Check className="text-green-600" size={20} />
+                    </div>
+                  </div>
+
+                  <div
+                    className="bg-red-50 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-red-100 transition-colors"
+                    onClick={() => setActiveWeeklyTab('missed')}
+                  >
+                    <div>
+                      <p className="text-sm text-gray-600">Missing Updates</p>
+                      <p className="text-2xl font-bold">{weeklyMissedCount}</p>
+                    </div>
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <AlertTriangle className="text-red-600" size={20} />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4">
-                  {UserListWithWeeklyUpdates?.map(user => {
-                    // Get initials from name
+                {/* Filter Tabs */}
+                <div className="flex border-b mb-4">
+                  <button
+                    className={`py-2 px-4 font-medium ${activeWeeklyTab === 'all' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
+                    onClick={() => setActiveWeeklyTab('all')}
+                  >
+                    All ({UserListWithWeeklyUpdates?.length})
+                  </button>
+                  <button
+                    className={`py-2 px-4 font-medium ${activeWeeklyTab === 'updated' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
+                    onClick={() => setActiveWeeklyTab('updated')}
+                  >
+                    Updated ({weeklyUpdatedCount})
+                  </button>
+                  <button
+                    className={`py-2 px-4 font-medium ${activeWeeklyTab === 'missed' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
+                    onClick={() => setActiveWeeklyTab('missed')}
+                  >
+                    Missed ({weeklyMissedCount})
+                  </button>
+                </div>
+
+                {/* User List */}
+                <div className="space-y-4">
+                  {filteredWeeklyUsers?.map(user => {
                     const fullname = `${user.FirstName} ${user.LastName}`;
                     const initials = fullname
                       .split(' ')
@@ -364,26 +427,41 @@ export default function SimpleTrackingView() {
                       .join('')
                       .substring(0, 2)
                       .toUpperCase();
+                    const hasUpdated = isWeeklyComplete(user);
 
                     return (
                       <div
                         key={user.IdUser}
-                        className="flex items-center p-4 bg-white rounded-lg border hover:bg-gray-50 cursor-pointer"
+                        className="flex items-center justify-between p-4 bg-white rounded-lg border hover:bg-gray-50 cursor-pointer"
                         onClick={() => handleSelectUser(user.IdUser)}
                       >
-                        <div className={`w-14 h-14 ${getRandomColor(fullname)} rounded-full flex items-center justify-center text-white text-xl font-bold mr-4`}>
-                          {initials}
+                        <div className="flex items-center">
+                          <div className={`w-14 h-14 ${getRandomColor(fullname)} rounded-full flex items-center justify-center text-white text-xl font-bold mr-4`}>
+                            {initials}
+                          </div>
+                          <div>
+                            <p className="text-lg font-semibold">{fullname}</p>
+                            <p className="text-sm text-gray-500">
+                              {formatDate(user.DateRange!) === ""
+                                ? "No update yet"
+                                : `Last update: ${formatDate(user.DateRange!)}`}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-lg font-semibold">{fullname}</p>
-                          <p className="text-sm text-gray-500">
-
-                            {formatDate(user.DateRange!) == "" ? "Not Available" : `Last update: ${formatDate(user.DateRange!)}`}
-                          </p>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${hasUpdated ? 'bg-green-100' : 'bg-red-100'}`}>
+                          {hasUpdated
+                            ? <Check size={20} className="text-green-600" />
+                            : <X size={20} className="text-red-600" />}
                         </div>
                       </div>
                     );
                   })}
+
+                  {filteredWeeklyUsers?.length === 0 && (
+                    <div className="p-8 text-center text-gray-500">
+                      No users found in this category
+                    </div>
+                  )}
                 </div>
               </div>
             )}

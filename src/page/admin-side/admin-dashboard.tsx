@@ -7,8 +7,10 @@ import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
 import {
   ArrowRightLeft,
   BarChart2,
+  Bell,
   ClipboardCheck,
   EuroIcon,
+  MessageCircle,
   Plus,
   Target,
   Trash2,
@@ -24,6 +26,7 @@ import {
   getUserListWithUpdates_ForCoach,
   isSuperAdminApi,
 } from "../../services/AdminServices";
+import { getPendingQueriesForCoach, IPendingMealQuery } from "../../services/MealQueryService";
 import { ACCESS_STATUS, BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService";
 import { IUpdatesForUser } from "../../interface/IDailyUpdates";
@@ -60,6 +63,17 @@ export default function AdminDashboard() {
     queryFn: () => isSuperAdminApi(0).then((res) => res.data.data),
   });
 
+  const { data: pendingQueries = [] } = useQuery<IPendingMealQuery[]>({
+    queryKey: ["admin-pending-queries"],
+    queryFn: async () => {
+      const res = await getPendingQueriesForCoach() as any;
+      const d = res.data?.data;
+      return Array.isArray(d) ? d : [];
+    },
+    staleTime: 0,
+    refetchInterval: 60000,
+  });
+
   const [quickNotes, setQuickNotes] = useState<string[]>([
     "Weekly progress reviews due this Friday",
     "New nutrition plans available",
@@ -90,6 +104,7 @@ export default function AdminDashboard() {
   const activeClients = getActiveUserCount(coach_client_list ?? []);
   const updatedToday = getUpdatedCount(UserListWithUpdates ?? []);
 
+
   const hourOfDay = currentDate.getHours();
   const greeting =
     hourOfDay < 12 ? "Good morning" : hourOfDay < 17 ? "Good afternoon" : "Good evening";
@@ -107,10 +122,24 @@ export default function AdminDashboard() {
               </div>
               <span className="text-white/80 text-sm font-medium">FitwithPK</span>
             </div>
-            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-              <span className="text-white font-bold text-sm">
-                {coachName.charAt(0)}
-              </span>
+
+            <div className="flex items-center gap-2">
+              {/* Notifications bell */}
+              <button
+                onClick={() => setLocation(RENDER_URL.ADMIN_NOTIFICATIONS)}
+                className="relative w-9 h-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm"
+              >
+                <Bell className="w-4 h-4 text-white" />
+                {pendingQueries.length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                    {pendingQueries.length > 9 ? "9+" : pendingQueries.length}
+                  </span>
+                )}
+              </button>
+              {/* Coach avatar */}
+              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                <span className="text-white font-bold text-sm">{coachName.charAt(0)}</span>
+              </div>
             </div>
           </div>
           <div className="mt-4">
@@ -293,6 +322,19 @@ export default function AdminDashboard() {
           </div>
         </div>
       </main>
+
+      {/* Chat FAB — navigates to Messenger page */}
+      <button
+        onClick={() => setLocation(RENDER_URL.ADMIN_NOTIFICATIONS)}
+        className="fixed bottom-20 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
+      >
+        <MessageCircle className="h-6 w-6 text-white" />
+        {pendingQueries.length > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+            {pendingQueries.length > 9 ? "9+" : pendingQueries.length}
+          </span>
+        )}
+      </button>
 
       <MobileAdminNav />
     </div>

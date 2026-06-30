@@ -31,7 +31,7 @@ import {
   logFoodConsumption, batchLogFoodConsumption,
 } from "../../services/MealPlanService";
 import {
-  IMealQuery, askMealQuery, getMyMealQueries,
+  IMealQuery, askMealQuery, getMyMealQueries, notifyCoachQuery,
 } from "../../services/MealQueryService";
 import {
   IMealPlan, IMealLog, IMealFoodItemWithLog, MealType,
@@ -302,10 +302,15 @@ export default function MealTrackingPage() {
 
   const askMutation = useMutation({
     mutationFn: (question: string) => askMealQuery({ QueryDate: selectedDate, Question: question }),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ["my-meal-queries", selectedDate] });
       setQuestionText("");
       toast.success("Question sent to your coach!");
+      // fire-and-forget: notify the coach via push notification
+      const idQuery = res?.data?.data?.IdQuery;
+      if (idQuery) {
+        notifyCoachQuery({ IdQuery: idQuery }).catch(() => {});
+      }
     },
     onError: (e: Error) => toast.error(`Failed: ${e.message}`),
   });
