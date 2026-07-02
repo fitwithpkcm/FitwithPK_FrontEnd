@@ -48,5 +48,8 @@ export default defineConfig({
     port: 5173,
     open: true,
     allowedHosts: ['fitapp.mazhaundo.com', 'localhost', '127.0.0.1'],
+  },
+  preview: {
+    allowedHosts: ['fitwithpk.com', 'www.fitwithpk.com', 'localhost'],
   }
 })
