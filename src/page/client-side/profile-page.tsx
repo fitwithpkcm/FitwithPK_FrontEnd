@@ -570,7 +570,7 @@ export default function ProfilePage() {
                         <span>Message</span>
                       </Button>
                       <Button variant="outline" size="sm" className="gap-1 rounded-full" onClick={() => {
-                        console.log(myCoachDetails.BasicDetails.phone);
+                        console.log(myCoachDetails?.BasicDetails?.phone);
                       }}>
                         <Phone className="h-4 w-4" />
                         <span>Call</span>
@@ -578,7 +578,7 @@ export default function ProfilePage() {
 
                     </div>
                     <div className="flex flex-wrap justify-center gap-2 mb-4">
-                      {myCoachDetails.BasicDetails?.social_media.map((social, index) => {
+                      {myCoachDetails?.BasicDetails?.social_media?.map((social, index) => {
                         // Determine the appropriate icon based on the platform
                         let IconComponent;
                         switch (social.platform.toLowerCase()) {
