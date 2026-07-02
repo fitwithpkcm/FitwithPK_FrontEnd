@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "start": "vite preview --host --port ${PORT:-4173}",
     "generate-pwa-assets": "pwa-assets-generator --preset minimal"
   },
   "dependencies": {
