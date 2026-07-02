@@ -1,7 +1,7 @@
 // Login
 
-export const BASE_URL = "https://backend.mazhaundo.com";
-
+//export const BASE_URL = "https://backend.mazhaundo.com";
+export const BASE_URL = "https://api.fitwithpk.com";
 /**
  * VAPID public key for Web Push notifications.
  * Generate a key pair on the backend with: npx web-push generate-vapid-keys
