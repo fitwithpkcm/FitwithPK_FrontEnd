@@ -269,7 +269,7 @@ const dailyUpdateSchema = z.object({
   Sleep: z.coerce.number().min(0).max(24).optional(),
   Diet_Follow: z.coerce.number().min(0).max(5).optional(),
   WorkOut: z.coerce.number().min(0).max(5).optional(),
-  Notes: z.string() 
+  Notes: z.string().optional()
 });
 
 type DailyUpdateFormValues = z.infer<typeof dailyUpdateSchema>;
@@ -677,14 +677,11 @@ export default function UpdatesPage() {
 
       console.log("Submitting data:", transformedData);
 
-      return dailyUpdate(transformedData).then((res) => {
-
-        return res;
-
-      }).catch((error) => {
-        return error
-      })
-
+      const res = await dailyUpdate(transformedData);
+      if (!res.data?.success) {
+        throw new Error(res.data?.message || "Failed to log your updates");
+      }
+      return res;
     },
     onSuccess: (_, submitted) => {
       queryClient.invalidateQueries({ queryKey: ["daily-updates"] });
