@@ -53,7 +53,7 @@ export const weeklyUpdate = (params: FormData) => {
         url: API_URL.WEEKLY_UPDATES,
         method: "post",
         data: params
-    }).then((response: unknown) => {
+    }).then((response: ApiResponse<unknown>) => {
         return response;
     });
 };

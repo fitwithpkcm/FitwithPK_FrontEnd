@@ -19,7 +19,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/ta
 import { Progress } from "../../components/ui/progress";
 /* import { DailyUpdate, BodyMeasurement } from "@shared/schema"; */
 import { dailyUpdate, getDailyUpdate, getDailyUpdateForAWeek, getProgressGallery, getSingleDayUpdate, getWeeklyUpdate, weeklyUpdate } from "../../services/UpdateServices";
-import { fetchOnBoardUserAttributes } from "../../services/LoginServices";
 
 import { BASE_URL, UNITS, USER_TARGET } from "../../common/Constant";
 
@@ -322,14 +321,6 @@ export default function UpdatesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  // Height entered in the profile's "Measurements" tab (OnBoardUserAttributes) —
-  // the source of truth for body-fat calc. The login-cached MainBodyAttributes
-  // height is a separate, never-synced field and must not be used here.
-  const { data: onboardAttributes } = useQuery<any>({
-    queryKey: ["onboarduser-attributes"],
-    queryFn: () => fetchOnBoardUserAttributes(null).then((res: any) => res.data?.data ?? null),
-    staleTime: 5 * 60 * 1000,
-  });
   //const [selectedDate, setSelectedDate] = useState<string>(new Date().toDateString());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [files, setFiles] = useState<File[]>([])
@@ -552,27 +543,32 @@ export default function UpdatesPage() {
 
 
   const { mutate: updateMeasurements } = useMutation({
-    mutationFn: (formData: FormData) => weeklyUpdate(formData),
+    mutationFn: async (formData: FormData) => {
+      const res = await weeklyUpdate(formData);
+      if (!res.data?.success) {
+        throw new Error(res.data?.message || "Failed to save weekly measurements");
+      }
+      return res;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["weekly-updates"] });
       setShowMeasurementForm(false);
-    }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
 
   const addUpdateBodyMeasurementWeekly = () => {
     const formdata = new FormData()
 
-    //todo need to check female or male
-    const waistMinusNeck = parseFloat(measurementForm.Waist) - parseFloat(measurementForm.Neck);
-    const height = parseFloat(onboardAttributes?.height);
-    if (height > 0 && waistMinusNeck > 0) {
-      const bodyFatPercentage = 86.010 * Math.log10(waistMinusNeck / 2.54) - 70.041 * Math.log10(height / 2.54) + 36.76;
-      if (Number.isFinite(bodyFatPercentage)) {
-        formdata.append("BodyFat", bodyFatPercentage.toFixed(2));
-      }
-    }
-
+    // BodyFat is calculated server-side (using the profile height on file),
+    // so the client no longer computes or sends it here.
     formdata.append("DateRange", `${moment(selectedDate).format("YYYY-MM-DD")}`);
     formdata.append("Weight", measurementForm.Weight);
     formdata.append("Waist", measurementForm.Waist);
