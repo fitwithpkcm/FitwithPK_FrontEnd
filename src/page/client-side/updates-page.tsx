@@ -552,6 +552,9 @@ export default function UpdatesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["weekly-updates"] });
+      // The trend chart (GraphDataChart) reads weekly measurements under this
+      // key — it must also be invalidated or it keeps showing stale data.
+      queryClient.invalidateQueries({ queryKey: ["daily-updates"] });
       setShowMeasurementForm(false);
     },
     onError: (error: Error) => {
