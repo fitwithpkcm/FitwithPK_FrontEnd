@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/ta
 import { Progress } from "../../components/ui/progress";
 /* import { DailyUpdate, BodyMeasurement } from "@shared/schema"; */
 import { dailyUpdate, getDailyUpdate, getDailyUpdateForAWeek, getProgressGallery, getSingleDayUpdate, getWeeklyUpdate, weeklyUpdate } from "../../services/UpdateServices";
+import { fetchOnBoardUserAttributes } from "../../services/LoginServices";
 
 import { BASE_URL, UNITS, USER_TARGET } from "../../common/Constant";
 
@@ -255,8 +256,6 @@ import RatingSmiley from "../../components/ui/rating-smiley";
 import { calculatePercentage } from "../../lib/utils";
 
 import { setBaseUrl } from "../../services/HttpService"
-import { ManageLocalStorage } from "../../services/Localstorage"
-import { ILoginUserData } from "../../interface/ILoginUserData";
 import { IStudentGallery } from "../../interface/IStudentGallery";
 import { useTheme } from "next-themes";
 
@@ -323,6 +322,14 @@ export default function UpdatesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  // Height entered in the profile's "Measurements" tab (OnBoardUserAttributes) —
+  // the source of truth for body-fat calc. The login-cached MainBodyAttributes
+  // height is a separate, never-synced field and must not be used here.
+  const { data: onboardAttributes } = useQuery<any>({
+    queryKey: ["onboarduser-attributes"],
+    queryFn: () => fetchOnBoardUserAttributes(null).then((res: any) => res.data?.data ?? null),
+    staleTime: 5 * 60 * 1000,
+  });
   //const [selectedDate, setSelectedDate] = useState<string>(new Date().toDateString());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [files, setFiles] = useState<File[]>([])
@@ -556,15 +563,14 @@ export default function UpdatesPage() {
   const addUpdateBodyMeasurementWeekly = () => {
     const formdata = new FormData()
 
-    const userData: string = ManageLocalStorage.get("userData") || "{}";
-    const _userData: ILoginUserData = userData ? JSON.parse(userData) : {};
-    const userHeight = JSON.parse(_userData?.info.Attributes).height;
-    //todo need to check female or male 
-    if (userHeight != undefined) {
-      const waistMinusNeck = parseFloat(measurementForm.Waist) - parseFloat(measurementForm.Neck);
-      const height = parseFloat(userHeight);
+    //todo need to check female or male
+    const waistMinusNeck = parseFloat(measurementForm.Waist) - parseFloat(measurementForm.Neck);
+    const height = parseFloat(onboardAttributes?.height);
+    if (height > 0 && waistMinusNeck > 0) {
       const bodyFatPercentage = 86.010 * Math.log10(waistMinusNeck / 2.54) - 70.041 * Math.log10(height / 2.54) + 36.76;
-      formdata.append("BodyFat", bodyFatPercentage.toFixed(2));
+      if (Number.isFinite(bodyFatPercentage)) {
+        formdata.append("BodyFat", bodyFatPercentage.toFixed(2));
+      }
     }
 
     formdata.append("DateRange", `${moment(selectedDate).format("YYYY-MM-DD")}`);
