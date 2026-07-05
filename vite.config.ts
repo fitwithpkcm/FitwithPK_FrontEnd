@@ -13,8 +13,8 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       manifest: {
-        name: 'Fit App',
-        short_name: 'FitApp',
+        name: 'FitwithPK',
+        short_name: 'FitwithPK',
         description: 'Your fitness application',
         start_url: '/',
         display: 'standalone',

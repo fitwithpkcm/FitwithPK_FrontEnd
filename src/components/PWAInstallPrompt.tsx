@@ -43,11 +43,11 @@ export function PWAInstallPrompt() {
       <div className="flex items-start space-x-3">
         <img 
           src="/icons/icon-48x48.png" 
-          alt="Fit App" 
+          alt="FitwithPK"
           className="w-10 h-10 flex-shrink-0"
         />
         <div>
-          <h3 className="font-semibold text-gray-900">Install Fit App</h3>
+          <h3 className="font-semibold text-gray-900">Install FitwithPK</h3>
           <p className="text-sm text-gray-600 mt-1">Get the full app experience</p>
           <div className="flex space-x-2 mt-3">
             <button
