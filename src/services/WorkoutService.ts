@@ -93,10 +93,19 @@ export const getExerciseLibrary = () =>
   httpCall({ method: "post", url: API_URL.GET_EXERCISE_LIBRARY, data: {} });
 
 export const createLibraryItem = (params: IExerciseLibraryItem) =>
-  httpCall({ method: "post", url: API_URL.CREATE_LIBRARY_ITEM, data: params });
+  httpCall({ method: "post", url: API_URL.CREATE_LIBRARY_ITEM, data: params }).then((response) => {
+    if (!response.data?.success) throw new Error(response.data?.message || "Failed to create exercise");
+    return response;
+  });
 
 export const updateLibraryItem = (params: IExerciseLibraryItem) =>
-  httpCall({ method: "post", url: API_URL.UPDATE_LIBRARY_ITEM, data: params });
+  httpCall({ method: "post", url: API_URL.UPDATE_LIBRARY_ITEM, data: params }).then((response) => {
+    if (!response.data?.success) throw new Error(response.data?.message || "Failed to update exercise");
+    return response;
+  });
 
 export const deleteLibraryItem = (params: { IdLibraryItem: number }) =>
-  httpCall({ method: "post", url: API_URL.DELETE_LIBRARY_ITEM, data: params });
+  httpCall({ method: "post", url: API_URL.DELETE_LIBRARY_ITEM, data: params }).then((response) => {
+    if (!response.data?.success) throw new Error(response.data?.message || "Failed to remove exercise");
+    return response;
+  });

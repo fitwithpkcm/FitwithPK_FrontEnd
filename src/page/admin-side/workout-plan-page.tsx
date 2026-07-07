@@ -33,7 +33,7 @@ import {
 } from "../../services/WorkoutService";
 import {
   IWorkout, IExercise, IExerciseLog, ISetLog, IExerciseLibraryItem,
-  createBlankWorkout, createBlankExercise, mergeWorkoutWithLogs, WEIGHT_UNITS, WORKOUT_TYPES,
+  createBlankWorkout, createBlankExercise, mergeWorkoutWithLogs, WEIGHT_UNITS, WORKOUT_TYPES, MUSCLE_GROUPS,
   IWorkoutTemplate, ITemplateExercise, createBlankTemplate, createBlankTemplateExercise,
 } from "../../interface/IWorkout";
 import { IUser } from "../../interface/models/User";
@@ -389,17 +389,17 @@ function LibraryManager({ library, onRefresh }: {
   const createMut = useMutation({
     mutationFn: createLibraryItem,
     onSuccess: () => { toast.success("Exercise added to library"); onRefresh(); setEditOpen(false); },
-    onError: () => toast.error("Failed to add"),
+    onError: (error: Error) => toast.error(error.message || "Failed to add"),
   });
   const updateMut = useMutation({
     mutationFn: updateLibraryItem,
     onSuccess: () => { toast.success("Updated"); onRefresh(); setEditOpen(false); },
-    onError: () => toast.error("Failed to update"),
+    onError: (error: Error) => toast.error(error.message || "Failed to update"),
   });
   const deleteMut = useMutation({
     mutationFn: deleteLibraryItem,
     onSuccess: () => { toast.success("Removed"); onRefresh(); },
-    onError: () => toast.error("Failed to remove"),
+    onError: (error: Error) => toast.error(error.message || "Failed to remove"),
   });
 
   const filtered = search.trim()
@@ -465,6 +465,7 @@ function LibraryManager({ library, onRefresh }: {
                         {item.DefaultSets}×{item.DefaultReps}
                         {item.DefaultWeight ? ` · ${item.DefaultWeight}${item.WeightUnit ?? "kg"}` : ""}
                         {item.RestSeconds ? ` · ${item.RestSeconds}s rest` : ""}
+                        {item.MuscleGroup ? ` · ${item.MuscleGroup}` : ""}
                       </p>
                     </div>
                     <button onClick={() => { setEditItem({ ...item }); setEditOpen(true); }}
@@ -506,6 +507,15 @@ function LibraryManager({ library, onRefresh }: {
                   className="w-full h-9 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-2 text-gray-800 dark:text-gray-200">
                   <option value="">— Select category —</option>
                   {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Muscle Group</label>
+                <select value={editItem.MuscleGroup ?? ""}
+                  onChange={e => setEditItem({ ...editItem, MuscleGroup: e.target.value || undefined })}
+                  className="w-full h-9 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-2 text-gray-800 dark:text-gray-200">
+                  <option value="">— Select muscle group —</option>
+                  {MUSCLE_GROUPS.map(m => <option key={m}>{m}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-3 gap-2">
