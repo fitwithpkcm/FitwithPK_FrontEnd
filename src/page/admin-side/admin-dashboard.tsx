@@ -30,7 +30,7 @@ import { getPendingQueriesForCoach, IPendingMealQuery } from "../../services/Mea
 import { ACCESS_STATUS, BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService";
 import { IUpdatesForUser } from "../../interface/IDailyUpdates";
-import moment from "moment";
+import { getReviewDate, isDailyUpdateComplete } from "../../lib/dailyUpdateStatus";
 import { useTheme } from "next-themes";
 
 export default function AdminDashboard() {
@@ -50,11 +50,15 @@ export default function AdminDashboard() {
     queryFn: () => getUserListForACoach(null).then((res) => res.data.data),
   });
 
+  // Reviews the same "most recently completed day" as the Check Updates detail
+  // page (simple-tracking-view.tsx) — see lib/dailyUpdateStatus for why yesterday.
+  const reviewDate = getReviewDate(currentDate);
+
   const { data: UserListWithUpdates } = useQuery<IUpdatesForUser[]>({
-    queryKey: ["coach-userlist-updates-dashboard", user?.info?.EmailID],
+    queryKey: ["coach-userlist-updates-dashboard", user?.info?.EmailID, reviewDate],
     queryFn: () =>
       getUserListWithUpdates_ForCoach({
-        Day: moment(currentDate).format("DD-MM-YYYY"),
+        Day: reviewDate,
       }).then((res) => res.data.data),
   });
 
@@ -97,12 +101,12 @@ export default function AdminDashboard() {
   };
 
   const getUpdatedCount = (list: IUpdatesForUser[]) => {
-    return list?.filter((u) => u.IdStats != null).length ?? 0;
+    return list?.filter((u) => isDailyUpdateComplete(u, reviewDate)).length ?? 0;
   };
 
   const totalClients = coach_client_list?.length ?? 0;
   const activeClients = getActiveUserCount(coach_client_list ?? []);
-  const updatedToday = getUpdatedCount(UserListWithUpdates ?? []);
+  const updatedYesterday = getUpdatedCount(UserListWithUpdates ?? []);
 
 
   const hourOfDay = currentDate.getHours();
@@ -153,7 +157,7 @@ export default function AdminDashboard() {
           {[
             { label: "Total Clients", value: totalClients, color: "text-gray-900 dark:text-white" },
             { label: "Active", value: activeClients, color: "text-green-600" },
-            { label: "Updated Today", value: updatedToday, color: "text-blue-600" },
+            { label: "Updated Yesterday", value: updatedYesterday, color: "text-blue-600" },
           ].map(({ label, value, color }) => (
             <div key={label} className="py-4 flex flex-col items-center">
               <span className={`text-2xl font-extrabold ${color}`}>{value}</span>
@@ -189,10 +193,10 @@ export default function AdminDashboard() {
               <ClipboardCheck className="text-blue-600" size={20} />
             </div>
             <p className="text-2xl font-extrabold text-gray-900 dark:text-white">
-              {updatedToday}
+              {updatedYesterday}
               <span className="text-base font-normal text-gray-400">/{totalClients}</span>
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium">Updated Today</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium">Updated Yesterday</p>
           </button>
         </div>
 

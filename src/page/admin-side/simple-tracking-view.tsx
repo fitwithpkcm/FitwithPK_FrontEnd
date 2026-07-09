@@ -7,9 +7,9 @@ import { setBaseUrl } from "../../services/HttpService"
 import { getUserListWithUpdates_ForCoach, getUserListWithWeeklyUpdates_ForCoach, sendReminderNotification } from "../../services/AdminServices";
 import { IUser } from "../../interface/models/User";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import moment from 'moment';
 import { IDailyStats, IUpdatesForUser } from "../../interface/IDailyUpdates";
 import { getRandomColor, isEmpty } from "../../lib/utils";
+import { getReviewDate, isDailyUpdateComplete } from "../../lib/dailyUpdateStatus";
 import UserDailyDetailView from "./user-details-view";
 import { IWeeklyStatsExtended, IWeeklyUpdatesForUser } from "../../interface/IWeeklyUpdates";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
@@ -78,7 +78,7 @@ export default function SimpleTrackingView() {
   }, []);
 
 
-  const yesterday = moment(currentDate).subtract(1, "days").format("DD-MM-YYYY");
+  const yesterday = getReviewDate(currentDate);
 
   // Fetch user list with their update status for yesterday
   const { data: UserListWithUpdates } = useQuery<IUpdatesForUser[]>({
@@ -141,19 +141,7 @@ export default function SimpleTrackingView() {
    *  1. An IdStats row exists for yesterday's date specifically.
    *  2. Every required field is filled in (not just a partial submission).
    */
-  const isComplete = (user: IUpdatesForUser): boolean => {
-    if (user.IdStats == null) return false;
-    // The update row must belong to yesterday
-    if (user.Day !== yesterday) return false;
-    return (
-      user.Steps != null &&
-      user.Water != null &&
-      user.Diet_Follow != null &&
-      (user.WorkOut_Follow != null || user.WorkOut != null) &&
-      user.Weight != null &&
-      user.Sleep != null
-    );
-  };
+  const isComplete = (user: IUpdatesForUser): boolean => isDailyUpdateComplete(user, yesterday);
 
   // Filter users based on active tab
   const filteredUsers = UserListWithUpdates?.filter(user => {
