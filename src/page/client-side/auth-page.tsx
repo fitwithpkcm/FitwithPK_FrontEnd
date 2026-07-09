@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService";
 import { Dumbbell, Zap, TrendingUp, Eye, EyeOff } from "lucide-react";
+import { InstallAppButton } from "../../components/InstallGuideDialog";
 
 interface UserType {
   IsAdmin: number;
@@ -256,6 +257,8 @@ export default function AuthPage() {
                 >
                   {loginMutation.isPending ? "Signing in…" : "Sign In"}
                 </Button>
+
+                <InstallAppButton />
               </form>
             ) : (
               <form onSubmit={handleRegister} className="space-y-4">
