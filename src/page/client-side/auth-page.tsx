@@ -8,7 +8,6 @@ import { validateToken } from "../..//services/LoginServices";
 import { useQuery } from "@tanstack/react-query";
 import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService";
-import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { Dumbbell, Zap, TrendingUp, Eye, EyeOff } from "lucide-react";
 
 interface UserType {
@@ -351,10 +350,6 @@ export default function AuthPage() {
                 </Button>
               </form>
             )}
-
-            <div className="mt-4 flex justify-center">
-              <PWAInstallPrompt />
-            </div>
           </div>
 
           <p className="text-center text-xs text-gray-400 mt-6">

@@ -38,6 +38,7 @@ import SupplementPage from './page/client-side/supplement-page';
 import NotificationsPage from './page/client-side/notifications-page';
 import AdminNotificationsPage from './page/admin-side/admin-notifications-page';
 import { Toaster } from 'react-hot-toast';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
 class AppErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean; message: string; stack: string }> {
   state = { crashed: false, message: '', stack: '' };
@@ -164,6 +165,7 @@ function App() {
                 <Router />
               </AppErrorBoundary>
               <Toaster toastOptions={{ duration: 3000 }} />
+              <PWAInstallPrompt />
             </TooltipProvider>
           </AuthProvider>
         </BrowserRouter>
