@@ -107,13 +107,16 @@ function WeekStrip({ selected, onSelect }: { selected: string; onSelect: (d: str
 
 // ── Exercise Name Input with Library Dropdown ─────────────────────
 
-function ExerciseNameInput({ value, library, onChange, onSelectFromLibrary }: {
+function ExerciseNameInput({ value, library, autoOpenLibrary, onChange, onSelectFromLibrary }: {
   value: string;
   library: IExerciseLibraryItem[];
+  autoOpenLibrary?: boolean;
   onChange: (v: string) => void;
   onSelectFromLibrary: (item: IExerciseLibraryItem) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  // A freshly-added blank row opens straight into the library list, so picking
+  // from the library is the obvious first action instead of typing from scratch.
+  const [open, setOpen] = useState(!!autoOpenLibrary && library.length > 0);
   const [search, setSearch] = useState(value);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -189,7 +192,7 @@ function ExerciseEditorRow({ ex, index, library, onChange, onRemove }: {
   onChange: (i: number, f: keyof IExercise, v: string|number) => void;
   onRemove: (i: number) => void;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   const handleSelectFromLibrary = (item: IExerciseLibraryItem) => {
     // Patch all fields at once via individual onChange calls
@@ -204,12 +207,13 @@ function ExerciseEditorRow({ ex, index, library, onChange, onRemove }: {
   };
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden">
+    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
       <div className="flex items-center gap-2 px-3 py-2.5">
         <span className="text-xs font-bold text-gray-400 w-5">{index + 1}</span>
         <ExerciseNameInput
           value={ex.ExerciseName}
           library={library}
+          autoOpenLibrary={!ex.ExerciseName.trim()}
           onChange={v => onChange(index, "ExerciseName", v)}
           onSelectFromLibrary={handleSelectFromLibrary}
         />
@@ -963,6 +967,12 @@ function TemplateEditorDrawer({ open, initial, saving, library, onClose, onSave 
                 <Plus className="h-3 w-3" /> Add
               </button>
             </div>
+            {library.length > 0 && (
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-1">
+                <BookOpen className="h-3 w-3" />
+                Pick from your exercise library, or type a custom name.
+              </p>
+            )}
             <div className="space-y-2">
               {tpl.Exercises.length === 0 ? (
                 <button onClick={addEx}
