@@ -58,6 +58,7 @@ export const RENDER_URL = {
 export const API_URL = {
     REGISTRATION: "/user/register",
     LOGIN: "/user/login",
+    RESET_PASSWORD_BY_EMAIL: "/user/resetpasswordbyemail",
     VALIDATE_TOKEN_USERTYPE: "/user/validatetoken",
     GET_COACH_DETAILS: '/user/getCoachDetails',
     ONBOARD_PROFILE_ATTRIBUTE_UPDATE: "/user/userOnBoardUpdatesProfile",

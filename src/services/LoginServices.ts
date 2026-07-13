@@ -46,6 +46,16 @@ export const registerUser = (params: unknown) => {
     });
 };
 
+export const resetPasswordByEmail = (params: { EmailID: string; NewPassword: string }) => {
+    return httpCall({
+        url: API_URL.RESET_PASSWORD_BY_EMAIL,
+        method: "post",
+        data: params
+    }).then((response: ApiResponse<unknown>) => {
+        return response;
+    });
+};
+
 export const onBoardProfileAttributeUpdates = (params: unknown) => {
     return httpCall({
         url: API_URL.ONBOARD_PROFILE_ATTRIBUTE_UPDATE,

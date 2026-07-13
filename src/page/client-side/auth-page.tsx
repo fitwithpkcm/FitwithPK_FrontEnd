@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { Button } from "../../components/ui/button";
 import { useAuth } from "../../hooks/use-auth";
 import { RENDER_URL } from "../../common/Urls";
-import { validateToken } from "../..//services/LoginServices";
+import { validateToken, resetPasswordByEmail } from "../..//services/LoginServices";
 import { useQuery } from "@tanstack/react-query";
 import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService";
@@ -81,6 +81,12 @@ export default function AuthPage() {
   const [profile, setProfile] = useState<OnboardProfile>(emptyProfile);
   const [error, setError] = useState("");
 
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotNewPassword, setForgotNewPassword] = useState("");
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState("");
+
   const setField = <K extends keyof OnboardProfile>(key: K, value: OnboardProfile[K]) =>
     setProfile((p) => ({ ...p, [key]: value }));
 
@@ -128,6 +134,30 @@ export default function AuthPage() {
         },
       }
     );
+  };
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotMessage("");
+    setForgotSubmitting(true);
+    try {
+      const res = await resetPasswordByEmail({ EmailID: forgotEmail, NewPassword: forgotNewPassword });
+      if (res.data.success) {
+        setForgotMessage("Password updated! You can now log in with your new password.");
+        setForgotEmail("");
+        setForgotNewPassword("");
+      } else {
+        setForgotMessage(res.data.message || "Could not update password.");
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setForgotMessage(err.response?.data?.message || "Something went wrong.");
+      } else {
+        setForgotMessage("Something went wrong.");
+      }
+    } finally {
+      setForgotSubmitting(false);
+    }
   };
 
   const resetSignup = () => {
@@ -286,6 +316,68 @@ export default function AuthPage() {
             )}
 
             {activeTab === "login" ? (
+              showForgotPassword ? (
+                <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+                  <p className="text-sm text-gray-500">
+                    Enter your account email and choose a new password.
+                  </p>
+
+                  {forgotMessage && (
+                    <div
+                      className={`px-4 py-3 rounded-xl text-sm font-medium ${
+                        forgotMessage.startsWith("Password updated")
+                          ? "bg-green-50 text-green-700 border border-green-200"
+                          : "bg-red-50 text-red-700 border border-red-200"
+                      }`}
+                    >
+                      {forgotMessage}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className={labelClass}>Email</label>
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className={inputClass}
+                      placeholder="you@example.com"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>New Password</label>
+                    <input
+                      type="password"
+                      value={forgotNewPassword}
+                      onChange={(e) => setForgotNewPassword(e.target.value)}
+                      className={inputClass}
+                      placeholder="At least 6 characters"
+                      minLength={6}
+                      required
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-12 rounded-xl px-4"
+                      onClick={() => { setShowForgotPassword(false); setForgotMessage(""); }}
+                    >
+                      Back to Login
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 h-12 rounded-xl text-sm font-semibold"
+                      disabled={forgotSubmitting}
+                    >
+                      {forgotSubmitting ? "Updating…" : "Update Password"}
+                    </Button>
+                  </div>
+                </form>
+              ) : (
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label htmlFor="login-email" className={labelClass}>Email</label>
@@ -301,7 +393,16 @@ export default function AuthPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="login-password" className={labelClass}>Password</label>
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="login-password" className={labelClass}>Password</label>
+                    <button
+                      type="button"
+                      onClick={() => { setShowForgotPassword(true); setError(""); }}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-700 mb-1.5"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <div className="relative">
                     <input
                       id="login-password"
@@ -332,6 +433,7 @@ export default function AuthPage() {
 
                 <InstallAppButton />
               </form>
+              )
             ) : (
               <form onSubmit={signupStep === SIGNUP_STEPS.length - 1 ? handleRegisterSubmit : nextStep} className="space-y-4">
                 {/* Step indicator */}
