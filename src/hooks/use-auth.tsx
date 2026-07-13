@@ -44,8 +44,9 @@ type RegisterData = {
   Mobile: string;
   IsUser: number;
   LoginType: string;
-  Height: string;
-  Weight: string;
+  Height?: string;
+  Weight?: string;
+  OnBoardUserAttributes?: Record<string, unknown>;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
