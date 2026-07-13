@@ -519,6 +519,21 @@ export default function IntakeFormPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Not sure how to measure? Watch this quick demo:
+                        </p>
+                        <div className="aspect-video w-full rounded-lg overflow-hidden border">
+                          <iframe
+                            className="w-full h-full"
+                            src="https://www.youtube.com/embed/3OrwgRdGnTs"
+                            title="How to take your body measurements"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        </div>
+                      </div>
+
                       <FormField
                         control={form.control}
                         name="height"
