@@ -1316,13 +1316,16 @@ export default function HomePage() {
               ))}
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {[{ label: "+ 250ml", val: 0.25 }, { label: "+ 500ml", val: 0.5 }].map(({ label, val }) => (
-                <button key={label}
-                  onClick={() => setWaterAmount(((parseFloat("" + waterAmount) || 0) + val).toFixed(2))}
-                  className="py-2 rounded-xl text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 active:scale-95 transition-all">
-                  {label}
-                </button>
-              ))}
+              <button
+                onClick={() => setWaterAmount(Math.max(0, (parseFloat("" + waterAmount) || 0) - 0.25).toFixed(2))}
+                className="py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 active:scale-95 transition-all">
+                − 250ml
+              </button>
+              <button
+                onClick={() => setWaterAmount(((parseFloat("" + waterAmount) || 0) + 0.25).toFixed(2))}
+                className="py-2 rounded-xl text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 active:scale-95 transition-all">
+                + 250ml
+              </button>
             </div>
             <div className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-2 border border-gray-200">
               <span className="text-gray-400 text-sm">Custom (L)</span>
@@ -1530,13 +1533,16 @@ export default function HomePage() {
                     ))}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    {[{ label: "+ 1,000", val: 1000 }, { label: "+ 2,500", val: 2500 }].map(({ label, val }) => (
-                      <button key={label}
-                        onClick={() => setStepsAmount(((parseInt("" + stepsAmount) || 0) + val).toString())}
-                        className="py-2 rounded-xl text-sm font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-95 transition-all">
-                        {label}
-                      </button>
-                    ))}
+                    <button
+                      onClick={() => setStepsAmount(Math.max(0, (parseInt("" + stepsAmount) || 0) - 1000).toString())}
+                      className="py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 active:scale-95 transition-all">
+                      − 1,000
+                    </button>
+                    <button
+                      onClick={() => setStepsAmount(((parseInt("" + stepsAmount) || 0) + 1000).toString())}
+                      className="py-2 rounded-xl text-sm font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-95 transition-all">
+                      + 1,000
+                    </button>
                   </div>
                   <div className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-2 border border-gray-200">
                     <span className="text-gray-400 text-sm">Custom</span>
