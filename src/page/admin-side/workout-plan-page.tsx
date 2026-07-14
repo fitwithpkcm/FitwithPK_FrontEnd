@@ -1540,7 +1540,7 @@ export default function AdminWorkoutPlanPage() {
   const createMut     = useMutation({ mutationFn: createWorkout,     onSuccess: () => { toast.success("Workout created!"); invalidate(); setEditorOpen(false); }, onError: () => toast.error("Failed to create") });
   const updateMut     = useMutation({ mutationFn: updateWorkout,     onSuccess: () => { toast.success("Updated!");          invalidate(); setEditorOpen(false); }, onError: () => toast.error("Failed to update") });
   const deleteMut     = useMutation({ mutationFn: deleteWorkout,     onSuccess: () => { toast.success("Deleted");           invalidate(); },                      onError: () => toast.error("Failed to delete") });
-  const rescheduleMut = useMutation({ mutationFn: rescheduleWorkout, onSuccess: () => { toast.success("Rescheduled!");      invalidate(); setRescheduleOpen(false); }, onError: () => toast.error("Failed to reschedule") });
+  const rescheduleMut = useMutation({ mutationFn: rescheduleWorkout, onSuccess: () => { toast.success("Rescheduled!");      invalidate(); setRescheduleOpen(false); }, onError: (error: Error) => toast.error(error.message || "Failed to reschedule") });
 
   const handleSave    = (w: IWorkout) => w.IdWorkout ? updateMut.mutate(w) : createMut.mutate(w);
   const handleDelete  = (w: IWorkout) => { if (!confirm(`Delete "${w.WorkoutName}"?`)) return; deleteMut.mutate({ IdWorkout: w.IdWorkout! }); };
