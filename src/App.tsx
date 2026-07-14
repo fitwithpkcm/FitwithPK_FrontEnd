@@ -39,6 +39,7 @@ import NotificationsPage from './page/client-side/notifications-page';
 import AdminNotificationsPage from './page/admin-side/admin-notifications-page';
 import { Toaster } from 'react-hot-toast';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import PullToRefresh from './components/PullToRefresh';
 
 class AppErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean; message: string; stack: string }> {
   state = { crashed: false, message: '', stack: '' };
@@ -162,7 +163,9 @@ function App() {
           <AuthProvider>
             <TooltipProvider>
               <AppErrorBoundary>
-                <Router />
+                <PullToRefresh>
+                  <Router />
+                </PullToRefresh>
               </AppErrorBoundary>
               <Toaster toastOptions={{ duration: 3000 }} />
               <PWAInstallPrompt />
