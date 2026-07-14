@@ -50,6 +50,12 @@ export const upsertMuscleTarget = (params: IMuscleTarget) =>
 export const getMyWorkouts = (params: { ScheduledDate: string }) =>
   httpCall({ method: "post", url: API_URL.GET_MY_WORKOUTS, data: params });
 
+export const rescheduleMyWorkout = (params: { IdWorkout: number; NewDate: string }) =>
+  httpCall({ method: "post", url: API_URL.RESCHEDULE_MY_WORKOUT, data: params }).then((response) => {
+    if (!response.data?.success) throw new Error(response.data?.message || "Failed to reschedule workout");
+    return response;
+  });
+
 export const logExercise = (params: IExerciseLog) =>
   httpCall({ method: "post", url: API_URL.LOG_EXERCISE, data: params });
 

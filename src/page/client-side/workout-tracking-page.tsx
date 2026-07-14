@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Check, Dumbbell, Video,
   Plus, Loader2, AlertCircle, ChevronDown, ChevronUp,
   BarChart2, Zap, ArrowLeft, MessageSquare, X, Trash2,
-  Pencil, Play,
+  Pencil, Play, ArrowRightLeft,
 } from "lucide-react";
 import moment from "moment";
 import toast from "react-hot-toast";
@@ -24,7 +24,7 @@ import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService";
 import {
   getMyWorkouts, getMyWorkoutLogs, getMyWorkoutHistory,
-  logSet, deleteSetLog, getSetLogsForDate,
+  logSet, deleteSetLog, getSetLogsForDate, rescheduleMyWorkout,
 } from "../../services/WorkoutService";
 import WorkoutProgressCharts from "../../components/workout/WorkoutProgressCharts";
 import {
@@ -96,6 +96,10 @@ function VideoSheet({ url, title, onClose }: { url: string; title: string; onClo
 
 function ddmmyyyy(m: moment.Moment) { return m.format("DD-MM-YYYY"); }
 const isToday = (d: string) => d === ddmmyyyy(moment());
+function dateInputToFmt(v: string) {
+  if (!v) return "";
+  const [y, m, d] = v.split("-"); return `${d}-${m}-${y}`;
+}
 
 function buildWeek(center: string): string[] {
   const mon = moment(center, "DD-MM-YYYY").startOf("isoWeek");
@@ -816,15 +820,65 @@ function ExerciseDetailView({ exercise, setLogs, historySetLogs, workout, select
   );
 }
 
+// ── Move Workout Drawer ─────────────────────────────────────────────
+
+function MoveWorkoutDrawer({ open, workout, saving, onClose, onConfirm }: {
+  open: boolean; workout: IWorkout|null; saving: boolean;
+  onClose: () => void; onConfirm: (id: number, d: string) => void;
+}) {
+  const [newDate, setNewDate] = useState("");
+  useEffect(() => { if (open) setNewDate(""); }, [open]);
+
+  return (
+    <Drawer open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DrawerContent>
+        <div className="p-4 space-y-4 max-w-md mx-auto w-full">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <ArrowRightLeft className="h-4 w-4 text-amber-500" /> Move Workout
+          </h3>
+          {workout && (
+            <>
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5">
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{workout.WorkoutName}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Currently: {moment(workout.ScheduledDate, "DD-MM-YYYY").format("ddd, D MMM YYYY")}
+                </p>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">New Date *</label>
+                <Input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" className="flex-1" onClick={onClose} disabled={saving}>Cancel</Button>
+                <Button
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-white border-0"
+                  disabled={saving || !newDate}
+                  onClick={() => {
+                    if (!newDate) { toast.error("Select a date"); return; }
+                    onConfirm(workout.IdWorkout!, dateInputToFmt(newDate));
+                  }}
+                >
+                  {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Moving…</> : "Confirm"}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
 // ── Workout Card ──────────────────────────────────────────────────
 
-function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet, onAddExtraSet }: {
+function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet, onAddExtraSet, onMove }: {
   workout: IWorkout;
   setLogs: ISetLog[];
   onExerciseClick: (ex: IExercise) => void;
   onLogSet: (ex: IExercise, setNumber: number, existing: ISetLog|null) => void;
   onDeleteSet: (setLog: ISetLog) => void;
   onAddExtraSet: (ex: IExercise, nextSetNum: number, prev: ISetLog) => void;
+  onMove: (workout: IWorkout) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -858,6 +912,13 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
               : completePct > 0 ? "text-orange-600 dark:text-orange-400"
               : "text-gray-300 dark:text-gray-600"
             }`}>{completePct}%</span>
+            <button
+              onClick={() => onMove(workout)}
+              title="Move to another date"
+              className="p-1 text-gray-300 dark:text-gray-600 hover:text-amber-500"
+            >
+              <ArrowRightLeft className="h-4 w-4" />
+            </button>
             <button onClick={() => setExpanded(e => !e)} className="p-1 text-gray-300 dark:text-gray-600 hover:text-gray-500">
               {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
@@ -956,6 +1017,7 @@ export default function WorkoutTrackingPage() {
   const [detailWk, setDetailWk] = useState<IWorkout|null>(null);
   const [logSheet, setLogSheet] = useState<{ex: IExercise; setNumber: number; existing: ISetLog|null; prefill: ISetLog|null}|null>(null);
   const [tab, setTab] = useState<"today"|"history"|"progress">("today");
+  const [movingWorkout, setMovingWorkout] = useState<IWorkout|null>(null);
 
   // ── Queries ──────────────────────────────────────────────────────
 
@@ -1002,6 +1064,16 @@ export default function WorkoutTrackingPage() {
     mutationFn: deleteSetLog,
     onSuccess: () => { invalidateSetLogs(); toast.success("Set removed"); },
     onError: () => toast.error("Failed to remove"),
+  });
+
+  const rescheduleMut = useMutation({
+    mutationFn: rescheduleMyWorkout,
+    onSuccess: () => {
+      toast.success("Workout moved!");
+      queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
+      setMovingWorkout(null);
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to move workout"),
   });
 
   const handleLogSet = (ex: IExercise, setNumber: number, existing: ISetLog|null) => {
@@ -1198,6 +1270,7 @@ export default function WorkoutTrackingPage() {
                 onLogSet={handleLogSet}
                 onDeleteSet={handleDeleteSet}
                 onAddExtraSet={handleAddExtraSet}
+                onMove={() => setMovingWorkout(w)}
               />
             ))}
           </>
@@ -1234,6 +1307,14 @@ export default function WorkoutTrackingPage() {
           onDelete={logSheet.existing ? () => handleDeleteSet(logSheet.existing!) : undefined}
         />
       )}
+
+      <MoveWorkoutDrawer
+        open={!!movingWorkout}
+        workout={movingWorkout}
+        saving={rescheduleMut.isPending}
+        onClose={() => setMovingWorkout(null)}
+        onConfirm={(IdWorkout, NewDate) => rescheduleMut.mutate({ IdWorkout, NewDate })}
+      />
     </div>
   );
 }

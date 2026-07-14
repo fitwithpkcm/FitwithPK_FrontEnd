@@ -172,6 +172,7 @@ export const API_URL = {
     BATCH_LOG_EXERCISES: '/workout/batchLog',
     GET_MY_WORKOUT_LOGS: '/workout/getMyLogs',
     GET_MY_WORKOUT_HISTORY: '/workout/getHistory',
+    RESCHEDULE_MY_WORKOUT: '/workout/rescheduleMyWorkout',
 
     // ── Per-set logging ───────────────────────────────────────────
     LOG_SET:                    '/workout/logSet',
