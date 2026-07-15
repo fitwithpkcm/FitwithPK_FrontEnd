@@ -11,7 +11,18 @@ export interface IUsdaSearchResult {
   fdcId: number;
   description: string;
   dataType: string;
+  brandOwner?: string;
+  brandName?: string;
   foodNutrients: IUsdaNutrient[];
+}
+
+/** Short, human-readable label distinguishing near-duplicate results, e.g. "Foundation" or "Tyson (Branded)" */
+export function describeSource(food: IUsdaSearchResult): string {
+  if (food.dataType === "Branded") {
+    const brand = food.brandOwner || food.brandName;
+    return brand ? `${brand} (Branded)` : "Branded";
+  }
+  return food.dataType;
 }
 
 export interface IUsdaMacros {

@@ -10,7 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { nutriInsert } from "../../services/AdminServices";
 import { IFoodAlternative } from "../../interface/IFoodAlternative";
 import FoodList from "./foodlist-component";
-import { searchUsdaFoods, extractMacrosPer100g, IUsdaSearchResult } from "../../services/UsdaFoodService";
+import { searchUsdaFoods, extractMacrosPer100g, describeSource, IUsdaSearchResult } from "../../services/UsdaFoodService";
 // Interface for food items
 interface FoodItem {
     id: number;
@@ -293,7 +293,10 @@ export default function NutriSwapScreen() {
                                                 className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0 flex items-center justify-between gap-2"
                                                 onClick={() => handleUsdaSelect(food)}
                                             >
-                                                <span className="text-sm text-gray-800 truncate">{food.description}</span>
+                                                <span className="min-w-0">
+                                                    <span className="block text-sm text-gray-800 truncate">{food.description}</span>
+                                                    <span className="block text-[11px] text-gray-400 truncate">{describeSource(food)}</span>
+                                                </span>
                                                 <span className="text-[11px] text-gray-400 flex-shrink-0">{macros.calories} kcal /100g</span>
                                             </button>
                                         );
