@@ -367,10 +367,13 @@ function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDel
   return (
     <div className={`border-b border-gray-50 dark:border-gray-700/50 last:border-0 ${allDone ? "bg-green-50/40 dark:bg-green-950/10" : ""}`}>
       {/* exercise header row */}
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+        onClick={() => setExpanded(e => !e)}
+      >
         {/* thumbnail or fallback icon */}
         {exercise.VideoUrl ? (
-          <button onClick={() => setVideoOpen(true)}
+          <button onClick={e => { e.stopPropagation(); setVideoOpen(true); }}
             className="relative w-12 h-9 rounded-lg overflow-hidden flex-shrink-0 shadow-sm">
             {getYoutubeThumbnail(exercise.VideoUrl)
               ? <img src={getYoutubeThumbnail(exercise.VideoUrl)!} alt={exercise.ExerciseName}
@@ -417,9 +420,9 @@ function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDel
           </p>
         </div>
 
-        <button onClick={() => setExpanded(e => !e)} className="p-1 text-gray-300 dark:text-gray-600 hover:text-gray-500 flex-shrink-0">
+        <span className="p-1 text-gray-300 dark:text-gray-600 flex-shrink-0">
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
+        </span>
       </div>
 
       {/* inline set rows */}
@@ -918,9 +921,10 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
             <button
               onClick={e => { e.stopPropagation(); onMove(workout); }}
               title="Move to another date"
-              className="p-1 text-gray-300 dark:text-gray-600 hover:text-amber-500"
+              className="flex items-center gap-1 px-1.5 py-1 rounded-lg text-gray-400 dark:text-gray-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20"
             >
-              <ArrowRightLeft className="h-4 w-4" />
+              <ArrowRightLeft className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-semibold">Move</span>
             </button>
             <span className="p-1 text-gray-300 dark:text-gray-600">
               {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
