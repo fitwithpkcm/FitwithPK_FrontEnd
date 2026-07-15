@@ -42,6 +42,7 @@ import { getFoodBasedOnCatergoryApi, getSwappedNutriProducts } from "../../servi
 type FoodAlternative = {
   name: string;
   quantity: string;
+  grams?: number; // equivalent amount of THIS food needed to match the base food's nutrition (alternatives only)
   calories: number;
   protein: number;
   carbs: number;
@@ -55,6 +56,43 @@ type FoodAlternative = {
   category?: string,
 };
 
+
+// ── NutrientTile — one nutrient cell in the alternative comparison grid ──
+
+function NutrientTile({ label, value, unit, baseValue, lowerIsBetter }: {
+  label: string;
+  value: number;
+  unit: string;
+  baseValue: number;
+  lowerIsBetter?: boolean;
+}) {
+  const diff = value - baseValue;
+  const pct = Math.round((Math.abs(diff) / Math.max(1, Math.abs(baseValue))) * 100);
+  const isBetter = lowerIsBetter ? diff < 0 : diff > 0;
+
+  return (
+    <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
+      <div className="flex justify-between items-center">
+        <span className="text-[10px] text-gray-500 dark:text-gray-400">{label}</span>
+        {diff === 0 ? (
+          <Badge variant="outline" className="text-blue-500 border-blue-200 bg-blue-50 dark:bg-blue-900/20 text-[10px] h-4">Same</Badge>
+        ) : (
+          <Badge
+            variant="outline"
+            className={`text-[10px] h-4 ${
+              isBetter
+                ? "text-green-500 border-green-200 bg-green-50 dark:bg-green-900/20"
+                : "text-amber-500 border-amber-200 bg-amber-50 dark:bg-amber-900/20"
+            }`}
+          >
+            {diff > 0 ? "+" : "-"}{pct}%
+          </Badge>
+        )}
+      </div>
+      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{value}{unit}</p>
+    </div>
+  );
+}
 
 export default function NutritionPage() {
   const { toast } = useToast();
@@ -366,127 +404,69 @@ export default function NutritionPage() {
                       key={idx}
                       className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 overflow-hidden"
                     >
-                      <div className="flex flex-col md:flex-row">
-                        {/* Image section */}
-                        {alt.imageUrl && (
-                          <div className="w-full md:w-1/3 h-48 md:h-auto">
+                      <div className="p-4 sm:p-5">
+                        {/* header: thumbnail + name + eat-amount callout + details button */}
+                        <div className="flex items-start gap-3">
+                          {alt.imageUrl ? (
                             <img
                               src={`${BASE_URL}/uploads/nutriimg/${alt.imageUrl}`}
                               alt={alt.name}
-                              className="w-full h-full object-cover"
+                              className="w-14 h-14 rounded-xl object-cover flex-shrink-0 border border-gray-100 dark:border-gray-800"
                             />
+                          ) : (
+                            <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+                              <Salad className="h-6 w-6 text-gray-300 dark:text-gray-600" />
+                            </div>
+                          )}
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 truncate">{alt.name}</h3>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 flex-shrink-0 -mt-1"
+                                onClick={() => {
+                                  setSelectedAlternative(alt);
+                                  setShowBenefitsDialog(true);
+                                }}
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            {typeof alt.grams === "number" ? (
+                              <div className="inline-flex items-baseline gap-1.5 mt-1.5 px-2.5 py-1 rounded-lg bg-primary-50 dark:bg-primary-900/20">
+                                <span className="text-lg font-extrabold text-primary-600 dark:text-primary-400 leading-none">{alt.grams}g</span>
+                                <span className="text-[11px] text-primary-700/80 dark:text-primary-300/80">
+                                  to match your {quantity || "100"}g {selectedFoodInfo.baseInfo.name}
+                                </span>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-400 mt-1">Serving size unavailable</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Nutrition comparison */}
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4">
+                          <NutrientTile label="Calories" value={alt.calories} unit="" baseValue={selectedFoodInfo.baseInfo.calories} lowerIsBetter />
+                          <NutrientTile label="Protein" value={alt.protein} unit="g" baseValue={selectedFoodInfo.baseInfo.protein} />
+                          <NutrientTile label="Carbs" value={alt.carbs} unit="g" baseValue={selectedFoodInfo.baseInfo.carbs} lowerIsBetter />
+                          <NutrientTile label="Fat" value={alt.fat} unit="g" baseValue={selectedFoodInfo.baseInfo.fat} lowerIsBetter />
+                          <NutrientTile label="Fiber" value={alt.fiber} unit="g" baseValue={selectedFoodInfo.baseInfo.fiber} />
+                        </div>
+
+                        {/* Benefits */}
+                        {alt.benefits?.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-3">
+                            {alt.benefits.slice(0, 3).map((benefit, i) => (
+                              <Badge key={i} variant="secondary" className="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 text-[10px] font-normal">
+                                {benefit}
+                              </Badge>
+                            ))}
                           </div>
                         )}
-
-                        {/* Content section */}
-                        <div className="p-5 flex-1">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{alt.name}</h3>
-                              <p className="text-gray-500 dark:text-gray-400">{alt.quantity} g serving</p>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-1"
-                              onClick={() => {
-                                console.log(alt);
-                                setSelectedAlternative(alt);
-                                setShowBenefitsDialog(true);
-                              }}
-                            >
-                              <span>View Notes</span>
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          {/* Nutrition comparison */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-                            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
-                              <div className="flex justify-between">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">Calories</span>
-                                {alt.calories < selectedFoodInfo.baseInfo.calories ? (
-                                  <Badge variant="outline" className="text-green-500 border-green-200 bg-green-50 dark:bg-green-900/20 text-[10px] h-4">
-                                    -{Math.round(((selectedFoodInfo.baseInfo.calories - alt.calories) / selectedFoodInfo.baseInfo.calories) * 100)}%
-                                  </Badge>
-                                ) : alt.calories > selectedFoodInfo.baseInfo.calories ? (
-                                  <Badge variant="outline" className="text-amber-500 border-amber-200 bg-amber-50 dark:bg-amber-900/20 text-[10px] h-4">
-                                    +{Math.round(((alt.calories - selectedFoodInfo.baseInfo.calories) / selectedFoodInfo.baseInfo.calories) * 100)}%
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-blue-500 border-blue-200 bg-blue-50 dark:bg-blue-900/20 text-[10px] h-4">Same</Badge>
-                                )}
-                              </div>
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{alt.calories}</p>
-                            </div>
-
-                            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
-                              <div className="flex justify-between">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">Protein</span>
-                                {alt.protein > selectedFoodInfo.baseInfo.protein ? (
-                                  <Badge variant="outline" className="text-green-500 border-green-200 bg-green-50 dark:bg-green-900/20 text-[10px] h-4">
-                                    +{Math.round(((alt.protein - selectedFoodInfo.baseInfo.protein) / selectedFoodInfo.baseInfo.protein) * 100)}%
-                                  </Badge>
-                                ) : alt.protein < selectedFoodInfo.baseInfo.protein ? (
-                                  <Badge variant="outline" className="text-amber-500 border-amber-200 bg-amber-50 dark:bg-amber-900/20 text-[10px] h-4">
-                                    -{Math.round(((selectedFoodInfo.baseInfo.protein - alt.protein) / selectedFoodInfo.baseInfo.protein) * 100)}%
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-blue-500 border-blue-200 bg-blue-50 dark:bg-blue-900/20 text-[10px] h-4">Same</Badge>
-                                )}
-                              </div>
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{alt.protein}g</p>
-                            </div>
-
-                            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
-                              <div className="flex justify-between">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">Carbs</span>
-                                {alt.carbs < selectedFoodInfo.baseInfo.carbs ? (
-                                  <Badge variant="outline" className="text-green-500 border-green-200 bg-green-50 dark:bg-green-900/20 text-[10px] h-4">
-                                    -{Math.round(((selectedFoodInfo.baseInfo.carbs - alt.carbs) / selectedFoodInfo.baseInfo.carbs) * 100)}%
-                                  </Badge>
-                                ) : alt.carbs > selectedFoodInfo.baseInfo.carbs ? (
-                                  <Badge variant="outline" className="text-amber-500 border-amber-200 bg-amber-50 dark:bg-amber-900/20 text-[10px] h-4">
-                                    +{Math.round(((alt.carbs - selectedFoodInfo.baseInfo.carbs) / selectedFoodInfo.baseInfo.carbs) * 100)}%
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-blue-500 border-blue-200 bg-blue-50 dark:bg-blue-900/20 text-[10px] h-4">Same</Badge>
-                                )}
-                              </div>
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{alt.carbs}g</p>
-                            </div>
-
-                            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
-                              <div className="flex justify-between">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">Fiber</span>
-                                {alt.fiber > selectedFoodInfo.baseInfo.fiber ? (
-                                  <Badge variant="outline" className="text-green-500 border-green-200 bg-green-50 dark:bg-green-900/20 text-[10px] h-4">
-                                    +{Math.round(((alt.fiber - selectedFoodInfo.baseInfo.fiber) / Math.max(1, selectedFoodInfo.baseInfo.fiber)) * 100)}%
-                                  </Badge>
-                                ) : alt.fiber < selectedFoodInfo.baseInfo.fiber ? (
-                                  <Badge variant="outline" className="text-amber-500 border-amber-200 bg-amber-50 dark:bg-amber-900/20 text-[10px] h-4">
-                                    -{Math.round(((selectedFoodInfo.baseInfo.fiber - alt.fiber) / Math.max(1, selectedFoodInfo.baseInfo.fiber)) * 100)}%
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-blue-500 border-blue-200 bg-blue-50 dark:bg-blue-900/20 text-[10px] h-4">Same</Badge>
-                                )}
-                              </div>
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{alt.fiber}g</p>
-                            </div>
-                          </div>
-
-                          {/* Benefits list */}
-                          {/*  <div className="mt-4">
-                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Benefits:</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {alt.benefits.map((benefit, i) => (
-                                <Badge key={i} variant="secondary" className="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                                  {benefit}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div> */}
-                        </div>
                       </div>
                     </Card>
                   ))}
@@ -516,6 +496,15 @@ export default function NutritionPage() {
 
           <div className="py-4">
             <div className="space-y-4">
+              {typeof selectedAlternative?.grams === "number" && (
+                <div className="flex items-baseline gap-1.5 px-3 py-2 rounded-lg bg-primary-50 dark:bg-primary-900/20">
+                  <span className="text-xl font-extrabold text-primary-600 dark:text-primary-400 leading-none">{selectedAlternative.grams}g</span>
+                  <span className="text-xs text-primary-700/80 dark:text-primary-300/80">
+                    to match your {quantity || "100"}g {selectedFoodInfo?.baseInfo.name}
+                  </span>
+                </div>
+              )}
+
               <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
                 <ul className="space-y-2">
                   {selectedAlternative?.benefits?.map((benefit, index) => (
