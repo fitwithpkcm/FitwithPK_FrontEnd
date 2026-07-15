@@ -1,4 +1,4 @@
-import { httpCall } from "./HttpService";
+import { httpCall, httpUpload } from "./HttpService";
 import { API_URL } from "../common/Urls";
 import { IMealPlan, IMealLog } from "../interface/IMealPlan";
 
@@ -35,3 +35,14 @@ export const getMyMealLogs = (params: { LogDate: string }) =>
 
 export const getMealLogsForClient = (params: { IdUser: number; LogDate: string }) =>
   httpCall({ method: "post", url: API_URL.GET_MEAL_LOGS_FOR_CLIENT, data: params });
+
+// ── Extra food (client logs unplanned food, admin views it) ───────
+
+export const logExtraFood = (formData: FormData) =>
+  httpUpload({ url: API_URL.LOG_EXTRA_FOOD, data: formData });
+
+export const getMyExtraFoodLogs = (params: { LogDate: string }) =>
+  httpCall({ method: "post", url: API_URL.GET_MY_EXTRA_FOOD_LOGS, data: params });
+
+export const getExtraFoodLogsForClient = (params: { IdUser: number; LogDate: string }) =>
+  httpCall({ method: "post", url: API_URL.GET_EXTRA_FOOD_LOGS_FOR_CLIENT, data: params });

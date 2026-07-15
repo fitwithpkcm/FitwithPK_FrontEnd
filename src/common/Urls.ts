@@ -144,6 +144,11 @@ export const API_URL = {
     // ── Meal Plan (Admin — view client adherence) ─────────────────
     GET_MEAL_LOGS_FOR_CLIENT: '/mealplan/getClientLogs',
 
+    // ── Extra Food Log (client logs unplanned food, admin views it) ─
+    LOG_EXTRA_FOOD: '/mealplan/logExtraFood',
+    GET_MY_EXTRA_FOOD_LOGS: '/mealplan/getMyExtraFoodLogs',
+    GET_EXTRA_FOOD_LOGS_FOR_CLIENT: '/mealplan/getExtraFoodLogsForClient',
+
     // ── Meal Queries (client asks, coach replies) ─────────────────
     ASK_MEAL_QUERY: '/mealquery/ask',
     GET_MY_MEAL_QUERIES: '/mealquery/getMyQ',

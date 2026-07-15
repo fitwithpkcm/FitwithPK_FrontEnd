@@ -33,13 +33,14 @@ import { getFoodBasedOnCatergoryApi } from "../../services/FoodService";
 import {
   getMealPlansForClient, createMealPlan, updateMealPlan,
   deleteMealPlan, copyMealPlan, getMealLogsForClient,
+  getExtraFoodLogsForClient,
 } from "../../services/MealPlanService";
 import {
   IMealQuery, getMealQueriesForClient, replyMealQuery,
 } from "../../services/MealQueryService";
 import {
   IMealPlan, IMealFoodItem, IMealLog, MealType,
-  MEAL_TYPES, MEAL_META, COMMON_UNITS, createBlankPlan,
+  MEAL_TYPES, MEAL_META, COMMON_UNITS, createBlankPlan, IExtraFoodLog,
 } from "../../interface/IMealPlan";
 import { IUser } from "../../interface/models/User";
 import { IFoodCatergory, IFoodAlternative } from "../../interface/IFoodAlternative";
@@ -687,6 +688,52 @@ function MealCard({ mealType, foodItems, logs, viewMode, onBrowse, onAddManual, 
 }
 
 // ─────────────────────────────────────────────────────────────────
+// ExtraFoodAdminCard — read-only view of food the client logged
+// outside their assigned plan, including any photos they attached
+// ─────────────────────────────────────────────────────────────────
+function ExtraFoodAdminCard({ logs }: { logs: IExtraFoodLog[] }) {
+  if (logs.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl overflow-hidden border-2 border-purple-200 bg-white">
+      <div className="w-full flex items-center gap-2 px-4 py-3 bg-purple-50">
+        <span className="text-base">🍟</span>
+        <span className="font-semibold text-sm text-gray-800">Additional Food (logged by client)</span>
+        <Badge className="text-[10px] h-5 bg-purple-100 text-purple-700 border-0">{logs.length}</Badge>
+      </div>
+      <div className="p-3 space-y-2">
+        {logs.map(log => {
+          const images = log.ImageFileNames
+            ? log.ImageFileNames.split(',').map(f => f.trim()).filter(Boolean)
+            : [];
+          return (
+            <div key={log.IdExtraFoodLog} className="p-2.5 rounded-xl bg-purple-50/50 border border-purple-100">
+              <p className="text-sm font-medium text-gray-800">
+                {log.FoodName}
+                {log.Quantity && <span className="text-xs font-normal text-gray-400 ml-1.5">({log.Quantity})</span>}
+              </p>
+              {log.Notes && <p className="text-xs text-gray-500 mt-0.5">{log.Notes}</p>}
+              {images.length > 0 && (
+                <div className="flex gap-1.5 mt-2 overflow-x-auto">
+                  {images.map((file, i) => (
+                    <img
+                      key={i}
+                      src={`${BASE_URL}/uploads/extrafood/${file}`}
+                      alt={`${log.FoodName} photo ${i + 1}`}
+                      className="h-16 w-16 rounded-lg object-cover flex-shrink-0 border border-purple-100"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Plan dirty-check helper — only compares user-editable fields
 // ─────────────────────────────────────────────────────────────────
 function planSnapshot(p: IMealPlan): string {
@@ -815,6 +862,18 @@ export default function AdminMealPlanPage() {
     () => new Map<number, IMealLog>(clientLogs.map(l => [l.IdFoodItem, l])),
     [clientLogs]
   );
+
+  // ── client extra food logs (unplanned food eaten outside the diet) ──
+  const { data: clientExtraFoodLogs = [] } = useQuery<IExtraFoodLog[]>({
+    queryKey: ["client-extra-food-logs-admin", selectedUserId, selectedDate],
+    enabled: !!selectedUserId && !!selectedDate,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const res = await getExtraFoodLogsForClient({ IdUser: selectedUserId!, LogDate: selectedDate }) as { data: { data: IExtraFoodLog[] } };
+      return res.data?.data ?? [];
+    },
+  });
 
   const adherence = React.useMemo(() => {
     if (!plan) return null;
@@ -1269,6 +1328,9 @@ export default function AdminMealPlanPage() {
                 onDeleteFood={so => handleDeleteFood(mt, so)}
               />
             ))}
+
+            {/* ── extra food logged by client outside the plan ── */}
+            <ExtraFoodAdminCard logs={clientExtraFoodLogs} />
 
           </div>
         ) : null}

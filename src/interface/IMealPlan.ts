@@ -121,6 +121,19 @@ export interface IMealLog {
   LoggedAt?: string;
 }
 
+// ── Extra food log (unplanned food eaten outside the assigned diet) ──
+
+export interface IExtraFoodLog {
+  IdExtraFoodLog?: number;
+  IdUser?: number;
+  LogDate: string;        // "DD-MM-YYYY"
+  FoodName: string;
+  Quantity?: string;
+  Notes?: string;
+  ImageFileNames?: string; // comma-joined filenames as returned by the API
+  LoggedAt?: string;
+}
+
 // ── Client-side computed / merged types ──────────────────────────
 
 export interface IMealFoodItemWithLog extends IMealFoodItem {
