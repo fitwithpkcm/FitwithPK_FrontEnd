@@ -963,9 +963,16 @@ export default function HomePage() {
 
       {/* ── Coach Chat ── */}
       {chatOpen && (
-        <div className="fixed inset-0 z-40 flex flex-col bg-white dark:bg-gray-900">
+        <>
+          {/* backdrop */}
+          <div
+            className="fixed inset-0 z-30 bg-black/40"
+            onClick={() => setChatOpen(false)}
+          />
+          {/* floating chat panel — anchored to the bottom, like a Messenger chat head */}
+          <div className="fixed bottom-0 left-0 right-0 z-40 rounded-t-2xl bg-white dark:bg-gray-900 shadow-2xl flex flex-col h-[70vh] max-h-[600px]">
           {/* header */}
-          <div className="flex items-center gap-3 px-4 py-3 bg-blue-600 flex-shrink-0">
+          <div className="flex items-center gap-3 px-4 py-3 bg-blue-600 flex-shrink-0 rounded-t-2xl">
             <button onClick={() => setChatOpen(false)} className="p-1.5 text-white/80 hover:text-white">
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -1050,7 +1057,8 @@ export default function HomePage() {
               {askCoachMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </button>
           </div>
-        </div>
+          </div>
+        </>
       )}
 
       {/* ── Supplement Drawer ── */}

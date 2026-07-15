@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ChevronLeft, ChevronRight, Check, MessageSquare, X,
   Loader2, UtensilsCrossed, TrendingUp, Save, HelpCircle, Send, ChevronDown, ChevronUp, RefreshCw, MessageCircle, CalendarDays,
-  Plus, Image as ImageIcon,
+  Plus, Image as ImageIcon, Pencil, Trash2,
 } from "lucide-react";
 import moment from "moment";
 import toast from "react-hot-toast";
@@ -30,7 +30,7 @@ import { setBaseUrl } from "../../services/HttpService";
 import {
   getMyMealPlans, getMyMealLogs,
   logFoodConsumption, batchLogFoodConsumption,
-  logExtraFood, getMyExtraFoodLogs,
+  logExtraFood, getMyExtraFoodLogs, updateExtraFoodLog, deleteExtraFoodLog,
 } from "../../services/MealPlanService";
 import {
   IMealQuery, askMealQuery, getMyMealQueries, notifyCoachQuery,
@@ -234,9 +234,11 @@ interface ExtraFoodSectionProps {
   logs: IExtraFoodLog[];
   readOnly?: boolean;
   onAddClick: () => void;
+  onEditClick: (log: IExtraFoodLog) => void;
+  onDeleteClick: (log: IExtraFoodLog) => void;
 }
 
-function ExtraFoodSection({ logs, readOnly, onAddClick }: ExtraFoodSectionProps) {
+function ExtraFoodSection({ logs, readOnly, onAddClick, onEditClick, onDeleteClick }: ExtraFoodSectionProps) {
   return (
     <div className="rounded-xl overflow-hidden border-2 border-purple-300 dark:border-purple-700">
       <div className="w-full flex items-center justify-between px-4 py-3 bg-purple-50 dark:bg-purple-950/30">
@@ -273,13 +275,31 @@ function ExtraFoodSection({ logs, readOnly, onAddClick }: ExtraFoodSectionProps)
                 key={log.IdExtraFoodLog}
                 className="p-2.5 rounded-xl bg-purple-50/50 dark:bg-purple-950/10 border border-purple-100 dark:border-purple-900"
               >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 min-w-0">
                     {log.FoodName}
                     {log.Quantity && (
                       <span className="text-xs font-normal text-gray-400 ml-1.5">({log.Quantity})</span>
                     )}
                   </p>
+                  {!readOnly && (
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                      <button
+                        onClick={() => onEditClick(log)}
+                        className="p-1 text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                        title="Edit"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => onDeleteClick(log)}
+                        className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 {log.Notes && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{log.Notes}</p>
@@ -322,12 +342,18 @@ export default function MealTrackingPage() {
 
   // extra food dialog
   const [extraFoodOpen, setExtraFoodOpen] = useState(false);
+  const [editingExtraFoodId, setEditingExtraFoodId] = useState<number | null>(null);
   const [extraFoodName, setExtraFoodName] = useState("");
   const [extraFoodQty, setExtraFoodQty] = useState("");
   const [extraFoodNotes, setExtraFoodNotes] = useState("");
   const [extraFoodFiles, setExtraFoodFiles] = useState<File[]>([]);
   const [extraFoodPreviews, setExtraFoodPreviews] = useState<string[]>([]);
+  const [existingExtraFoodImages, setExistingExtraFoodImages] = useState<string[]>([]);
+  const [originalExtraFoodImages, setOriginalExtraFoodImages] = useState<string[]>([]);
   const extraFoodFileInputRef = useRef<HTMLInputElement>(null);
+
+  // extra food delete confirm
+  const [deleteExtraFoodTarget, setDeleteExtraFoodTarget] = useState<IExtraFoodLog | null>(null);
 
   // Q&A
   const [questionText, setQuestionText] = useState("");
@@ -423,19 +449,46 @@ export default function MealTrackingPage() {
     onError: (e: Error) => toast.error(`Save failed: ${e.message}`),
   });
 
+  const resetExtraFoodForm = () => {
+    setExtraFoodOpen(false);
+    setEditingExtraFoodId(null);
+    setExtraFoodName("");
+    setExtraFoodQty("");
+    setExtraFoodNotes("");
+    setExtraFoodFiles([]);
+    setExtraFoodPreviews([]);
+    setExistingExtraFoodImages([]);
+    setOriginalExtraFoodImages([]);
+  };
+
   const extraFoodMutation = useMutation({
     mutationFn: (formData: FormData) => logExtraFood(formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-extra-food-logs", selectedDate] });
       toast.success("Additional food logged");
-      setExtraFoodOpen(false);
-      setExtraFoodName("");
-      setExtraFoodQty("");
-      setExtraFoodNotes("");
-      setExtraFoodFiles([]);
-      setExtraFoodPreviews([]);
+      resetExtraFoodForm();
     },
     onError: (e: Error) => toast.error(`Save failed: ${e.message}`),
+  });
+
+  const updateExtraFoodMutation = useMutation({
+    mutationFn: (formData: FormData) => updateExtraFoodLog(formData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-extra-food-logs", selectedDate] });
+      toast.success("Additional food updated");
+      resetExtraFoodForm();
+    },
+    onError: (e: Error) => toast.error(`Save failed: ${e.message}`),
+  });
+
+  const deleteExtraFoodMutation = useMutation({
+    mutationFn: (IdExtraFoodLog: number) => deleteExtraFoodLog({ IdExtraFoodLog }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-extra-food-logs", selectedDate] });
+      toast.success("Additional food deleted");
+      setDeleteExtraFoodTarget(null);
+    },
+    onError: (e: Error) => toast.error(`Delete failed: ${e.message}`),
   });
 
   // ── handlers ──────────────────────────────────────────────────
@@ -532,6 +585,30 @@ export default function MealTrackingPage() {
     setExtraFoodPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleExtraFoodRemoveExistingImage = (file: string) => {
+    setExistingExtraFoodImages(prev => prev.filter(f => f !== file));
+  };
+
+  const handleExtraFoodAddOpen = () => {
+    resetExtraFoodForm();
+    setExtraFoodOpen(true);
+  };
+
+  const handleExtraFoodEditOpen = (log: IExtraFoodLog) => {
+    const images = log.ImageFileNames
+      ? log.ImageFileNames.split(',').map(f => f.trim()).filter(Boolean)
+      : [];
+    setEditingExtraFoodId(log.IdExtraFoodLog ?? null);
+    setExtraFoodName(log.FoodName);
+    setExtraFoodQty(log.Quantity ?? "");
+    setExtraFoodNotes(log.Notes ?? "");
+    setExtraFoodFiles([]);
+    setExtraFoodPreviews([]);
+    setExistingExtraFoodImages(images);
+    setOriginalExtraFoodImages(images);
+    setExtraFoodOpen(true);
+  };
+
   const handleExtraFoodSave = () => {
     if (!extraFoodName.trim()) {
       toast.error("Please enter a food name");
@@ -543,7 +620,15 @@ export default function MealTrackingPage() {
     formData.append("FoodName", extraFoodName.trim());
     if (extraFoodQty.trim()) formData.append("Quantity", extraFoodQty.trim());
     if (extraFoodNotes.trim()) formData.append("Notes", extraFoodNotes.trim());
-    extraFoodMutation.mutate(formData);
+
+    if (editingExtraFoodId != null) {
+      const removedImages = originalExtraFoodImages.filter(f => !existingExtraFoodImages.includes(f));
+      formData.append("IdExtraFoodLog", String(editingExtraFoodId));
+      formData.append("RemoveImages", removedImages.join(','));
+      updateExtraFoodMutation.mutate(formData);
+    } else {
+      extraFoodMutation.mutate(formData);
+    }
   };
 
   // date navigation
@@ -713,7 +798,9 @@ export default function MealTrackingPage() {
           <ExtraFoodSection
             logs={extraFoodLogs}
             readOnly={isFuture}
-            onAddClick={() => setExtraFoodOpen(true)}
+            onAddClick={handleExtraFoodAddOpen}
+            onEditClick={handleExtraFoodEditOpen}
+            onDeleteClick={setDeleteExtraFoodTarget}
           />
         )}
 
@@ -875,10 +962,10 @@ export default function MealTrackingPage() {
         multiple
         onChange={handleExtraFoodFileChange}
       />
-      <Dialog open={extraFoodOpen} onOpenChange={setExtraFoodOpen}>
+      <Dialog open={extraFoodOpen} onOpenChange={open => { if (!open) resetExtraFoodForm(); else setExtraFoodOpen(true); }}>
         <DialogContent className="sm:max-w-[420px] max-h-[90vh] overflow-auto">
           <DialogHeader>
-            <DialogTitle>Log Additional Food</DialogTitle>
+            <DialogTitle>{editingExtraFoodId != null ? "Edit Additional Food" : "Log Additional Food"}</DialogTitle>
             <DialogDescription>
               Ate something outside your plan? Log it here — your coach will see it too.
             </DialogDescription>
@@ -913,12 +1000,29 @@ export default function MealTrackingPage() {
 
             <div>
               <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">Photos (optional)</label>
-              {extraFoodPreviews.length > 0 ? (
+              {(existingExtraFoodImages.length > 0 || extraFoodPreviews.length > 0) ? (
                 <div className="space-y-2">
-                  <div className={`${extraFoodPreviews.length > 6 ? 'max-h-[40vh] overflow-y-auto pr-2' : ''}`}>
+                  <div className={`${existingExtraFoodImages.length + extraFoodPreviews.length > 6 ? 'max-h-[40vh] overflow-y-auto pr-2' : ''}`}>
                     <div className="grid grid-cols-3 gap-2">
+                      {existingExtraFoodImages.map((file, index) => (
+                        <div key={`existing-${index}`} className="relative aspect-square w-full rounded-md overflow-hidden">
+                          <img
+                            src={`${BASE_URL}/uploads/extrafood/${file}`}
+                            alt={`Existing photo ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 h-5 w-5 rounded-full"
+                            onClick={() => handleExtraFoodRemoveExistingImage(file)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
                       {extraFoodPreviews.map((image, index) => (
-                        <div key={index} className="relative aspect-square w-full rounded-md overflow-hidden">
+                        <div key={`new-${index}`} className="relative aspect-square w-full rounded-md overflow-hidden">
                           <img
                             src={image}
                             alt={`Additional food preview ${index + 1}`}
@@ -962,12 +1066,42 @@ export default function MealTrackingPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setExtraFoodOpen(false)}>Cancel</Button>
-            <Button size="sm" onClick={handleExtraFoodSave} disabled={extraFoodMutation.isPending}>
-              {extraFoodMutation.isPending
+            <Button variant="outline" size="sm" onClick={resetExtraFoodForm}>Cancel</Button>
+            <Button
+              size="sm"
+              onClick={handleExtraFoodSave}
+              disabled={extraFoodMutation.isPending || updateExtraFoodMutation.isPending}
+            >
+              {(extraFoodMutation.isPending || updateExtraFoodMutation.isPending)
                 ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                 : <Save className="h-3.5 w-3.5 mr-1.5" />}
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Additional Food Confirm ───────────────────────── */}
+      <Dialog open={!!deleteExtraFoodTarget} onOpenChange={() => setDeleteExtraFoodTarget(null)}>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle>Delete Additional Food?</DialogTitle>
+            <DialogDescription>
+              Remove "{deleteExtraFoodTarget?.FoodName}" from your log for this day? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setDeleteExtraFoodTarget(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={deleteExtraFoodMutation.isPending}
+              onClick={() => deleteExtraFoodTarget?.IdExtraFoodLog != null && deleteExtraFoodMutation.mutate(deleteExtraFoodTarget.IdExtraFoodLog)}
+            >
+              {deleteExtraFoodMutation.isPending
+                ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

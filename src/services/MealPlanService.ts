@@ -41,6 +41,12 @@ export const getMealLogsForClient = (params: { IdUser: number; LogDate: string }
 export const logExtraFood = (formData: FormData) =>
   httpUpload({ url: API_URL.LOG_EXTRA_FOOD, data: formData });
 
+export const updateExtraFoodLog = (formData: FormData) =>
+  httpUpload({ url: API_URL.UPDATE_EXTRA_FOOD_LOG, data: formData });
+
+export const deleteExtraFoodLog = (params: { IdExtraFoodLog: number }) =>
+  httpCall({ method: "post", url: API_URL.DELETE_EXTRA_FOOD_LOG, data: params });
+
 export const getMyExtraFoodLogs = (params: { LogDate: string }) =>
   httpCall({ method: "post", url: API_URL.GET_MY_EXTRA_FOOD_LOGS, data: params });
 

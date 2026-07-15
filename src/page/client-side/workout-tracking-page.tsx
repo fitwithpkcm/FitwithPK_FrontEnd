@@ -893,7 +893,10 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
 
   return (
     <Card className="bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 pt-3 pb-2">
+      <div
+        className="px-4 pt-3 pb-2 cursor-pointer"
+        onClick={() => setExpanded(e => !e)}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
@@ -913,15 +916,15 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
               : "text-gray-300 dark:text-gray-600"
             }`}>{completePct}%</span>
             <button
-              onClick={() => onMove(workout)}
+              onClick={e => { e.stopPropagation(); onMove(workout); }}
               title="Move to another date"
               className="p-1 text-gray-300 dark:text-gray-600 hover:text-amber-500"
             >
               <ArrowRightLeft className="h-4 w-4" />
             </button>
-            <button onClick={() => setExpanded(e => !e)} className="p-1 text-gray-300 dark:text-gray-600 hover:text-gray-500">
+            <span className="p-1 text-gray-300 dark:text-gray-600">
               {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </button>
+            </span>
           </div>
         </div>
         <div className="mt-2">

@@ -146,6 +146,8 @@ export const API_URL = {
 
     // ── Extra Food Log (client logs unplanned food, admin views it) ─
     LOG_EXTRA_FOOD: '/mealplan/logExtraFood',
+    UPDATE_EXTRA_FOOD_LOG: '/mealplan/updateExtraFoodLog',
+    DELETE_EXTRA_FOOD_LOG: '/mealplan/deleteExtraFoodLog',
     GET_MY_EXTRA_FOOD_LOGS: '/mealplan/getMyExtraFoodLogs',
     GET_EXTRA_FOOD_LOGS_FOR_CLIENT: '/mealplan/getExtraFoodLogsForClient',
 

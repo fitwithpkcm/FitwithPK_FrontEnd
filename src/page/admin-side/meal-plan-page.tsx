@@ -691,7 +691,7 @@ function MealCard({ mealType, foodItems, logs, viewMode, onBrowse, onAddManual, 
 // ExtraFoodAdminCard — read-only view of food the client logged
 // outside their assigned plan, including any photos they attached
 // ─────────────────────────────────────────────────────────────────
-function ExtraFoodAdminCard({ logs }: { logs: IExtraFoodLog[] }) {
+function ExtraFoodAdminCard({ logs, onImageClick }: { logs: IExtraFoodLog[]; onImageClick: (url: string) => void }) {
   if (logs.length === 0) return null;
 
   return (
@@ -715,14 +715,23 @@ function ExtraFoodAdminCard({ logs }: { logs: IExtraFoodLog[] }) {
               {log.Notes && <p className="text-xs text-gray-500 mt-0.5">{log.Notes}</p>}
               {images.length > 0 && (
                 <div className="flex gap-1.5 mt-2 overflow-x-auto">
-                  {images.map((file, i) => (
-                    <img
-                      key={i}
-                      src={`${BASE_URL}/uploads/extrafood/${file}`}
-                      alt={`${log.FoodName} photo ${i + 1}`}
-                      className="h-16 w-16 rounded-lg object-cover flex-shrink-0 border border-purple-100"
-                    />
-                  ))}
+                  {images.map((file, i) => {
+                    const url = `${BASE_URL}/uploads/extrafood/${file}`;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => onImageClick(url)}
+                        className="flex-shrink-0"
+                      >
+                        <img
+                          src={url}
+                          alt={`${log.FoodName} photo ${i + 1}`}
+                          className="h-16 w-16 rounded-lg object-cover border border-purple-100 hover:opacity-80 transition-opacity cursor-zoom-in"
+                        />
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -768,6 +777,7 @@ export default function AdminMealPlanPage() {
   const [isNewPlan, setIsNewPlan] = useState(true);
   const [viewMode,  setViewMode]  = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [extraFoodPreviewImage, setExtraFoodPreviewImage] = useState<string | null>(null);
 
   // food browser dialog
   const [browserMeal, setBrowserMeal] = useState<MealType | null>(null);
@@ -1330,7 +1340,7 @@ export default function AdminMealPlanPage() {
             ))}
 
             {/* ── extra food logged by client outside the plan ── */}
-            <ExtraFoodAdminCard logs={clientExtraFoodLogs} />
+            <ExtraFoodAdminCard logs={clientExtraFoodLogs} onImageClick={setExtraFoodPreviewImage} />
 
           </div>
         ) : null}
@@ -1602,6 +1612,19 @@ export default function AdminMealPlanPage() {
           <DialogFooter className="pt-1">
             <Button variant="ghost" size="sm" onClick={() => setSaveRangeOpen(false)}>Cancel</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Additional food photo lightbox ── */}
+      <Dialog open={!!extraFoodPreviewImage} onOpenChange={open => !open && setExtraFoodPreviewImage(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] p-1 overflow-hidden">
+          {extraFoodPreviewImage && (
+            <img
+              src={extraFoodPreviewImage}
+              alt="Additional food full size"
+              className="max-w-full max-h-[85vh] w-full object-contain rounded"
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
