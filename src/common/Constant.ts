@@ -98,12 +98,4 @@ export const ACCESS_STATUS = Object.freeze({
 
 export type AccessStatusType = typeof ACCESS_STATUS[keyof typeof ACCESS_STATUS];
 
-/**
- * USDA FoodData Central — used to autofill nutrition values when an admin adds a food item.
- * DEMO_KEY is rate-limited (30 requests/hour/IP, 50/day). Get a free, higher-limit key at
- * https://fdc.nal.usda.gov/api-key-signup.html and replace it here.
- */
-export const USDA_FDC_API_KEY = "2eAQVXK005U5cvCXxkwJO0ewCyOCQKEHn5uOrSTa";
-export const USDA_FDC_BASE_URL = "https://api.nal.usda.gov/fdc/v1";
-
 

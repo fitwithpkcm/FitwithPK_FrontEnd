@@ -90,6 +90,7 @@ export const API_URL = {
     SET_FOOD: '/student/addNutriFood',
     UPDATE_FOOD: '/student/updateNutriFood',
     DELETE_FOOD: '/student/deleteNutriFood',
+    SEARCH_OPEN_FOOD_FACTS: '/student/searchOpenFoodFacts',
     GET_FOOD_CATERGORY_BASEDLIST: '/student/getAllFoodAvailableCatergory',
     GET_FOOD_SWAPPED: '/student/getAlternativeNutri',
     GET_DAILY_UPDATES_FORWEEK: '/student/getDailyUpdatesForAWeek',

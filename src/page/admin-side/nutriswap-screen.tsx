@@ -10,7 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { nutriInsert, nutriUpdate, nutriDelete } from "../../services/AdminServices";
 import { IFoodAlternative } from "../../interface/IFoodAlternative";
 import FoodList from "./foodlist-component";
-import { searchUsdaFoods, extractMacrosPer100g, describeSource, IUsdaSearchResult } from "../../services/UsdaFoodService";
+import { searchOpenFoodFacts, extractOffMacrosPer100g, IOffProduct } from "../../services/OpenFoodFactsService";
 // Interface for food items
 interface FoodItem {
     id: number;
@@ -77,11 +77,11 @@ export default function NutriSwapScreen() {
 
     const [addNewFoodUI, setAddNewFoodUI] = useState<boolean>(false);
 
-    // USDA FoodData Central autofill
-    const [usdaQuery, setUsdaQuery] = useState<string>("");
-    const [usdaResults, setUsdaResults] = useState<IUsdaSearchResult[]>([]);
-    const [usdaSearching, setUsdaSearching] = useState<boolean>(false);
-    const [usdaOpen, setUsdaOpen] = useState<boolean>(false);
+    // Open Food Facts autofill (branded/packaged products)
+    const [offQuery, setOffQuery] = useState<string>("");
+    const [offResults, setOffResults] = useState<IOffProduct[]>([]);
+    const [offSearching, setOffSearching] = useState<boolean>(false);
+    const [offOpen, setOffOpen] = useState<boolean>(false);
 
     //constructor basil
     useEffect(() => {
@@ -264,23 +264,23 @@ export default function NutriSwapScreen() {
         setBenefits(benefits.filter(b => b !== benefit));
     };
 
-    const handleUsdaSearch = async () => {
-        if (!usdaQuery.trim()) return;
-        setUsdaSearching(true);
+    const handleOffSearch = async () => {
+        if (!offQuery.trim()) return;
+        setOffSearching(true);
         try {
-            const results = await searchUsdaFoods(usdaQuery.trim());
-            setUsdaResults(results);
-            setUsdaOpen(true);
+            const results = await searchOpenFoodFacts(offQuery.trim());
+            setOffResults(results);
+            setOffOpen(true);
         } catch (error) {
-            alert(error instanceof Error ? error.message : "USDA search failed");
+            alert(error instanceof Error ? error.message : "Open Food Facts search failed");
         } finally {
-            setUsdaSearching(false);
+            setOffSearching(false);
         }
     };
 
-    const handleUsdaSelect = (food: IUsdaSearchResult) => {
-        const macros = extractMacrosPer100g(food);
-        if (!foodName.trim()) setFoodName(food.description);
+    const handleOffSelect = (product: IOffProduct) => {
+        const macros = extractOffMacrosPer100g(product);
+        if (!foodName.trim()) setFoodName(product.product_name || offQuery);
         setQuantity("100");
         setCalories(String(macros.calories));
         setProtein(String(macros.protein));
@@ -288,9 +288,9 @@ export default function NutriSwapScreen() {
         setFat(String(macros.fat));
         setFiber(String(macros.fiber));
         setSugar(String(macros.sugar));
-        setUsdaOpen(false);
-        setUsdaResults([]);
-        setUsdaQuery("");
+        setOffOpen(false);
+        setOffResults([]);
+        setOffQuery("");
     };
 
     const handleRemoveImage = (index: number) => {
@@ -329,45 +329,45 @@ export default function NutriSwapScreen() {
                         </h2>
 
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-1">Autofill from USDA FoodData Central</label>
+                            <label className="block text-sm font-medium mb-1">Autofill from Open Food Facts</label>
                             <div className="flex gap-2">
                                 <input
                                     type="text"
                                     className="flex-grow px-3 py-2 border rounded-md"
-                                    placeholder="Search USDA (e.g., chicken breast)"
-                                    value={usdaQuery}
-                                    onChange={(e) => setUsdaQuery(e.target.value)}
+                                    placeholder="Search a packaged product (e.g., Lay's Classic)"
+                                    value={offQuery}
+                                    onChange={(e) => setOffQuery(e.target.value)}
                                     onKeyDown={(e) => {
                                         if (e.key === "Enter") {
                                             e.preventDefault();
-                                            handleUsdaSearch();
+                                            handleOffSearch();
                                         }
                                     }}
                                 />
                                 <button
                                     type="button"
                                     className="px-3 py-2 bg-primary-600 text-white rounded-md text-sm flex items-center gap-1 disabled:opacity-50 flex-shrink-0"
-                                    onClick={handleUsdaSearch}
-                                    disabled={usdaSearching || !usdaQuery.trim()}
+                                    onClick={handleOffSearch}
+                                    disabled={offSearching || !offQuery.trim()}
                                 >
-                                    {usdaSearching ? "Searching…" : <><Search size={14} /> Search</>}
+                                    {offSearching ? "Searching…" : <><Search size={14} /> Search</>}
                                 </button>
                             </div>
 
-                            {usdaOpen && usdaResults.length > 0 && (
+                            {offOpen && offResults.length > 0 && (
                                 <div className="mt-2 border rounded-md max-h-56 overflow-y-auto bg-white">
-                                    {usdaResults.map(food => {
-                                        const macros = extractMacrosPer100g(food);
+                                    {offResults.map(product => {
+                                        const macros = extractOffMacrosPer100g(product);
                                         return (
                                             <button
                                                 type="button"
-                                                key={food.fdcId}
+                                                key={product.code}
                                                 className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0 flex items-center justify-between gap-2"
-                                                onClick={() => handleUsdaSelect(food)}
+                                                onClick={() => handleOffSelect(product)}
                                             >
                                                 <span className="min-w-0">
-                                                    <span className="block text-sm text-gray-800 truncate">{food.description}</span>
-                                                    <span className="block text-[11px] text-gray-400 truncate">{describeSource(food)}</span>
+                                                    <span className="block text-sm text-gray-800 truncate">{product.product_name || "(unnamed product)"}</span>
+                                                    <span className="block text-[11px] text-gray-400 truncate">{product.brands || "Unknown brand"}</span>
                                                 </span>
                                                 <span className="text-[11px] text-gray-400 flex-shrink-0">{macros.calories} kcal /100g</span>
                                             </button>
@@ -375,11 +375,11 @@ export default function NutriSwapScreen() {
                                     })}
                                 </div>
                             )}
-                            {usdaOpen && usdaResults.length === 0 && !usdaSearching && (
-                                <p className="text-xs text-gray-400 mt-1">No USDA matches found.</p>
+                            {offOpen && offResults.length === 0 && !offSearching && (
+                                <p className="text-xs text-gray-400 mt-1">No Open Food Facts matches found.</p>
                             )}
                             <p className="text-[11px] text-gray-400 mt-1">
-                                Values are per 100g — selecting a result fills Quantity, Calories, Protein, Carbs, Fat, Fiber and Sugar below (you can still edit them before saving).
+                                Best for branded/packaged products — values come from the product's own nutrition label data, already per 100g.
                             </p>
                         </div>
 
