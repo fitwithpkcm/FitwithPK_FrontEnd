@@ -1,5 +1,6 @@
 
 export interface IFoodAlternative {
+  id?: number;
   name: string;
   quantity: string;
   calories: number;

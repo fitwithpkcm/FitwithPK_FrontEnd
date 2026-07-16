@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { nutriInsert } from "../../services/AdminServices";
+import { nutriInsert, nutriUpdate, nutriDelete } from "../../services/AdminServices";
 import { IFoodAlternative } from "../../interface/IFoodAlternative";
 import FoodList from "./foodlist-component";
 import { searchUsdaFoods, extractMacrosPer100g, describeSource, IUsdaSearchResult } from "../../services/UsdaFoodService";
@@ -61,6 +61,7 @@ export default function NutriSwapScreen() {
     const [uploadedImages, setUploadedImages] = useState<string[]>([]);
     const [files, setFiles] = useState<File[]>([]);
     const [isUploading, setIsUploading] = useState(false);
+    const [existingImageUrl, setExistingImageUrl] = useState<string>("");
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -88,17 +89,44 @@ export default function NutriSwapScreen() {
     }, []);
 
 
-    // Define the mutation
+    // Define the mutations
     const { mutate: insertFoodItem } = useMutation({
         mutationFn: nutriInsert,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["food-items"] });
+            queryClient.invalidateQueries({ queryKey: ["foodcatergory_list"] });
             resetForm();
+            setAddNewFoodUI(false);
             alert("Food item saved successfully!");
         },
         onError: (error) => {
             console.error("Error saving food item:", error);
             alert("Failed to save food item");
+        }
+    });
+
+    const { mutate: updateFoodItemMutate } = useMutation({
+        mutationFn: nutriUpdate,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["foodcatergory_list"] });
+            handleCancelEdit();
+            setAddNewFoodUI(false);
+            alert("Food item updated successfully!");
+        },
+        onError: (error) => {
+            console.error("Error updating food item:", error);
+            alert("Failed to update food item");
+        }
+    });
+
+    const { mutate: deleteFoodItemMutate } = useMutation({
+        mutationFn: nutriDelete,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["foodcatergory_list"] });
+            alert("Food item deleted successfully!");
+        },
+        onError: (error) => {
+            console.error("Error deleting food item:", error);
+            alert("Failed to delete food item");
         }
     });
 
@@ -122,6 +150,10 @@ export default function NutriSwapScreen() {
 
         // Create FormData object
         const formData = new FormData();
+
+        if (editMode && editingItemId != null) {
+            formData.append("id", String(editingItemId));
+        }
 
         // Append all food data
         formData.append("name", foodName);
@@ -148,7 +180,43 @@ export default function NutriSwapScreen() {
         }
 
         // Execute the mutation
-        insertFoodItem(formData);
+        if (editMode && editingItemId != null) {
+            updateFoodItemMutate(formData);
+        } else {
+            insertFoodItem(formData);
+        }
+    };
+
+    // Populate the form with an existing food item for editing
+    const handleEditFood = (food: IFoodAlternative) => {
+        if (food.id == null) return;
+        setEditMode(true);
+        setEditingItemId(food.id);
+        setFoodName(food.name);
+        setCalories(String(food.calories));
+        setProtein(String(food.protein));
+        setCarbs(String(food.carbs));
+        setFat(String(food.fat));
+        setFiber(String(food.fiber));
+        setSugar(String(food.sugar));
+        setQuantity("100");
+        setBenefits(food.benefits ?? []);
+        setBenefitsInput("");
+        setNotes(food.note ?? "");
+        setShowNotes(!!food.note);
+        setHealthScore(food.health_score != null ? String(food.health_score) : "");
+        setFoodCatergory((food.category?.toLowerCase() as "protein" | "carbs" | "fat") ?? "protein");
+        setExistingImageUrl(food.imageUrl ?? "");
+        setUploadedImages([]);
+        setFiles([]);
+        setAddNewFoodUI(true);
+    };
+
+    // Delete a food item after confirmation
+    const handleDeleteFood = (food: IFoodAlternative) => {
+        if (food.id == null) return;
+        if (!window.confirm(`Delete "${food.name}"? This cannot be undone.`)) return;
+        deleteFoodItemMutate({ id: food.id });
     };
 
     // Reset form fields
@@ -159,13 +227,17 @@ export default function NutriSwapScreen() {
         setCarbs("");
         setFat("");
         setFiber("");
+        setSugar("");
         setQuantity("100");
         setBenefits([]);
         setBenefitsInput("");
         setNotes("");
         setShowNotes(false);
+        setHealthScore("");
+        setFoodCatergory("protein");
         setUploadedImages([]);
         setFiles([]);
+        setExistingImageUrl("");
     };
 
 
@@ -516,6 +588,15 @@ export default function NutriSwapScreen() {
                                             </div>
                                         ))}
                                     </div>
+                                ) : existingImageUrl ? (
+                                    <div className="flex flex-col items-center gap-1">
+                                        <img
+                                            src={`${BASE_URL}/uploads/nutriimg/${existingImageUrl}`}
+                                            alt="Current"
+                                            className="h-16 w-16 object-cover rounded-md"
+                                        />
+                                        <span className="text-[10px] text-gray-400">Current — choose a file to replace</span>
+                                    </div>
                                 ) : (
                                     <div className="flex-grow px-3 py-2 border rounded-md flex items-center justify-center">
                                         <ImageIcon className="h-10 w-10 text-gray-400 dark:text-gray-500" />
@@ -576,7 +657,7 @@ export default function NutriSwapScreen() {
                             <button
                                 type="button"
                                 className={`px-4 py-2 ${editMode ? 'bg-blue-600' : 'bg-green-600'} text-white rounded-md text-sm flex items-center gap-1`}
-                                onClick={editMode ? () => { } : handleAddFoodItem}
+                                onClick={handleAddFoodItem}
                                 disabled={isUploading}
                             >
                                 {isUploading ? (
@@ -593,7 +674,7 @@ export default function NutriSwapScreen() {
 
                     {/* Food Items List */}
 
-                    <FoodList lastCatergory={category} />
+                    <FoodList lastCatergory={category} onEditFood={handleEditFood} onDeleteFood={handleDeleteFood} />
 
                 </div>
             </div>

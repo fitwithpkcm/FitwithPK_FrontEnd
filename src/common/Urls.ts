@@ -88,6 +88,8 @@ export const API_URL = {
     GET_SINGLE_DAY: '/student/getSingleDayUpdate',
     GET_DAILY_UPDATES: '/student/getStudentUpdate',
     SET_FOOD: '/student/addNutriFood',
+    UPDATE_FOOD: '/student/updateNutriFood',
+    DELETE_FOOD: '/student/deleteNutriFood',
     GET_FOOD_CATERGORY_BASEDLIST: '/student/getAllFoodAvailableCatergory',
     GET_FOOD_SWAPPED: '/student/getAlternativeNutri',
     GET_DAILY_UPDATES_FORWEEK: '/student/getDailyUpdatesForAWeek',

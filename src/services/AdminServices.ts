@@ -77,6 +77,26 @@ export const nutriInsert = (params: FormData) => {
     });
 };
 
+export const nutriUpdate = (params: FormData) => {
+    return httpUpload({
+        url: API_URL.UPDATE_FOOD,
+        method: "post",
+        data: params
+    }).then((response: unknown) => {
+        return response;
+    });
+};
+
+export const nutriDelete = (params: { id: number }) => {
+    return httpCall({
+        url: API_URL.DELETE_FOOD,
+        method: "post",
+        data: params
+    }).then((response: unknown) => {
+        return response;
+    });
+};
+
 export const addDietPlan = (params: unknown) => {
     return httpUpload({
         url: API_URL.ADD_DIET_PLAN,

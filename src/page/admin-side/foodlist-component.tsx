@@ -3,12 +3,14 @@ import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getFoodBasedOnCatergoryApi } from "../../services/FoodService";
 import { IFoodAlternative, IFoodCatergory } from "../../interface/IFoodAlternative";
-import { Search, X } from "lucide-react";
+import { Search, X, Pencil, Trash2 } from "lucide-react";
 import { setBaseUrl } from "../../services/HttpService";
 import { BASE_URL } from "../../common/Constant";
 
 interface FoodListProps {
     lastCatergory: "protein" | "carbs" | "fat"
+    onEditFood: (food: IFoodAlternative) => void;
+    onDeleteFood: (food: IFoodAlternative) => void;
 }
 
 
@@ -115,7 +117,7 @@ const FoodList = (props: FoodListProps) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filteredFoods.protein.length > 0 ? (
                             filteredFoods.protein.map((food) => (
-                                <FoodCard key={`protein-${food.name}`} food={food} />
+                                <FoodCard key={`protein-${food.name}`} food={food} onEdit={props.onEditFood} onDelete={props.onDeleteFood} />
                             ))
                         ) : (
                             <div className="col-span-3 text-center py-4 text-gray-500">
@@ -129,7 +131,7 @@ const FoodList = (props: FoodListProps) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filteredFoods.carbs.length > 0 ? (
                             filteredFoods.carbs.map((food) => (
-                                <FoodCard key={`carbs-${food.name}`} food={food} />
+                                <FoodCard key={`carbs-${food.name}`} food={food} onEdit={props.onEditFood} onDelete={props.onDeleteFood} />
                             ))
                         ) : (
                             <div className="col-span-3 text-center py-4 text-gray-500">
@@ -143,7 +145,7 @@ const FoodList = (props: FoodListProps) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filteredFoods.fat.length > 0 ? (
                             filteredFoods.fat.map((food) => (
-                                <FoodCard key={`fat-${food.name}`} food={food} />
+                                <FoodCard key={`fat-${food.name}`} food={food} onEdit={props.onEditFood} onDelete={props.onDeleteFood} />
                             ))
                         ) : (
                             <div className="col-span-3 text-center py-4 text-gray-500">
@@ -158,14 +160,36 @@ const FoodList = (props: FoodListProps) => {
 };
 
 
-const FoodCard = ({ food }: { food: IFoodAlternative }) => {
+const FoodCard = ({ food, onEdit, onDelete }: {
+    food: IFoodAlternative;
+    onEdit: (food: IFoodAlternative) => void;
+    onDelete: (food: IFoodAlternative) => void;
+}) => {
     return (
         <div className="border rounded-lg p-4 hover:shadow-md transition-shadow h-full">
             <div className="flex justify-between items-start mb-2">
                 <h3 className="font-semibold">{food.name}</h3>
-                <span className="bg-gray-100 px-2 py-1 rounded text-sm">
-                    {food.quantity}
-                </span>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                    <span className="bg-gray-100 px-2 py-1 rounded text-sm">
+                        {food.quantity}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => onEdit(food)}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
+                        title="Edit"
+                    >
+                        <Pencil size={14} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onDelete(food)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                        title="Delete"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                </div>
             </div>
             <hr></hr>
             <div className="w-full mt-2">
