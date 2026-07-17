@@ -230,4 +230,5 @@ export const API_URL = {
 
     // ── Fitness Tips ────────────────────────────────────────────────
     GET_DAILY_TIP: '/tips/daily',
+    DISMISS_DAILY_TIP: '/tips/dismiss',
 }

@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useAuth } from "../hooks/use-auth";
-import { getDailyTip } from "../services/TipsService";
+import { dismissDailyTip, getDailyTip } from "../services/TipsService";
 import { IFitnessTip } from "../interface/IFitnessTip";
 import { Dialog, DialogContent } from "./ui/dialog";
 
 const DAILY_TIP_HOUR = 9;
 
-function todaysTipKey() {
+function todayKey() {
   const today = new Date();
-  return `dailyTipShown_${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+  return `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
 }
 
 export function DailyTipDialog() {
@@ -18,31 +18,25 @@ export function DailyTipDialog() {
   const [open, setOpen] = useState(false);
 
   const dueToday = new Date().getHours() >= DAILY_TIP_HOUR;
-  const alreadyShown = sessionStorage.getItem(todaysTipKey()) === "1";
-  const shouldFetch = !!user && dueToday && !alreadyShown;
+  const shouldFetch = !!user && dueToday;
 
   const { data } = useQuery({
-    queryKey: ["dailyTip", todaysTipKey()],
+    queryKey: ["dailyTip", todayKey()],
     queryFn: async () => (await getDailyTip()).data.data as IFitnessTip,
     enabled: shouldFetch,
     staleTime: Infinity,
   });
 
+  const dismissMutation = useMutation({ mutationFn: dismissDailyTip });
+
   useEffect(() => {
-    if (data) {
-      setOpen(true);
-      sessionStorage.setItem(todaysTipKey(), "1");
-    }
+    if (data && !data.AlreadyDismissedToday) setOpen(true);
   }, [data]);
 
-  // TEMP DEBUG - remove before finishing
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("debugTip") === "1") setOpen(true);
-  }, []);
-  const debugData = { Title: "Stay Hydrated", Description: "Drink at least 2-3 liters of water daily. Even mild dehydration can reduce your energy and workout performance." };
-  const shownData = data ?? debugData;
-
-  const handleClose = () => setOpen(false);
+  const handleClose = () => {
+    setOpen(false);
+    dismissMutation.mutate();
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -90,7 +84,7 @@ export function DailyTipDialog() {
             <button
               onClick={handleClose}
               aria-label="Close"
-              className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/60"
+              className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 dark:bg-gray-700 dark:text-blue-200 dark:hover:bg-gray-600"
             >
               <X className="h-4 w-4" />
             </button>
@@ -102,10 +96,10 @@ export function DailyTipDialog() {
             <div className="relative mx-auto mt-4 max-w-[85%] border-t border-dashed border-blue-200 dark:border-blue-800" />
 
             <div className="relative mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-center dark:bg-blue-950/40">
-              {shownData?.Title && (
-                <p className="text-base font-bold text-blue-900 dark:text-blue-100">{shownData.Title}</p>
+              {data?.Title && (
+                <p className="text-base font-bold text-blue-900 dark:text-blue-100">{data.Title}</p>
               )}
-              <p className="mt-1 text-sm leading-relaxed text-blue-800/80 dark:text-blue-200/80">{shownData?.Description}</p>
+              <p className="mt-1 text-sm leading-relaxed text-blue-800/80 dark:text-blue-200/80">{data?.Description}</p>
             </div>
 
             <p className="relative mt-4 text-center text-[11px] tracking-wide text-gray-400 dark:text-gray-500">
