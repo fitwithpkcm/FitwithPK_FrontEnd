@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Calendar, FileText, Eye, Plus, Save, X, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { User, Calendar, FileText, Eye, Plus, Save, X, CheckCircle, AlertTriangle, Upload, Trash2 } from "lucide-react";
 import { getLoggedUserDetails } from "../../services/ProfileService";
-import { setCoachingPlan } from "../../services/AdminServices";
+import { setCoachingPlan, uploadMedicalDocument, getMedicalDocuments, deleteMedicalDocument } from "../../services/AdminServices";
 import toast from "react-hot-toast";
 import { IUser } from "../../interface/models/User";
+import { IMedicalDocument, MedicalDocumentType } from "../../interface/IMedicalDocument";
 import { setBaseUrl } from "../../services/HttpService";
 import { BASE_URL } from "../../common/Constant";
 import moment from "moment";
@@ -21,6 +22,13 @@ export default function ClientProfileScreen() {
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [planForm, setPlanForm] = useState({ PlanName: '', Price: '', StartDate: '', EndDate: '' });
   const queryClient = useQueryClient();
+
+  // Medical documents / blood reports
+  const [showMedicalUpload, setShowMedicalUpload] = useState(false);
+  const [medicalFiles, setMedicalFiles] = useState<File[]>([]);
+  const [medicalDocType, setMedicalDocType] = useState<MedicalDocumentType>('Blood Report');
+  const [medicalNotes, setMedicalNotes] = useState('');
+  const medicalFileInputRef = useRef<HTMLInputElement>(null);
 
 
   /**
@@ -51,6 +59,66 @@ export default function ClientProfileScreen() {
     },
     onError: () => toast.error('Failed to save plan'),
   });
+
+  const { data: medicalDocuments = [], isLoading: medicalDocsLoading } = useQuery<IMedicalDocument[]>({
+    queryKey: [`medical_documents_${selectedUserID}`],
+    enabled: !!selectedUserID,
+    queryFn: async () => {
+      const res = await getMedicalDocuments({ IdUser: selectedUserID });
+      return res.data?.data ?? [];
+    },
+  });
+
+  const resetMedicalForm = () => {
+    setMedicalFiles([]);
+    setMedicalDocType('Blood Report');
+    setMedicalNotes('');
+    setShowMedicalUpload(false);
+  };
+
+  const { mutate: uploadMedical, isPending: uploadingMedical } = useMutation({
+    mutationFn: (formData: FormData) => uploadMedicalDocument(formData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`medical_documents_${selectedUserID}`] });
+      resetMedicalForm();
+      toast.success('Document(s) uploaded successfully!');
+    },
+    onError: () => toast.error('Failed to upload document'),
+  });
+
+  const { mutate: deleteMedical } = useMutation({
+    mutationFn: (params: { IdDocument: number }) => deleteMedicalDocument(params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`medical_documents_${selectedUserID}`] });
+      toast.success('Document deleted');
+    },
+    onError: () => toast.error('Failed to delete document'),
+  });
+
+  const handleMedicalFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setMedicalFiles(Array.from(files));
+  };
+
+  const handleUploadMedical = () => {
+    if (medicalFiles.length === 0) {
+      toast.error('Please choose at least one file');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('IdUser', String(selectedUserID));
+    formData.append('DocumentType', medicalDocType);
+    if (medicalNotes.trim()) formData.append('Notes', medicalNotes.trim());
+    medicalFiles.forEach(file => formData.append('MedicalDoc', file));
+    uploadMedical(formData);
+  };
+
+  const handleDeleteMedical = (doc: IMedicalDocument) => {
+    if (!doc.IdDocument) return;
+    if (!window.confirm(`Delete "${doc.OriginalName || doc.FileName}"? This cannot be undone.`)) return;
+    deleteMedical({ IdDocument: doc.IdDocument });
+  };
 
 
   const showHistoryPage = () => {
@@ -385,24 +453,130 @@ export default function ClientProfileScreen() {
         </div>
       </div>
 
-      {/* Blood Reports Section */}
+      {/* Medical Documents & Blood Reports */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Blood Reports</h3>
-          <div className={`px-3 py-1 rounded-full text-xs font-medium ${profileData?.OnBoardUserAttributes?.recentBloodTest
-            ? 'bg-green-100 text-green-700'
-            : 'bg-orange-100 text-orange-700'
-            }`}>
-            {profileData?.OnBoardUserAttributes?.recentBloodTest ? 'Recent Test Available' : 'No Recent Test'}
+          <h3 className="text-lg font-semibold text-gray-800">Medical Documents & Blood Reports</h3>
+          <div className="flex items-center gap-2">
+            <div className={`px-3 py-1 rounded-full text-xs font-medium ${profileData?.OnBoardUserAttributes?.recentBloodTest
+              ? 'bg-green-100 text-green-700'
+              : 'bg-orange-100 text-orange-700'
+              }`}>
+              {profileData?.OnBoardUserAttributes?.recentBloodTest ? 'Recent Test Available' : 'No Recent Test'}
+            </div>
+            <button
+              onClick={() => (showMedicalUpload ? resetMedicalForm() : setShowMedicalUpload(true))}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              {showMedicalUpload ? <X size={13} /> : <Plus size={13} />}
+              {showMedicalUpload ? 'Cancel' : 'Upload'}
+            </button>
           </div>
         </div>
 
+        {/* Upload form */}
+        {showMedicalUpload && (
+          <div className="bg-white rounded-lg p-4 mb-4 border border-blue-200 space-y-3">
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Document Type</label>
+              <select
+                value={medicalDocType}
+                onChange={e => setMedicalDocType(e.target.value as MedicalDocumentType)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="Blood Report">Blood Report</option>
+                <option value="Medical Document">Medical Document</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
 
-        <div className="text-center py-8 text-gray-500">
-          <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-          <div>No blood reports uploaded yet</div>
-        </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Files</label>
+              <input
+                type="file"
+                ref={medicalFileInputRef}
+                className="hidden"
+                accept="image/*,.pdf"
+                multiple
+                onChange={handleMedicalFileSelect}
+              />
+              <button
+                type="button"
+                onClick={() => medicalFileInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600"
+              >
+                <Upload size={14} />
+                {medicalFiles.length > 0 ? `${medicalFiles.length} file(s) selected` : 'Choose files (image or PDF)'}
+              </button>
+              {medicalFiles.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {medicalFiles.map((file, i) => (
+                    <li key={i} className="text-xs text-gray-500 truncate">{file.name}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Notes (optional)</label>
+              <textarea
+                value={medicalNotes}
+                onChange={e => setMedicalNotes(e.target.value)}
+                rows={2}
+                placeholder="e.g. Vitamin D deficiency flagged, follow up in 3 months"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              />
+            </div>
+
+            <button
+              onClick={handleUploadMedical}
+              disabled={uploadingMedical || medicalFiles.length === 0}
+              className="w-full flex items-center justify-center gap-1.5 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-60"
+            >
+              <Save size={14} />
+              {uploadingMedical ? 'Uploading…' : 'Save Document(s)'}
+            </button>
+          </div>
+        )}
+
+        {/* Document list */}
+        {medicalDocsLoading ? (
+          <div className="text-center py-6 text-gray-400 text-sm">Loading…</div>
+        ) : medicalDocuments.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <div>No medical documents uploaded yet</div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {medicalDocuments.map(doc => (
+              <div key={doc.IdDocument} className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-100">
+                <a
+                  href={`${BASE_URL}/uploads/medical/${doc.FileName}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2.5 min-w-0"
+                >
+                  <FileText className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{doc.OriginalName || doc.FileName}</p>
+                    <p className="text-xs text-gray-400">
+                      {doc.DocumentType} · {doc.UploadedAt ? moment(doc.UploadedAt).format('DD MMM YYYY') : ''}
+                    </p>
+                    {doc.Notes && <p className="text-xs text-gray-500 mt-0.5">{doc.Notes}</p>}
+                  </div>
+                </a>
+                <button
+                  onClick={() => handleDeleteMedical(doc)}
+                  className="p-1.5 text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
+                  title="Delete"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

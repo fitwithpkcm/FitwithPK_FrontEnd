@@ -4,6 +4,7 @@ import { IWeeklyUpdatesForUser } from "../interface/IWeeklyUpdates";
 import { IUser, SuperAdminResponse } from "../interface/models/User";
 import { IUpdatesForUser } from "../interface/IDailyUpdates";
 import { ICoach } from "../interface/models/Coach";
+import { IMedicalDocument } from "../interface/IMedicalDocument";
 
 
 export const getUserListForACoach = (params: unknown) => {
@@ -182,6 +183,21 @@ export const setCoachingPlan = (params: {
     PaidAmount: number;
 }): Promise<ApiResponse<unknown>> => {
     return httpCall({ url: API_URL.SET_COACHING_PLAN, method: 'post', data: params });
+};
+
+
+// ── Medical documents / blood reports (admin-uploaded, per client) ────────
+
+export const uploadMedicalDocument = (params: FormData): Promise<ApiResponse<IMedicalDocument[]>> => {
+    return httpUpload({ url: API_URL.UPLOAD_MEDICAL_DOCUMENT, method: 'post', data: params });
+};
+
+export const getMedicalDocuments = (params: { IdUser: number }): Promise<ApiResponse<IMedicalDocument[]>> => {
+    return httpCall({ url: API_URL.GET_MEDICAL_DOCUMENTS, method: 'post', data: params });
+};
+
+export const deleteMedicalDocument = (params: { IdDocument: number }): Promise<ApiResponse<unknown>> => {
+    return httpCall({ url: API_URL.DELETE_MEDICAL_DOCUMENT, method: 'post', data: params });
 };
 
 
