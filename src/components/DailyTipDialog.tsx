@@ -30,7 +30,7 @@ export function DailyTipDialog() {
 
   const { data } = useQuery({
     queryKey: ["dailyTip", todaysTipKey()],
-    queryFn: async () => (await getDailyTip()).data as IFitnessTip,
+    queryFn: async () => (await getDailyTip()).data.data as IFitnessTip,
     enabled: shouldFetch,
     staleTime: Infinity,
   });
