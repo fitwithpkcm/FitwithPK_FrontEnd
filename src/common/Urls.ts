@@ -227,4 +227,7 @@ export const API_URL = {
     SEND_REMINDER: '/notification/sendReminder',
     NOTIFY_COACH_QUERY: '/notification/notifyCoachQuery',
     COACH_SEND_MESSAGE: '/mealquery/coachSend',
+
+    // ── Fitness Tips ────────────────────────────────────────────────
+    GET_DAILY_TIP: '/tips/daily',
 }
