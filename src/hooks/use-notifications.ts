@@ -1,6 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import { onMessage } from 'firebase/messaging';
-import { messaging } from '../lib/firebase';
 import { idbSave, idbLoadAll, idbMarkAllRead, idbClearAll, StoredNotif } from '../lib/notif-idb';
 
 export type AppNotification = StoredNotif;
@@ -55,24 +53,19 @@ export function useNotifications() {
     syncBadge(0);
   }, []);
 
-  // Capture foreground FCM messages
-  useEffect(() => {
-    const unsub = onMessage(messaging, (payload) => {
-      const d = payload.data ?? {};
-      const title = d['title'] ?? payload.notification?.title ?? 'FitwithPK';
-      const body  = d['body']  ?? payload.notification?.body  ?? '';
-      const url   = d['url']  ?? '/student-updates';
-      addNotification(title, body, url);
-    });
-    return unsub;
-  }, [addNotification]);
-
-  // Listen for messages posted by the SW (e.g. on notificationclick)
+  // Every incoming FCM message (foreground or background) is persisted exactly once,
+  // by the service worker's onBackgroundMessage handler — data-only payloads reach it
+  // regardless of whether a tab is focused. This listener only mirrors that already-saved
+  // notif into in-app state; it must not re-save it, or every push would show up twice.
   useEffect(() => {
     const handler = (event: MessageEvent) => {
-      if (event.data?.type === 'NOTIFICATION_RECEIVED') {
-        const { title, body } = event.data;
-        addNotification(title ?? 'FitwithPK', body ?? '');
+      if (event.data?.type === 'NOTIFICATION_RECEIVED' && event.data.notif) {
+        const notif: AppNotification = event.data.notif;
+        setNotifications(prev => {
+          const next = [notif, ...prev].slice(0, 50);
+          syncBadge(next.filter(n => !n.read).length);
+          return next;
+        });
       }
       if (event.data?.type === 'RELOAD_NOTIFICATIONS') {
         idbLoadAll().then(all => {
@@ -83,7 +76,7 @@ export function useNotifications() {
     };
     navigator.serviceWorker?.addEventListener('message', handler);
     return () => navigator.serviceWorker?.removeEventListener('message', handler);
-  }, [addNotification]);
+  }, []);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 

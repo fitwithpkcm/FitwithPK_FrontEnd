@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "../../components/ui/button";
 import { useAuth } from "../../hooks/use-auth";
+import { useFcmNotification } from "../../hooks/use-fcm-notification";
 import { RENDER_URL } from "../../common/Urls";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
 import {
@@ -18,6 +19,7 @@ import {
   Users,
   TrendingUp,
   Dumbbell,
+  X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { IUser, SuperAdminResponse } from "../../interface/models/User";
@@ -39,6 +41,8 @@ export default function AdminDashboard() {
   const { theme, setTheme } = useTheme();
   const currentDate = new Date();
   const { user } = useAuth();
+  const { status: pushStatus, requestPermission: enablePush } = useFcmNotification();
+  const [pushBannerDismissed, setPushBannerDismissed] = useState(false);
 
   useEffect(() => {
     setBaseUrl(BASE_URL);
@@ -169,6 +173,53 @@ export default function AdminDashboard() {
 
       {/* Main */}
       <main className="px-4 pt-10 space-y-6">
+        {/* Push notification banner — visible until enabled or dismissed */}
+        {pushStatus !== 'granted' && !pushBannerDismissed && (
+          <div className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 border ${
+            pushStatus === 'denied'
+              ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900'
+              : pushStatus === 'requesting'
+              ? 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900'
+              : 'bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900'
+          }`}>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-lg">
+                {pushStatus === 'denied' ? '🚫' : pushStatus === 'requesting' ? '⏳' : '🔔'}
+              </span>
+              <span className={
+                pushStatus === 'denied' ? 'text-red-800 dark:text-red-300'
+                : pushStatus === 'requesting' ? 'text-blue-700 dark:text-blue-300'
+                : 'text-orange-800 dark:text-orange-300'
+              }>
+                {pushStatus === 'denied' ? (
+                  <span>
+                    Notifications blocked. <strong>To fix:</strong> open your browser Settings → Site Settings → Notifications → find this site → set to <strong>Allow</strong>, then reload the app.
+                  </span>
+                ) : pushStatus === 'requesting' ? (
+                  'Enabling notifications…'
+                ) : (
+                  'Enable notifications to get alerts when clients submit updates or ask questions.'
+                )}
+              </span>
+            </div>
+            {(pushStatus === 'idle' || pushStatus === 'error') && (
+              <button
+                onClick={enablePush}
+                className="text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 active:bg-orange-700 px-4 py-2 rounded-lg flex-shrink-0"
+              >
+                Enable
+              </button>
+            )}
+            <button
+              onClick={() => setPushBannerDismissed(true)}
+              className="flex-shrink-0 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-black/10 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         {/* Client overview cards */}
         <div className="grid grid-cols-2 gap-3">
           <button

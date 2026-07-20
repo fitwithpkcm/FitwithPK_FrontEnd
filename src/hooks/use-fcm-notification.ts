@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { getToken, onMessage } from 'firebase/messaging';
+import { getToken } from 'firebase/messaging';
 import { messaging, FCM_VAPID_KEY } from '../lib/firebase';
 import { httpCall } from '../services/HttpService';
 import { API_URL } from '../common/Urls';
-import toast from 'react-hot-toast';
 
 export type FcmStatus = 'idle' | 'requesting' | 'granted' | 'denied' | 'unsupported' | 'error';
 
@@ -68,16 +67,9 @@ export function useFcmNotification(): {
       .catch(() => {});
   }, []);
 
-  // Foreground message handler — show toast
-  useEffect(() => {
-    const unsub = onMessage(messaging, (payload) => {
-      const d     = payload.data ?? {};
-      const title = d['title'] ?? payload.notification?.title ?? 'FitwithPK';
-      const body  = d['body']  ?? payload.notification?.body  ?? '';
-      toast(`${title}${body ? ` — ${body}` : ''}`, { icon: '🔔', duration: 5000 });
-    });
-    return unsub;
-  }, []);
+  // Foreground FCM messages are handled by the service worker's onBackgroundMessage
+  // (fires regardless of tab focus for data-only payloads) + use-notifications.ts's
+  // mirror of it — a second listener here would show every push twice.
 
   return { status, requestPermission };
 }

@@ -73,6 +73,14 @@ onBackgroundMessage(messaging, (payload) => {
     silent: false,
     data: { ...d, notifId: notif.id },
   });
+
+  // Mirror the already-persisted notif to any open tabs so their in-app list
+  // updates live. Tabs must NOT re-save it themselves — this SW handler is the
+  // single place a message gets written to IDB, since data-only FCM messages
+  // reach this handler regardless of foreground/background state.
+  self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    clients.forEach((c) => c.postMessage({ type: 'NOTIFICATION_RECEIVED', notif }));
+  });
 });
 
 // ── Notification click ────────────────────────────────────────────
