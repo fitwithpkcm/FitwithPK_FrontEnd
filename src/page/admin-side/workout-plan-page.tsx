@@ -893,12 +893,126 @@ const TEMPLATE_CATEGORIES = [
   'Full Body', 'Cardio', 'Mobility', 'Flexibility', 'Other',
 ];
 
+// ── Library Picker Dialog — multi-select several exercises at once ────
+// The alternative (one blank row + inline dropdown per exercise) is painful
+// for building a template with many exercises, since it's a whole add-search-
+// select cycle per exercise. This lets a coach tick everything they need in
+// one pass and add them all together.
+function LibraryPickerDialog({ open, library, onClose, onAdd }: {
+  open: boolean;
+  library: IExerciseLibraryItem[];
+  onClose: () => void;
+  onAdd: (items: IExerciseLibraryItem[]) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+
+  useEffect(() => { if (open) { setSearch(""); setSelected(new Set()); } }, [open]);
+
+  const filtered = search.trim()
+    ? library.filter(l => l.ExerciseName.toLowerCase().includes(search.toLowerCase()) ||
+        (l.Category ?? "").toLowerCase().includes(search.toLowerCase()))
+    : library;
+
+  const grouped: Record<string, IExerciseLibraryItem[]> = {};
+  filtered.forEach(item => {
+    const cat = item.Category || "Uncategorised";
+    (grouped[cat] = grouped[cat] ?? []).push(item);
+  });
+
+  const keyOf = (item: IExerciseLibraryItem, i: number) => item.IdLibraryItem ?? -(i + 1);
+
+  const toggle = (key: number) => setSelected(s => {
+    const next = new Set(s);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
+
+  const handleAdd = () => {
+    const chosen = filtered.filter((item, i) => selected.has(keyOf(item, i)));
+    onAdd(chosen);
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-blue-500" />
+            Add from Library
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input placeholder="Search exercises…" value={search} onChange={e => setSearch(e.target.value)}
+            className="pl-9 bg-white dark:bg-gray-800" />
+        </div>
+
+        <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-3">
+          {library.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-8">Your exercise library is empty.</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-8">No exercises match "{search}"</p>
+          ) : (
+            Object.entries(grouped).map(([cat, items]) => (
+              <div key={cat}>
+                <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1.5 px-1">{cat}</p>
+                <Card className="bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 overflow-hidden">
+                  {items.map((item, i) => {
+                    const key = keyOf(item, i);
+                    const isSel = selected.has(key);
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => toggle(key)}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 dark:border-gray-700/50 last:border-0 text-left transition-colors ${
+                          isSel ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        }`}>
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${
+                          isSel ? 'bg-blue-600 border-blue-600' : 'border-gray-300 dark:border-gray-600'
+                        }`}>
+                          {isSel && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{item.ExerciseName}</p>
+                          <p className="text-[11px] text-gray-400">
+                            {item.DefaultSets}×{item.DefaultReps}
+                            {item.DefaultWeight ? ` · ${item.DefaultWeight}${item.WeightUnit ?? "kg"}` : ""}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </Card>
+              </div>
+            ))
+          )}
+        </div>
+
+        <DialogFooter className="flex-row gap-2 sm:justify-between">
+          <button onClick={onClose}
+            className="flex-1 h-10 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            Cancel
+          </button>
+          <button onClick={handleAdd} disabled={selected.size === 0}
+            className="flex-1 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors disabled:opacity-40">
+            Add {selected.size > 0 ? selected.size : ""} Exercise{selected.size === 1 ? "" : "s"}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TemplateEditorDrawer({ open, initial, saving, library, onClose, onSave }: {
   open: boolean; initial: IWorkoutTemplate | null; saving: boolean;
   library: IExerciseLibraryItem[];
   onClose: () => void; onSave: (t: IWorkoutTemplate) => void;
 }) {
   const [tpl, setTpl] = useState<IWorkoutTemplate | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   useEffect(() => { if (open && initial) setTpl(JSON.parse(JSON.stringify(initial))); }, [open, initial]);
   if (!tpl) return null;
 
@@ -919,6 +1033,22 @@ function TemplateEditorDrawer({ open, initial, saving, library, onClose, onSave 
   });
 
   const addEx = () => setTpl(t => t ? { ...t, Exercises: [...t.Exercises, createBlankTemplateExercise(t.Exercises.length)] } : t);
+  const addExFromLibrary = (items: IExerciseLibraryItem[]) => setTpl(t => {
+    if (!t) return t;
+    const added: ITemplateExercise[] = items.map((item, i) => ({
+      ExerciseName: item.ExerciseName,
+      MuscleGroup: item.MuscleGroup,
+      VideoUrl: item.VideoUrl,
+      Sets: item.DefaultSets,
+      TargetReps: item.DefaultReps,
+      TargetWeight: item.DefaultWeight,
+      WeightUnit: item.WeightUnit ?? 'kg',
+      RestSeconds: item.RestSeconds,
+      Notes: item.Notes,
+      SortOrder: t.Exercises.length + i,
+    }));
+    return { ...t, Exercises: [...t.Exercises, ...added] };
+  });
   const removeEx = (i: number) => setTpl(t => t ? { ...t, Exercises: t.Exercises.filter((_, idx) => idx !== i) } : t);
   const changeEx = (i: number, f: keyof IExercise, v: string | number) =>
     setTpl(t => { if (!t) return t; const exs = [...t.Exercises]; exs[i] = { ...exs[i], [f]: v }; return { ...t, Exercises: exs }; });
@@ -962,23 +1092,25 @@ function TemplateEditorDrawer({ open, initial, saving, library, onClose, onSave 
               <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
                 Exercises <span className="text-gray-400">({tpl.Exercises.length})</span>
               </label>
-              <button onClick={addEx}
-                className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full transition-colors">
-                <Plus className="h-3 w-3" /> Add
-              </button>
+              <div className="flex items-center gap-1.5">
+                {library.length > 0 && (
+                  <button onClick={() => setPickerOpen(true)}
+                    className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full transition-colors">
+                    <BookOpen className="h-3 w-3" /> Add from Library
+                  </button>
+                )}
+                <button onClick={addEx}
+                  className="flex items-center gap-1 text-xs font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-700 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full transition-colors">
+                  <Plus className="h-3 w-3" /> Custom
+                </button>
+              </div>
             </div>
-            {library.length > 0 && (
-              <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-1">
-                <BookOpen className="h-3 w-3" />
-                Pick from your exercise library, or type a custom name.
-              </p>
-            )}
             <div className="space-y-2">
               {tpl.Exercises.length === 0 ? (
-                <button onClick={addEx}
+                <button onClick={() => library.length > 0 ? setPickerOpen(true) : addEx()}
                   className="w-full py-8 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 text-gray-400 hover:border-blue-300 hover:text-blue-500 flex flex-col items-center gap-2 transition-colors">
                   <Plus className="h-6 w-6" />
-                  <span className="text-sm">Add your first exercise</span>
+                  <span className="text-sm">{library.length > 0 ? "Add exercises from your library" : "Add your first exercise"}</span>
                 </button>
               ) : tpl.Exercises.map((ex, i) => (
                 <ExerciseEditorRow key={i} ex={exAsIExercise(ex)} index={i} library={library} onChange={changeEx} onRemove={removeEx} />
@@ -991,6 +1123,7 @@ function TemplateEditorDrawer({ open, initial, saving, library, onClose, onSave 
           </button>
         </div>
       </DrawerContent>
+      <LibraryPickerDialog open={pickerOpen} library={library} onClose={() => setPickerOpen(false)} onAdd={addExFromLibrary} />
     </Drawer>
   );
 }

@@ -37,6 +37,7 @@ import AdminSupplementPage from './page/admin-side/supplement-page';
 import SupplementPage from './page/client-side/supplement-page';
 import NotificationsPage from './page/client-side/notifications-page';
 import AdminNotificationsPage from './page/admin-side/admin-notifications-page';
+import AdminAlertsPage from './page/admin-side/admin-alerts-page';
 import { Toaster } from 'react-hot-toast';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { DailyTipDialog } from './components/DailyTipDialog';
@@ -139,6 +140,7 @@ function Router() {
       <ClientRoute path={RENDER_URL.STUDENT_SUPPLEMENTS} component={SupplementPage} />
       <ClientRoute path={RENDER_URL.STUDENT_NOTIFICATIONS} component={NotificationsPage} />
       <Route path={RENDER_URL.ADMIN_NOTIFICATIONS} component={AdminNotificationsPage} />
+      <Route path={RENDER_URL.ADMIN_ALERTS} component={AdminAlertsPage} />
 
       {/* Catch-all: redirect any unmatched path to auth instead of showing blank */}
       <Route><Redirect to="/auth" /></Route>

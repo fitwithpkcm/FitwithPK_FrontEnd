@@ -258,15 +258,14 @@ function ClientRow({ client, unreadCount, lastMessage, onClick }: ClientRowProps
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// ── Messenger Panel — reusable client-list + thread UI ─────────────────────────
+// Used both by the standalone route below (AdminNotificationsPage) and embedded
+// directly inside a floating dialog from the admin dashboard, so it doesn't
+// assume it owns the whole viewport/route.
 
-export default function AdminNotificationsPage() {
+export function MessengerPanel() {
   const [selectedClient, setSelectedClient] = useState<IUser | null>(null);
   const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    setBaseUrl(BASE_URL);
-  }, []);
 
   const { data: clients = [], isLoading: clientsLoading } = useQuery<IUser[]>({
     queryKey: ["coach-userlist-messenger"],
@@ -316,9 +315,9 @@ export default function AdminNotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-24">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
       {/* header */}
-      <header className="bg-blue-600 px-4 pt-safe-top">
+      <header className="bg-blue-600 px-4 flex-shrink-0">
         <div className="pt-5 pb-4">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -349,7 +348,7 @@ export default function AdminNotificationsPage() {
       </header>
 
       {/* client list */}
-      <div className="bg-white dark:bg-gray-900 mt-2 rounded-t-2xl overflow-hidden shadow-sm">
+      <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900 mt-2 rounded-t-2xl shadow-sm">
         {(clientsLoading) && (
           <div className="flex justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -377,7 +376,20 @@ export default function AdminNotificationsPage() {
           );
         })}
       </div>
+    </div>
+  );
+}
 
+// ── Standalone route — full-page shell around MessengerPanel ───────────────────
+
+export default function AdminNotificationsPage() {
+  useEffect(() => {
+    setBaseUrl(BASE_URL);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-24">
+      <MessengerPanel />
       <MobileAdminNav />
     </div>
   );

@@ -54,22 +54,27 @@ function NotifRow({ n, onTap }: { n: AppNotification; onTap: (url: string) => vo
   );
 }
 
-export default function NotificationsPage() {
+// ── Notifications Panel — reusable list UI ─────────────────────────
+// Used both by the standalone route below (NotificationsPage) and embedded
+// directly inside a floating dialog (e.g. the admin dashboard's bell icon),
+// so it doesn't assume it owns the whole viewport/route.
+export function NotificationsPanel({ onNavigate }: { onNavigate?: (url: string) => void }) {
   const { notifications, markAllRead, clearAll } = useNotifications();
   const [, navigate] = useLocation();
+  const handleTap = onNavigate ?? navigate;
 
-  // Mark all read when page mounts
+  // Mark all read when panel mounts
   React.useEffect(() => { markAllRead(); }, []);
 
   const newNotifs = notifications.filter(isNew);
   const earlierNotifs = notifications.filter(n => !isNew(n));
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-24">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 pt-safe-top">
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 flex-shrink-0">
         <div className="flex items-center justify-between py-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Notifications</h1>
           {notifications.length > 0 && (
             <button
               onClick={clearAll}
@@ -82,38 +87,50 @@ export default function NotificationsPage() {
         </div>
       </header>
 
-      {notifications.length === 0 ? (
-        <div className="flex flex-col items-center justify-center pt-24 gap-4 text-gray-300 dark:text-gray-600">
-          <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-            <Bell size={36} />
+      <div className="flex-1 overflow-y-auto">
+        {notifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center pt-24 gap-4 text-gray-300 dark:text-gray-600">
+            <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <Bell size={36} />
+            </div>
+            <p className="text-base font-medium text-gray-400">No notifications yet</p>
+            <p className="text-sm text-gray-300 dark:text-gray-600 text-center px-8">
+              Updates and reminders will appear here.
+            </p>
           </div>
-          <p className="text-base font-medium text-gray-400">No notifications yet</p>
-          <p className="text-sm text-gray-300 dark:text-gray-600 text-center px-8">
-            Your coach reminders and updates will appear here.
-          </p>
-        </div>
-      ) : (
-        <div>
-          {newNotifs.length > 0 && (
-            <section>
-              <p className="px-4 pt-4 pb-2 text-sm font-bold text-gray-900 dark:text-white">New</p>
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {newNotifs.map(n => <NotifRow key={n.id} n={n} onTap={navigate} />)}
-              </div>
-            </section>
-          )}
+        ) : (
+          <div>
+            {newNotifs.length > 0 && (
+              <section>
+                <p className="px-4 pt-4 pb-2 text-sm font-bold text-gray-900 dark:text-white">New</p>
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {newNotifs.map(n => <NotifRow key={n.id} n={n} onTap={handleTap} />)}
+                </div>
+              </section>
+            )}
 
-          {earlierNotifs.length > 0 && (
-            <section>
-              <p className="px-4 pt-4 pb-2 text-sm font-bold text-gray-900 dark:text-white">Earlier</p>
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {earlierNotifs.map(n => <NotifRow key={n.id} n={n} onTap={navigate} />)}
-              </div>
-            </section>
-          )}
-        </div>
-      )}
+            {earlierNotifs.length > 0 && (
+              <section>
+                <p className="px-4 pt-4 pb-2 text-sm font-bold text-gray-900 dark:text-white">Earlier</p>
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {earlierNotifs.map(n => <NotifRow key={n.id} n={n} onTap={handleTap} />)}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
+// ── Standalone route — full-page shell around NotificationsPanel ───────────
+export default function NotificationsPage() {
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-24">
+      <div className="pt-safe-top">
+        <NotificationsPanel />
+      </div>
       <MobileNav />
     </div>
   );

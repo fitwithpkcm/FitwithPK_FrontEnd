@@ -45,6 +45,7 @@ export const RENDER_URL = {
     STUDENT_SUPPLEMENTS: '/student-supplements',
     STUDENT_NOTIFICATIONS: '/student-notifications',
     ADMIN_NOTIFICATIONS: '/admin-notifications',
+    ADMIN_ALERTS: '/admin-alerts',
     VIEW_STUDENT: '/student',
     DATA_MANAGEMENT: '/data-management',
     STAFFS: '/staffs',

@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "../../components/ui/button";
+import { Dialog, DialogContent } from "../../components/ui/dialog";
 import { useAuth } from "../../hooks/use-auth";
 import { useFcmNotification } from "../../hooks/use-fcm-notification";
+import { useNotifications } from "../../hooks/use-notifications";
 import { RENDER_URL } from "../../common/Urls";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
+import { MessengerPanel } from "./admin-notifications-page";
 import {
   ArrowRightLeft,
   BarChart2,
@@ -42,7 +45,9 @@ export default function AdminDashboard() {
   const currentDate = new Date();
   const { user } = useAuth();
   const { status: pushStatus, requestPermission: enablePush } = useFcmNotification();
+  const { unreadCount: unreadNotifCount } = useNotifications();
   const [pushBannerDismissed, setPushBannerDismissed] = useState(false);
+  const [messengerOpen, setMessengerOpen] = useState(false);
 
   useEffect(() => {
     setBaseUrl(BASE_URL);
@@ -134,13 +139,13 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-2">
               {/* Notifications bell */}
               <button
-                onClick={() => setLocation(RENDER_URL.ADMIN_NOTIFICATIONS)}
+                onClick={() => setLocation(RENDER_URL.ADMIN_ALERTS)}
                 className="relative w-9 h-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm"
               >
                 <Bell className="w-4 h-4 text-white" />
-                {pendingQueries.length > 0 && (
+                {unreadNotifCount > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-                    {pendingQueries.length > 9 ? "9+" : pendingQueries.length}
+                    {unreadNotifCount > 9 ? "9+" : unreadNotifCount}
                   </span>
                 )}
               </button>
@@ -378,9 +383,9 @@ export default function AdminDashboard() {
         </div>
       </main>
 
-      {/* Chat FAB — navigates to Messenger page */}
+      {/* Chat FAB — opens Messenger in a floating dialog */}
       <button
-        onClick={() => setLocation(RENDER_URL.ADMIN_NOTIFICATIONS)}
+        onClick={() => setMessengerOpen(true)}
         className="fixed bottom-20 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
       >
         <MessageCircle className="h-6 w-6 text-white" />
@@ -392,6 +397,13 @@ export default function AdminDashboard() {
       </button>
 
       <MobileAdminNav />
+
+      {/* Messenger — floating dialog, no page navigation */}
+      <Dialog open={messengerOpen} onOpenChange={setMessengerOpen}>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] h-[80vh] p-0 gap-0 overflow-hidden">
+          <MessengerPanel />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
