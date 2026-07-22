@@ -438,7 +438,9 @@ export default function UpdatesPage() {
  */
   const { data: dailyUpdatesForWeek = [] } = useQuery<IDailyStats[]>({
     queryKey: ["daily-updates-forweek"],
-    queryFn: () => getDailyUpdateForAWeek({ Day: moment(currentDate).format("DD-MM-YYYY") }).then((res: ApiResponse<IDailyStats[]>) => res.data.data)
+    // Guard against a non-array response (e.g. a backend error branch that
+    // doesn't return an array) — otherwise the .map/.reduce calls below throw.
+    queryFn: () => getDailyUpdateForAWeek({ Day: moment(currentDate).format("DD-MM-YYYY") }).then((res: ApiResponse<IDailyStats[]>) => Array.isArray(res.data.data) ? res.data.data : [])
   });
 
 
