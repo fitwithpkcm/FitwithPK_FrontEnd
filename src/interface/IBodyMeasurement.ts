@@ -11,5 +11,17 @@ export interface IBodyMeasurement {
     FileName?: string[],
     WeeklyFile?:string[],
     DateRange?: string,
-    IdUser?: number
+    IdUser?: number,
+    BMR?: number,
+    TDEE?: number,
+    Height?: number,
+    Gender?: string,
+    WeightDifference?: number,
+    WaistDifference?: number,
+    BodyFatDifference?: number,
+    BodyHipDifference?: number,
+    NeckDifference?: number,
+    ChestDifference?: number,
+    UpperArmDifference?: number,
+    QuadricepsDifference?: number,
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { format, parse, subDays, subMonths } from "date-fns";
+import { format, parse } from "date-fns";
 import { ArrowLeft, ChevronDown, ChevronUp, Plus, X, Calculator, Activity, FileText, Upload, Eye, Download, Utensils, Dumbbell } from "lucide-react";
 import {
   LineChart,
@@ -25,19 +25,6 @@ import GraphDataChart from "./AdminProgressWeeklyChart";
 import { IBodyMeasurement } from "../../interface/IBodyMeasurement";
 import { getProgressGallery, getWeeklyUpdate } from "../../services/UpdateServices";
 
-// Interface for body measurements
-interface BodyMeasurement {
-  date: string;
-  weight: number;
-  bodyFat?: number;
-  waist?: number;
-  hip?: number;
-  neck?: number;
-  chest?: number;
-  upperArms?: number;
-  quadriceps?: number;
-}
-
 // Interface for progress photos
 export interface ProgressPhoto {
   id: number | undefined | string;
@@ -51,118 +38,9 @@ interface WeeklyTrackingViewProps {
   onBack: () => void;
 }
 
-// Sample user data
-const USERS = [
-  {
-    id: 1,
-    name: "John Doe",
-    avatar: "https://ui-avatars.com/api/?name=John+Doe&background=random",
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    avatar: "https://ui-avatars.com/api/?name=Jane+Smith&background=random",
-  },
-  {
-    id: 3,
-    name: "Mike Johnson",
-    avatar: "https://ui-avatars.com/api/?name=Mike+Johnson&background=random",
-  },
-  {
-    id: 4,
-    name: "Sarah Williams",
-    avatar: "https://ui-avatars.com/api/?name=Sarah+Williams&background=random",
-  },
-  {
-    id: 5,
-    name: "Alex Brown",
-    avatar: "https://ui-avatars.com/api/?name=Alex+Brown&background=random",
-  }
-];
-
-// Generate sample measurement data
-const generateSampleMeasurements = (userId: number, period: "week" | "month" | "6month" | "year" = "month"): BodyMeasurement[] => {
-  // Use userId as a seed for consistent but varied data
-  const seed = userId;
-  const baseWeight = 65 + (seed % 20);
-  const measurements: BodyMeasurement[] = [];
-
-  // Determine data points and interval based on period
-  let dataPoints = 0;
-  let intervalDays = 0;
-
-  switch (period) {
-    case "week":
-      dataPoints = 7;
-      intervalDays = 1; // Daily data for a week
-      break;
-    case "month":
-      dataPoints = 30;
-      intervalDays = 1; // Daily data for a month
-      break;
-    case "6month":
-      dataPoints = 26;
-      intervalDays = 7; // Weekly data for 6 months
-      break;
-    case "year":
-      dataPoints = 52;
-      intervalDays = 7; // Weekly data for a year
-      break;
-    default:
-      dataPoints = 30;
-      intervalDays = 1;
-  }
-
-  // Generate data for the selected period
-  for (let i = 0; i < dataPoints; i++) {
-    const date = subDays(new Date(), i * intervalDays);
-    // Create more noticeable progress based on time period
-    const progressFactor = i / dataPoints; // Higher for older dates
-    const fluctuation = Math.sin(i * 0.5) * 0.8; // Create small fluctuations
-
-    measurements.push({
-      date: format(date, "yyyy-MM-dd"),
-      weight: parseFloat((baseWeight + fluctuation).toFixed(1)),
-      bodyFat: parseFloat((20 + (seed % 10) / 10 - i * 0.1 + fluctuation * 0.2).toFixed(1)),
-      waist: parseFloat((80 + (seed % 15) - i * 0.1 + fluctuation).toFixed(1)),
-      hip: parseFloat((90 + (seed % 10) - i * 0.05 + fluctuation * 0.5).toFixed(1)),
-      neck: parseFloat((38 + (seed % 5) - i * 0.01 + fluctuation * 0.1).toFixed(1)),
-      chest: parseFloat((95 + (seed % 15) - i * 0.1 + fluctuation * 0.3).toFixed(1)),
-      upperArms: parseFloat((33 + (seed % 7) - i * 0.03 + fluctuation * 0.2).toFixed(1)),
-      quadriceps: parseFloat((55 + (seed % 10) - i * 0.05 + fluctuation * 0.3).toFixed(1)),
-    });
-  }
-
-  return measurements.reverse(); // Return in chronological order
-};
-
-// Generate sample progress photos
-const generateSampleProgressPhotos = (userId: number): ProgressPhoto[] => {
-  return [
-    {
-      id: 1,
-      date: format(subMonths(new Date(), 2), "yyyy-MM-dd"),
-      imageUrl: `https://ui-avatars.com/api/?name=May+1&size=200&background=random&seed=${userId + 1}`,
-    },
-    {
-      id: 2,
-      date: format(subMonths(new Date(), 1), "yyyy-MM-dd"),
-      imageUrl: `https://ui-avatars.com/api/?name=May+15&size=200&background=random&seed=${userId + 2}`,
-    },
-    {
-      id: 3,
-      date: format(new Date(), "yyyy-MM-dd"),
-      imageUrl: `https://ui-avatars.com/api/?name=May+30&size=200&background=random&seed=${userId + 3}`,
-    },
-  ];
-};
-
 export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingViewProps) {
   const [user, setUser] = useState<IWeeklyUpdatesForUser>();
-  const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [progressPhotos, setProgressPhotos] = useState<ProgressPhoto[]>([]);
-
-  const [progressPhotos1, setProgressPhotos1] = useState<ProgressPhoto[]>([]);
 
   const [selectedMeasurement, setSelectedMeasurement] = useState<string>("weight");
   const [showPhotos, setShowPhotos] = useState(true);
@@ -237,67 +115,56 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
   // Time period for the graph
   const [timePeriod, setTimePeriod] = useState<"week" | "month" | "6month" | "year">("month");
 
-  // Sample user profile data for calculations
-  const userProfile = {
-    age: 28,
-    gender: "female",
-    height: 165, // cm
-    weight: 68, // kg
-    bodyFat: 22, // %
-  };
+  // Most recent real weekly entry — BMR/TDEE/Height/Gender on it are computed
+  // server-side (getWeeklyStatus) from the client's actual onboarding profile and
+  // that entry's own weight, so this view never falls back to placeholder data.
+  const latestMeasurement = weekly_updates_measurement_history?.[weekly_updates_measurement_history.length - 1];
 
-  // Activity level multipliers for TDEE calculation
+  // Activity level multipliers — same keys collected on the client's intake form.
   const activityLevels = {
-    sedentary: { label: "Sedentary (desk job)", multiplier: 1.2 },
-    light: { label: "Light exercise (1-3 days/week)", multiplier: 1.375 },
-    moderate: { label: "Moderate exercise (3-5 days/week)", multiplier: 1.55 },
-    active: { label: "Active (6-7 days/week)", multiplier: 1.725 },
-    veryActive: { label: "Very active (2x/day)", multiplier: 1.9 }
+    'sedentary': { label: "Sedentary (desk job)", multiplier: 1.2 },
+    'lightly-active': { label: "Light exercise (1-3 days/week)", multiplier: 1.375 },
+    'moderately-active': { label: "Moderate exercise (3-5 days/week)", multiplier: 1.55 },
+    'very-active': { label: "Active (6-7 days/week)", multiplier: 1.725 },
+    'super-active': { label: "Very active (2x/day)", multiplier: 1.9 },
   };
 
-  // BMR calculation using Mifflin-St Jeor equation
-  const calculateBMR = () => {
-    const { weight, height, age, gender } = userProfile;
-    if (gender === "male") {
-      return 10 * weight + 6.25 * height - 5 * age + 5;
-    } else {
-      return 10 * weight + 6.25 * height - 5 * age - 161;
-    }
+  // "What-if" TDEE preview for a different activity level — recomputed from the
+  // real server-calculated BMR, so switching the dropdown never uses fake inputs.
+  const calculateWhatIfTDEE = (activityLevel: string): number | null => {
+    if (!latestMeasurement?.BMR) return null;
+    const multiplier = activityLevels[activityLevel as keyof typeof activityLevels]?.multiplier ?? 1.2;
+    return Math.round(latestMeasurement.BMR * multiplier);
   };
 
-  // TDEE calculation
-  const calculateTDEE = (activityLevel: string) => {
-    const bmr = calculateBMR();
-    const multiplier = activityLevels[activityLevel as keyof typeof activityLevels]?.multiplier || 1.2;
-    return bmr * multiplier;
-  };
-
-  // Body composition calculations
+  // Body composition calculations — all from the latest real weekly entry.
   const calculateBodyComposition = () => {
-    const { weight, height, bodyFat } = userProfile;
-    const latestMeasurement = measurements[measurements.length - 1];
-    const waist = latestMeasurement?.waist || 75;
-    const hip = latestMeasurement?.hip || 95;
+    const weight = latestMeasurement?.Weight;
+    const height = latestMeasurement?.Height;
+    const bodyFat = latestMeasurement?.BodyFat;
+    const waist = latestMeasurement?.Waist;
+    const hip = latestMeasurement?.BodyHip;
+    const gender = latestMeasurement?.Gender;
 
-    // Lean Body Mass
-    const leanBodyMass = weight * (1 - bodyFat / 100);
+    if (!weight || !height) {
+      return { leanBodyMass: null, waistToHipRatio: null, idealBodyWeight: null, bmi: null };
+    }
 
-    // Waist-to-Hip Ratio
-    const waistToHipRatio = waist / hip;
+    const leanBodyMass = bodyFat != null ? weight * (1 - bodyFat / 100) : null;
+    const waistToHipRatio = waist && hip ? waist / hip : null;
 
     // Ideal Body Weight using Devine formula
     const heightInInches = height / 2.54;
-    const idealBodyWeight = userProfile.gender === "male"
-      ? 50 + 2.3 * (heightInInches - 60)
-      : 45.5 + 2.3 * (heightInInches - 60);
+    const idealBodyWeight = (gender ?? '').toLowerCase() === 'female'
+      ? 45.5 + 2.3 * (heightInInches - 60)
+      : 50 + 2.3 * (heightInInches - 60);
 
-    // BMI
     const heightInMeters = height / 100;
     const bmi = weight / (heightInMeters * heightInMeters);
 
     return {
-      leanBodyMass: leanBodyMass.toFixed(1),
-      waistToHipRatio: waistToHipRatio.toFixed(2),
+      leanBodyMass: leanBodyMass !== null ? leanBodyMass.toFixed(1) : null,
+      waistToHipRatio: waistToHipRatio !== null ? waistToHipRatio.toFixed(2) : null,
       idealBodyWeight: idealBodyWeight.toFixed(1),
       bmi: bmi.toFixed(1)
     };
@@ -351,13 +218,21 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
       <div className="grid grid-cols-2 gap-3 mb-4 px-2">
         <div className="bg-white p-4 rounded-lg border">
           <div className="text-sm text-gray-500 mb-1">Weight</div>
-          <div className="text-2xl font-bold">{measurements[0]?.weight || 68.2} kg</div>
-          <div className="text-xs text-green-500">+ 2.3 kg</div>
+          <div className="text-2xl font-bold">{latestMeasurement?.Weight ?? "—"} kg</div>
+          {!!latestMeasurement?.WeightDifference && (
+            <div className={`text-xs ${latestMeasurement.WeightDifference < 0 ? "text-green-500" : "text-orange-500"}`}>
+              {latestMeasurement.WeightDifference > 0 ? "+" : ""}{latestMeasurement.WeightDifference.toFixed(1)} kg
+            </div>
+          )}
         </div>
         <div className="bg-white p-4 rounded-lg border">
           <div className="text-sm text-gray-500 mb-1">Body Fat</div>
-          <div className="text-2xl font-bold">{measurements[0]?.bodyFat || 19.5}%</div>
-          <div className="text-xs text-green-500">↑ 1.2%</div>
+          <div className="text-2xl font-bold">{latestMeasurement?.BodyFat ?? "—"}%</div>
+          {!!latestMeasurement?.BodyFatDifference && (
+            <div className={`text-xs ${latestMeasurement.BodyFatDifference < 0 ? "text-green-500" : "text-orange-500"}`}>
+              {latestMeasurement.BodyFatDifference > 0 ? "+" : ""}{latestMeasurement.BodyFatDifference.toFixed(1)}%
+            </div>
+          )}
         </div>
       </div>
 
@@ -374,7 +249,11 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
           {showMetabolics ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </button>
 
-        {showMetabolics && (
+        {showMetabolics && (!latestMeasurement?.BMR ? (
+          <div className="px-4 pb-4 text-sm text-gray-500">
+            Can't calculate — the client needs their height and age set in their profile, and at least one weekly update logged.
+          </div>
+        ) : (
           <div className="px-4 pb-4 space-y-4">
             {/* Activity Level Selector */}
             <div>
@@ -394,13 +273,13 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
                 <div className="text-sm text-blue-700 font-medium mb-1">BMR (Basal Metabolic Rate)</div>
-                <div className="text-xl font-bold text-blue-800">{Math.round(calculateBMR())} cal/day</div>
+                <div className="text-xl font-bold text-blue-800">{Math.round(latestMeasurement.BMR)} cal/day</div>
                 <div className="text-xs text-blue-600">Mifflin-St Jeor equation</div>
               </div>
 
               <div className="bg-green-50 p-3 rounded-lg border border-green-100">
                 <div className="text-sm text-green-700 font-medium mb-1">TDEE</div>
-                <div className="text-xl font-bold text-green-800">{Math.round(calculateTDEE(selectedActivityLevel))} cal/day</div>
+                <div className="text-xl font-bold text-green-800">{calculateWhatIfTDEE(selectedActivityLevel) ?? "—"} cal/day</div>
                 <div className="text-xs text-green-600">With activity level</div>
               </div>
             </div>
@@ -409,23 +288,23 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="bg-gray-50 p-3 rounded-lg">
                 <div className="text-gray-600 mb-1">BMI</div>
-                <div className="font-semibold">{calculateBodyComposition().bmi}</div>
+                <div className="font-semibold">{calculateBodyComposition().bmi ?? "—"}</div>
               </div>
               <div className="bg-gray-50 p-3 rounded-lg">
                 <div className="text-gray-600 mb-1">Lean Body Mass</div>
-                <div className="font-semibold">{calculateBodyComposition().leanBodyMass} kg</div>
+                <div className="font-semibold">{calculateBodyComposition().leanBodyMass ?? "—"} kg</div>
               </div>
               <div className="bg-gray-50 p-3 rounded-lg">
                 <div className="text-gray-600 mb-1">Waist-Hip Ratio</div>
-                <div className="font-semibold">{calculateBodyComposition().waistToHipRatio}</div>
+                <div className="font-semibold">{calculateBodyComposition().waistToHipRatio ?? "—"}</div>
               </div>
               <div className="bg-gray-50 p-3 rounded-lg">
                 <div className="text-gray-600 mb-1">Ideal Weight</div>
-                <div className="font-semibold">{calculateBodyComposition().idealBodyWeight} kg</div>
+                <div className="font-semibold">{calculateBodyComposition().idealBodyWeight ?? "—"} kg</div>
               </div>
             </div>
           </div>
-        )}
+        ))}
       </div>
 
       {/* Body Measurements Graph */}

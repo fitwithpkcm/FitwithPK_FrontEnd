@@ -17,9 +17,12 @@ export function InstallAppButton() {
   const [platform, setPlatform] = useState<"android" | "ios">(detectDefaultPlatform());
   const [checking, setChecking] = useState(false);
 
-  const handleClick = async () => {
-    if (isStandalone()) return;
+  // Already running as the installed app (opened from the home screen icon) —
+  // nothing to install, and there's no supported way to "re-prompt" from here.
+  // Hide the button entirely instead of leaving a tap target that silently no-ops.
+  if (isStandalone()) return null;
 
+  const handleClick = async () => {
     // iOS has no native install API — Safari never fires beforeinstallprompt,
     // so the only option there is to show them how to do it manually.
     if (isIos()) {

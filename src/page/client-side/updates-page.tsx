@@ -1126,6 +1126,39 @@ export default function UpdatesPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:border-gray-800">
+                <CardContent className="p-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Waist-Hip Ratio</p>
+                  <div className="flex items-end">
+                    <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {latestMeasurement?.Waist && latestMeasurement?.BodyHip
+                        ? (latestMeasurement.Waist / latestMeasurement.BodyHip).toFixed(2)
+                        : "--"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:border-gray-800">
+                <CardContent className="p-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">BMR</p>
+                  <div className="flex items-end">
+                    <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{latestMeasurement?.BMR ?? "--"}</span>
+                    <span className="ml-1 text-gray-500 dark:text-gray-400 text-sm mb-1">cal/day</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:border-gray-800">
+                <CardContent className="p-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">TDEE</p>
+                  <div className="flex items-end">
+                    <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{latestMeasurement?.TDEE ?? "--"}</span>
+                    <span className="ml-1 text-gray-500 dark:text-gray-400 text-sm mb-1">cal/day</span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             {/*Graph Data Details */}

@@ -23,6 +23,10 @@ export interface IWeeklyStatsExtended extends IWeeklyStats {
   ChestDifference?: number,
   UpperArmDifference?: number,
   QuadricepsDifference?: number,
+  BMR?: number,
+  TDEE?: number,
+  Height?: number,
+  Gender?: string,
 }
 
 
