@@ -43,6 +43,8 @@ export const RENDER_URL = {
     STUDENT_WORKOUT: '/student-workout',
     ADMIN_SUPPLEMENTS: '/admin-supplements',
     STUDENT_SUPPLEMENTS: '/student-supplements',
+    ADMIN_HABITS: '/admin-habits',
+    STUDENT_HABITS: '/student-habits',
     STUDENT_NOTIFICATIONS: '/student-notifications',
     ADMIN_NOTIFICATIONS: '/admin-notifications',
     ADMIN_ALERTS: '/admin-alerts',
@@ -232,4 +234,23 @@ export const API_URL = {
     // ── Fitness Tips ────────────────────────────────────────────────
     GET_DAILY_TIP: '/tips/daily',
     DISMISS_DAILY_TIP: '/tips/dismiss',
+
+    // ── Habit Tracker (Admin) ───────────────────────────────────────
+    GET_HABIT_LIBRARY:            '/habit/getLibrary',
+    CREATE_LIBRARY_HABIT:         '/habit/createLibraryHabit',
+    UPDATE_LIBRARY_HABIT:         '/habit/updateLibraryHabit',
+    DELETE_LIBRARY_HABIT:         '/habit/deleteLibraryHabit',
+    GET_HABIT_ASSIGNMENTS_FOR_CLIENT: '/habit/getAssignmentsForClient',
+    ASSIGN_HABIT:                 '/habit/assign',
+    UPDATE_HABIT_ASSIGNMENT:      '/habit/updateAssignment',
+    UNASSIGN_HABIT:               '/habit/unassign',
+    GET_CLIENT_HABIT_STATS:       '/habit/getClientHabitStats',
+
+    // ── Habit Tracker (Client) ──────────────────────────────────────
+    GET_MY_HABITS_FOR_DAY: '/habit/getMyHabitsForDay',
+    TOGGLE_HABIT_LOG:      '/habit/toggleHabitLog',
+    GET_MY_HABIT_HISTORY:  '/habit/getMyHistory',
+    GET_MY_HABIT_STATS:    '/habit/getMyHabitStats',
+    GET_MY_HABIT_BADGES:   '/habit/getMyBadges',
+    MARK_BADGES_SEEN:      '/habit/markBadgesSeen',
 }

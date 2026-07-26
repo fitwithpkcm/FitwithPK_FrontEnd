@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, ClipboardCheck, Target, ArrowRightLeft, UtensilsCrossed, Cog, Dumbbell, Pill } from "lucide-react";
+import { Home, ClipboardCheck, Target, ArrowRightLeft, UtensilsCrossed, Cog, Dumbbell, Pill, CircleCheck } from "lucide-react";
 import { RENDER_URL } from "../../common/Urls";
 import React from "react";
 
@@ -22,6 +22,7 @@ export function MobileAdminNav({ onNavAttempt }: MobileAdminNavProps = {}) {
           <NavItem icon={<UtensilsCrossed className="h-5 w-5" />} label="Meals" href={RENDER_URL.ADMIN_MEAL_PLAN} isActive={location === RENDER_URL.ADMIN_MEAL_PLAN} onNavAttempt={onNavAttempt} />
           <NavItem icon={<Dumbbell className="h-5 w-5" />} label="Workouts" href={RENDER_URL.ADMIN_WORKOUT_PLAN} isActive={location === RENDER_URL.ADMIN_WORKOUT_PLAN} onNavAttempt={onNavAttempt} />
           <NavItem icon={<Pill className="h-5 w-5" />} label="Supps" href={RENDER_URL.ADMIN_SUPPLEMENTS} isActive={location === RENDER_URL.ADMIN_SUPPLEMENTS} onNavAttempt={onNavAttempt} />
+          <NavItem icon={<CircleCheck className="h-5 w-5" />} label="Habits" href={RENDER_URL.ADMIN_HABITS} isActive={location === RENDER_URL.ADMIN_HABITS} onNavAttempt={onNavAttempt} />
           <NavItem icon={<Cog className="h-5 w-5" />} label="Settings" href={RENDER_URL.ADMIN_SETTINGS} isActive={location === RENDER_URL.ADMIN_SETTINGS} onNavAttempt={onNavAttempt} />
         </div>
       </nav>

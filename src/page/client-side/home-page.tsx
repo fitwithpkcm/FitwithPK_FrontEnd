@@ -6,6 +6,9 @@ import { Droplet, Sun, Moon, Trophy, Dumbbell, Flame, X, CreditCard, Pill, Check
 import { formatDate, calculatePercentage, isEmpty } from "../../lib/utils";
 import { Link } from "wouter";
 import { MobileNav } from "../../components/layout/mobile-nav";
+import { HabitTodayCard } from "../../components/habits/habit-today-card";
+import { getMyHabitsForDay } from "../../services/HabitService";
+import { IHabitDayResponse } from "../../interface/IHabit";
 import { Progress } from "../../components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
@@ -530,11 +533,23 @@ export default function HomePage() {
   };
 
   {/* Streak + motivational helpers */}
-  const streakDays = Array.isArray(dailyUpdatesForWeek)
+  // Same query key as HabitTodayCard, so React Query shares one fetch between them.
+  const { data: habitDay } = useQuery<IHabitDayResponse>({
+    queryKey: ["my-habits-today", moment().format("DD-MM-YYYY")],
+    queryFn: () =>
+      getMyHabitsForDay({ Day: moment().format("DD-MM-YYYY") }).then(res => res.data.data),
+  });
+  const habitStreak = habitDay?.Stats?.CurrentStreak ?? 0;
+  const hasHabits = (habitDay?.Habits?.length ?? 0) > 0;
+
+  // Days this week with steps, water and sleep all logged. Only a fallback now —
+  // once habits are assigned the header shows the real consecutive-day streak.
+  const loggedDaysThisWeek = Array.isArray(dailyUpdatesForWeek)
     ? dailyUpdatesForWeek.filter((d: IDailyStats) =>
         Number(d.Steps) > 0 && Number(d.Water) > 0 && Number(d.Sleep) > 0
       ).length
     : 0;
+  const streakDays = hasHabits ? habitStreak : loggedDaysThisWeek;
   const motivations = [
     "Every rep counts. Keep pushing!",
     "Progress, not perfection.",
@@ -592,7 +607,9 @@ export default function HomePage() {
         {streakDays > 0 && (
           <div className="mt-3 inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
             <Flame className="h-3.5 w-3.5 text-amber-400" />
-            <span className="text-xs font-medium text-white">{streakDays}-day streak</span>
+            <span className="text-xs font-medium text-white">
+              {hasHabits ? `${streakDays}-day streak` : `${streakDays} full days this week`}
+            </span>
           </div>
         )}
       </header>
@@ -735,6 +752,9 @@ export default function HomePage() {
             </Card>
           </>
         )}
+
+        {/* ── Today's habits — renders nothing if the coach hasn't assigned any ── */}
+        <HabitTodayCard />
 
         {/* ── Today's stats ── */}
         <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Today's stats</p>

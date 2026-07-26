@@ -34,6 +34,8 @@ import MealTrackingPage from './page/client-side/meal-tracking-page';
 import AdminWorkoutPlanPage from './page/admin-side/workout-plan-page';
 import WorkoutTrackingPage from './page/client-side/workout-tracking-page';
 import AdminSupplementPage from './page/admin-side/supplement-page';
+import AdminHabitPage from './page/admin-side/habit-page';
+import HabitsPage from './page/client-side/habits-page';
 import SupplementPage from './page/client-side/supplement-page';
 import NotificationsPage from './page/client-side/notifications-page';
 import AdminNotificationsPage from './page/admin-side/admin-notifications-page';
@@ -138,6 +140,8 @@ function Router() {
       <ClientRoute path={RENDER_URL.STUDENT_WORKOUT} component={WorkoutTrackingPage} />
       <Route path={RENDER_URL.ADMIN_SUPPLEMENTS} component={AdminSupplementPage} />
       <ClientRoute path={RENDER_URL.STUDENT_SUPPLEMENTS} component={SupplementPage} />
+      <Route path={RENDER_URL.ADMIN_HABITS} component={AdminHabitPage} />
+      <ClientRoute path={RENDER_URL.STUDENT_HABITS} component={HabitsPage} />
       <ClientRoute path={RENDER_URL.STUDENT_NOTIFICATIONS} component={NotificationsPage} />
       <Route path={RENDER_URL.ADMIN_NOTIFICATIONS} component={AdminNotificationsPage} />
       <Route path={RENDER_URL.ADMIN_ALERTS} component={AdminAlertsPage} />
