@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Users, Play, Pause, X, Search, UserPlus } from "lucide-react";
+import { Users, Play, Pause, X, Search, UserPlus, Trash2 } from "lucide-react";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
 import { AdminPageHeader } from "../../components/layout/page-header";
 import { IUpdatesForUser } from "../../interface/IDailyUpdates";
@@ -35,6 +35,11 @@ export default function ClientManagementScreen() {
       ));
 
     updateActiveStatus({ clientID: clientId, status: newStatus });
+  };
+
+  const handleDeleteClient = (clientId: number, name: string) => {
+    if (!window.confirm(`Delete ${name}? This cannot be undone.`)) return;
+    handleStatusChange(clientId, ACCESS_STATUS.DELETE.NUMBER);
   };
 
   /**
@@ -96,8 +101,9 @@ export default function ClientManagementScreen() {
 
 
   const filteredClients = coach_client_list?.filter(client =>
-    client.FirstName!.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.EmailID!.toLowerCase().includes(searchTerm.toLowerCase())
+    client.ActiveStatus !== ACCESS_STATUS.DELETE.NUMBER &&
+    (client.FirstName!.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.EmailID!.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const getStatusColor = (status: number | undefined) => {
@@ -252,6 +258,16 @@ export default function ClientManagementScreen() {
                   >
                     <X size={14} className="mr-1" />
                     Deactivate
+                  </button>
+                )}
+
+                {client.IdUser && (
+                  <button
+                    onClick={() => handleDeleteClient(client.IdUser!, `${client.FirstName} ${client.LastName}`)}
+                    className="flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-md text-sm hover:bg-red-200"
+                  >
+                    <Trash2 size={14} className="mr-1" />
+                    Delete
                   </button>
                 )}
               </div>
