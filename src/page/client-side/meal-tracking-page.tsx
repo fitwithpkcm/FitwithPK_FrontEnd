@@ -76,7 +76,8 @@ function FoodItemRow({ item, isSaving, readOnly, onToggle, onQtyChange, onNotesC
   const [localQty, setLocalQty] = useState(item.consumedQty.toString());
   const [showAlt, setShowAlt] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasAlt = !!item.AlternativeFoodName;
+  const alternatives = item.Alternatives ?? [];
+  const hasAlt = alternatives.length > 0;
 
   // sync external changes (e.g. after save)
   useEffect(() => { setLocalQty(item.consumedQty.toString()); }, [item.consumedQty]);
@@ -167,18 +168,23 @@ function FoodItemRow({ item, isSaving, readOnly, onToggle, onQtyChange, onNotesC
           onClick={() => setShowAlt(s => !s)}
           className="flex items-center gap-1 text-[10px] font-semibold text-blue-500 dark:text-blue-400 hover:text-blue-700"
         >
-          <Repeat2 className="h-3 w-3" /> Replacement available
+          <Repeat2 className="h-3 w-3" />
+          {alternatives.length === 1 ? "Replacement available" : `${alternatives.length} replacements available`}
           {showAlt ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
         </button>
         {showAlt && (
-          <div className="mt-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 px-2.5 py-1.5">
-            <p className="text-xs font-medium text-blue-800 dark:text-blue-200">{item.AlternativeFoodName}</p>
-            <p className="text-[10px] text-blue-500 dark:text-blue-400">
-              {item.AlternativePlannedQty} {item.AlternativeUnit}
-              {item.AlternativeCaloriesPer100g != null && (
-                <> · {Math.round(item.AlternativeCaloriesPer100g * (item.AlternativePlannedQty ?? 0) / 100)} kcal</>
-              )}
-            </p>
+          <div className="mt-1 space-y-1">
+            {alternatives.map((alt, i) => (
+              <div key={i} className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 px-2.5 py-1.5">
+                <p className="text-xs font-medium text-blue-800 dark:text-blue-200">{alt.FoodName}</p>
+                <p className="text-[10px] text-blue-500 dark:text-blue-400">
+                  {alt.PlannedQty} {alt.Unit}
+                  {alt.CaloriesPer100g != null && (
+                    <> · {Math.round(alt.CaloriesPer100g * (alt.PlannedQty ?? 0) / 100)} kcal</>
+                  )}
+                </p>
+              </div>
+            ))}
           </div>
         )}
       </div>
