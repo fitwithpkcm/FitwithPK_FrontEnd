@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ChevronLeft, ChevronRight, Check, MessageSquare, X,
   Loader2, UtensilsCrossed, TrendingUp, Save, HelpCircle, Send, ChevronDown, ChevronUp, RefreshCw, MessageCircle, CalendarDays,
-  Plus, Image as ImageIcon, Pencil, Trash2,
+  Plus, Image as ImageIcon, Pencil, Trash2, Repeat2,
 } from "lucide-react";
 import moment from "moment";
 import toast from "react-hot-toast";
@@ -74,7 +74,9 @@ interface FoodItemRowProps {
 
 function FoodItemRow({ item, isSaving, readOnly, onToggle, onQtyChange, onNotesClick }: FoodItemRowProps) {
   const [localQty, setLocalQty] = useState(item.consumedQty.toString());
+  const [showAlt, setShowAlt] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasAlt = !!item.AlternativeFoodName;
 
   // sync external changes (e.g. after save)
   useEffect(() => { setLocalQty(item.consumedQty.toString()); }, [item.consumedQty]);
@@ -89,11 +91,12 @@ function FoodItemRow({ item, isSaving, readOnly, onToggle, onQtyChange, onNotesC
   };
 
   return (
-    <div className={`flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all duration-300 ${
+    <div className={`py-2.5 px-3 rounded-xl transition-all duration-300 ${
       item.isConsumed
         ? "bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800"
         : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
     }`}>
+    <div className="flex items-center gap-3">
       {/* Checkbox — hidden on future dates */}
       {!readOnly && (
         <button
@@ -155,6 +158,31 @@ function FoodItemRow({ item, isSaving, readOnly, onToggle, onQtyChange, onNotesC
       >
         <MessageSquare className="h-3.5 w-3.5" />
       </button>
+    </div>
+
+    {/* Replacement food — optional admin-defined substitute */}
+    {hasAlt && (
+      <div className="mt-1.5 pl-10">
+        <button
+          onClick={() => setShowAlt(s => !s)}
+          className="flex items-center gap-1 text-[10px] font-semibold text-blue-500 dark:text-blue-400 hover:text-blue-700"
+        >
+          <Repeat2 className="h-3 w-3" /> Replacement available
+          {showAlt ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        </button>
+        {showAlt && (
+          <div className="mt-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 px-2.5 py-1.5">
+            <p className="text-xs font-medium text-blue-800 dark:text-blue-200">{item.AlternativeFoodName}</p>
+            <p className="text-[10px] text-blue-500 dark:text-blue-400">
+              {item.AlternativePlannedQty} {item.AlternativeUnit}
+              {item.AlternativeCaloriesPer100g != null && (
+                <> · {Math.round(item.AlternativeCaloriesPer100g * (item.AlternativePlannedQty ?? 0) / 100)} kcal</>
+              )}
+            </p>
+          </div>
+        )}
+      </div>
+    )}
     </div>
   );
 }

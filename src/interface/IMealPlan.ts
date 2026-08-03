@@ -81,6 +81,14 @@ export interface IMealFoodItem {
   Category?: string;        // e.g. "Protein", "Carbs", "Fat"
   RecipeId?: number;        // future: linked recipe
   ImageUrl?: string;        // future: food photo
+  // Optional admin-defined substitute food the client can swap in instead
+  AlternativeFoodName?: string;
+  AlternativePlannedQty?: number;
+  AlternativeUnit?: string;
+  AlternativeCaloriesPer100g?: number;
+  AlternativeProteinPer100g?: number;
+  AlternativeCarbsPer100g?: number;
+  AlternativeFatPer100g?: number;
 }
 
 // ── Meal (one of Breakfast/Lunch/Snack/Dinner) ───────────────────

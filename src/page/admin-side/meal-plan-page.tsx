@@ -62,7 +62,10 @@ function fmtToDateInput(v: string) {
   return `${y}-${m}-${d}`;
 }
 
-type CartEntry = { food: IFoodAlternative; qty: string; unit: string };
+type CartEntry = {
+  food: IFoodAlternative; qty: string; unit: string;
+  altFood?: IFoodAlternative; altQty?: string; altUnit?: string;
+};
 type CategoryFilter = "All" | "Protein" | "Carbs" | "Fat";
 
 const CAT_COLOR: Record<string, string> = {
@@ -70,6 +73,102 @@ const CAT_COLOR: Record<string, string> = {
   Carbs:   "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
   Fat:     "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
 };
+
+// ─────────────────────────────────────────────────────────────────
+// ReplacementPicker — pick/edit an optional substitute food for a
+// planned meal item, from the same food database
+// ─────────────────────────────────────────────────────────────────
+
+interface ReplacementPickerProps {
+  foodDb: IFoodAlternative[];
+  alt?: IFoodAlternative;
+  altQty?: string;
+  altUnit?: string;
+  onSet: (food: IFoodAlternative) => void;
+  onQtyChange: (qty: string) => void;
+  onUnitChange: (unit: string) => void;
+  onRemove: () => void;
+}
+
+function ReplacementPicker({ foodDb, alt, altQty, altUnit, onSet, onQtyChange, onUnitChange, onRemove }: ReplacementPickerProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const results = search.trim()
+    ? foodDb.filter(f => f.name.toLowerCase().includes(search.trim().toLowerCase())).slice(0, 6)
+    : [];
+
+  if (alt) {
+    return (
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <Repeat2 className="h-3 w-3 text-blue-500 flex-shrink-0" />
+        <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium flex-shrink-0">Replacement:</span>
+        <span className="text-[10px] bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full truncate max-w-[120px]">
+          {alt.name}
+        </span>
+        <Input
+          type="number"
+          value={altQty ?? ""}
+          onChange={e => onQtyChange(e.target.value)}
+          min="0"
+          step="any"
+          className="w-14 h-6 text-xs text-center px-1 bg-white dark:bg-gray-800 border-blue-200 dark:border-blue-800"
+        />
+        <select
+          value={altUnit ?? "g"}
+          onChange={e => onUnitChange(e.target.value)}
+          className="h-6 rounded-md border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-[10px] px-1 text-gray-900 dark:text-gray-100"
+        >
+          {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+        </select>
+        <button onClick={onRemove} className="text-red-400 hover:text-red-600 flex-shrink-0">
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="text-[10px] text-blue-500 hover:text-blue-700 font-medium flex items-center gap-1"
+      >
+        <Repeat2 className="h-3 w-3" /> Add replacement
+      </button>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <div className="flex items-center gap-1">
+        <Input
+          autoFocus
+          placeholder="Search replacement food…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="h-7 text-xs flex-1"
+        />
+        <button onClick={() => { setOpen(false); setSearch(""); }} className="text-gray-300 hover:text-gray-500 flex-shrink-0">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {results.length > 0 && (
+        <div className="mt-1 max-h-36 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
+          {results.map(f => (
+            <button
+              key={f.name}
+              onClick={() => { onSet(f); setOpen(false); setSearch(""); }}
+              className="w-full text-left px-2 py-1.5 text-xs hover:bg-blue-50 dark:hover:bg-blue-950/30 border-b border-gray-50 dark:border-gray-700 last:border-0"
+            >
+              {f.name} <span className="text-gray-400">· {f.calories} kcal</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────
 // FoodBrowserDialog — multi-select from DB with inline qty edit
@@ -139,6 +238,24 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
   const updateUnit = (name: string, unit: string) =>
     setCart(prev => { const n = new Map(prev); const e = n.get(name); if (e) n.set(name, { ...e, unit }); return n; });
 
+  // Replacement-food helpers
+  const setAltFood = (name: string, altFood: IFoodAlternative) => setCart(prev => {
+    const n = new Map(prev); const e = n.get(name); if (!e) return n;
+    const qtyNum = parseFloat(altFood.quantity ?? "");
+    const unitMatch = (altFood.quantity ?? "").match(/[a-zA-Z]+/);
+    n.set(name, { ...e, altFood, altQty: isNaN(qtyNum) ? "100" : String(qtyNum), altUnit: unitMatch ? unitMatch[0] : "g" });
+    return n;
+  });
+  const updateAltQty  = (name: string, altQty: string)  =>
+    setCart(prev => { const n = new Map(prev); const e = n.get(name); if (e) n.set(name, { ...e, altQty });  return n; });
+  const updateAltUnit = (name: string, altUnit: string) =>
+    setCart(prev => { const n = new Map(prev); const e = n.get(name); if (e) n.set(name, { ...e, altUnit }); return n; });
+  const removeAltFood = (name: string) => setCart(prev => {
+    const n = new Map(prev); const e = n.get(name); if (!e) return n;
+    n.set(name, { ...e, altFood: undefined, altQty: undefined, altUnit: undefined });
+    return n;
+  });
+
   const handleConfirm = () => {
     if (cart.size === 0) { toast.error("Select at least one food"); return; }
     const items: Omit<IMealFoodItem, "IdFoodItem" | "IdMeal">[] = Array.from(cart.values()).map((e, idx) => ({
@@ -151,6 +268,13 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
       ProteinPer100g:  e.food.protein,
       CarbsPer100g:    e.food.carbs,
       FatPer100g:      e.food.fat,
+      AlternativeFoodName:        e.altFood?.name,
+      AlternativePlannedQty:      e.altFood ? Math.max(0.01, parseFloat(e.altQty ?? "") || 100) : undefined,
+      AlternativeUnit:            e.altFood ? (e.altUnit ?? "g") : undefined,
+      AlternativeCaloriesPer100g: e.altFood?.calories,
+      AlternativeProteinPer100g:  e.altFood?.protein,
+      AlternativeCarbsPer100g:    e.altFood?.carbs,
+      AlternativeFatPer100g:      e.altFood?.fat,
     }));
     onConfirm(mealType, items);
   };
@@ -236,6 +360,20 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
             >
               {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
             </select>
+          </div>
+        )}
+        {inCart && entry && (
+          <div className="px-3 pb-2.5 pt-0" onClick={e => e.stopPropagation()}>
+            <ReplacementPicker
+              foodDb={foodDb.filter(f => f.name !== food.name)}
+              alt={entry.altFood}
+              altQty={entry.altQty}
+              altUnit={entry.altUnit}
+              onSet={f => setAltFood(food.name, f)}
+              onQtyChange={q => updateAltQty(food.name, q)}
+              onUnitChange={u => updateAltUnit(food.name, u)}
+              onRemove={() => removeAltFood(food.name)}
+            />
           </div>
         )}
       </div>
@@ -498,13 +636,14 @@ interface MealCardProps {
   foodItems: IMealFoodItem[];
   logs: IMealLog[];
   viewMode: boolean;
+  foodDb: IFoodAlternative[];
   onBrowse: () => void;
   onAddManual: (item: Omit<IMealFoodItem, "IdFoodItem" | "IdMeal">) => void;
   onEditFood:  (sortOrder: number, item: Omit<IMealFoodItem, "IdFoodItem" | "IdMeal">) => void;
   onDeleteFood:(sortOrder: number) => void;
 }
 
-function MealCard({ mealType, foodItems, logs, viewMode, onBrowse, onAddManual, onEditFood, onDeleteFood }: MealCardProps) {
+function MealCard({ mealType, foodItems, logs, viewMode, foodDb, onBrowse, onAddManual, onEditFood, onDeleteFood }: MealCardProps) {
   const meta   = MEAL_META[mealType];
   const accent = MEAL_ACCENT[mealType];
   const [showManual,     setShowManual]     = useState(false);
@@ -585,39 +724,93 @@ function MealCard({ mealType, foodItems, logs, viewMode, onBrowse, onAddManual, 
               );
             }
 
-            return (
-              <div key={item.SortOrder} className={`flex items-center gap-3 px-4 py-2.5 ${eaten ? "bg-green-50/60" : log ? "bg-red-50/40" : ""}`}>
-                {/* status dot */}
-                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${eaten ? "bg-green-400" : log ? "bg-red-400" : accent.dot}`} />
+            const hasAlt = !!item.AlternativeFoodName;
 
-                {/* name + qty */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{item.FoodName}</p>
-                  <p className="text-[10px] text-gray-400 leading-none">
-                    {item.PlannedQty} {item.Unit}
-                    {kcal ? `  ·  ${kcal} kcal` : ""}
-                    {item.Category && <span className="ml-1.5 opacity-60">{item.Category}</span>}
-                  </p>
+            return (
+              <div key={item.SortOrder} className={`px-4 py-2.5 ${eaten ? "bg-green-50/60" : log ? "bg-red-50/40" : ""}`}>
+                <div className="flex items-center gap-3">
+                  {/* status dot */}
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${eaten ? "bg-green-400" : log ? "bg-red-400" : accent.dot}`} />
+
+                  {/* name + qty */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{item.FoodName}</p>
+                    <p className="text-[10px] text-gray-400 leading-none">
+                      {item.PlannedQty} {item.Unit}
+                      {kcal ? `  ·  ${kcal} kcal` : ""}
+                      {item.Category && <span className="ml-1.5 opacity-60">{item.Category}</span>}
+                    </p>
+                  </div>
+
+                  {/* eaten badge */}
+                  {log && (
+                    <span className={`text-[10px] font-semibold flex-shrink-0 ${eaten ? "text-green-600" : "text-red-400"}`}>
+                      {eaten ? "✓" : "✗"}
+                    </span>
+                  )}
+
+                  {/* edit / delete */}
+                  {!viewMode && (
+                    <div className="flex gap-0.5 flex-shrink-0">
+                      <button onClick={() => setEditingSO(item.SortOrder)} className="p-1.5 rounded-lg text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-colors">
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button onClick={() => onDeleteFood(item.SortOrder)} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {/* eaten badge */}
-                {log && (
-                  <span className={`text-[10px] font-semibold flex-shrink-0 ${eaten ? "text-green-600" : "text-red-400"}`}>
-                    {eaten ? "✓" : "✗"}
-                  </span>
-                )}
-
-                {/* edit / delete */}
-                {!viewMode && (
-                  <div className="flex gap-0.5 flex-shrink-0">
-                    <button onClick={() => setEditingSO(item.SortOrder)} className="p-1.5 rounded-lg text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-colors">
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                    <button onClick={() => onDeleteFood(item.SortOrder)} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                )}
+                {/* replacement food — admin can add/edit; view-only in viewMode */}
+                <div className="pl-4 mt-1">
+                  {viewMode ? (
+                    hasAlt && (
+                      <div className="flex items-center gap-1.5 text-[10px] text-blue-600 dark:text-blue-400">
+                        <Repeat2 className="h-3 w-3 flex-shrink-0" />
+                        <span>Replacement: <strong>{item.AlternativeFoodName}</strong> ({item.AlternativePlannedQty} {item.AlternativeUnit})</span>
+                      </div>
+                    )
+                  ) : (
+                    <ReplacementPicker
+                      foodDb={foodDb.filter(f => f.name !== item.FoodName)}
+                      alt={hasAlt ? {
+                        name: item.AlternativeFoodName!,
+                        quantity: `${item.AlternativePlannedQty ?? ""}${item.AlternativeUnit ?? ""}`,
+                        calories: item.AlternativeCaloriesPer100g ?? 0,
+                        protein: item.AlternativeProteinPer100g ?? 0,
+                        carbs: item.AlternativeCarbsPer100g ?? 0,
+                        fat: item.AlternativeFatPer100g ?? 0,
+                        fiber: 0, sugar: 0, benefits: [], health_score: 0,
+                        category: item.Category,
+                      } : undefined}
+                      altQty={item.AlternativePlannedQty?.toString()}
+                      altUnit={item.AlternativeUnit}
+                      onSet={f => onEditFood(item.SortOrder, {
+                        ...item,
+                        AlternativeFoodName: f.name,
+                        AlternativePlannedQty: parseFloat(f.quantity ?? "") || 100,
+                        AlternativeUnit: (f.quantity ?? "").match(/[a-zA-Z]+/)?.[0] ?? "g",
+                        AlternativeCaloriesPer100g: f.calories,
+                        AlternativeProteinPer100g: f.protein,
+                        AlternativeCarbsPer100g: f.carbs,
+                        AlternativeFatPer100g: f.fat,
+                      })}
+                      onQtyChange={q => onEditFood(item.SortOrder, { ...item, AlternativePlannedQty: parseFloat(q) || 0 })}
+                      onUnitChange={u => onEditFood(item.SortOrder, { ...item, AlternativeUnit: u })}
+                      onRemove={() => onEditFood(item.SortOrder, {
+                        ...item,
+                        AlternativeFoodName: undefined,
+                        AlternativePlannedQty: undefined,
+                        AlternativeUnit: undefined,
+                        AlternativeCaloriesPer100g: undefined,
+                        AlternativeProteinPer100g: undefined,
+                        AlternativeCarbsPer100g: undefined,
+                        AlternativeFatPer100g: undefined,
+                      })}
+                    />
+                  )}
+                </div>
               </div>
             );
           })}
@@ -1337,6 +1530,7 @@ export default function AdminMealPlanPage() {
                 foodItems={plan.Meals.find(m => m.MealType === mt)?.FoodItems ?? []}
                 logs={logsForMeal(mt)}
                 viewMode={viewMode}
+                foodDb={allFoods}
                 onBrowse={() => setBrowserMeal(mt)}
                 onAddManual={item => handleAddManual(mt, item)}
                 onEditFood={(so, item) => handleEditFood(mt, so, item)}
