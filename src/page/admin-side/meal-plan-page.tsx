@@ -160,6 +160,11 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
   // Shared renderer for a food row (used both in pinned-selected section and in filtered list)
   const renderFoodRow = (food: IFoodAlternative, entry?: CartEntry) => {
     const inCart = cart.has(food.name);
+    const factor = entry ? (parseFloat(entry.qty) || 0) / 100 : 1;
+    const kcal    = inCart && entry ? Math.round(food.calories * factor) : food.calories;
+    const protein = inCart && entry ? Math.round(food.protein  * factor * 10) / 10 : food.protein;
+    const carbs   = inCart && entry ? Math.round(food.carbs    * factor * 10) / 10 : food.carbs;
+    const fat     = inCart && entry ? Math.round(food.fat      * factor * 10) / 10 : food.fat;
     return (
       <div
         key={food.name}
@@ -191,7 +196,7 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
                 {food.category}
               </span>
               <span className="text-[10px] text-gray-400">
-                {food.calories} kcal · P:{food.protein}g · C:{food.carbs}g · F:{food.fat}g
+                {kcal} kcal · P:{protein}g · C:{carbs}g · F:{fat}g
               </span>
             </div>
           </div>
@@ -239,7 +244,7 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="p-0 flex flex-col gap-0 sm:max-w-lg w-full max-h-[85vh] overflow-hidden rounded-2xl top-4 translate-y-0 sm:top-[50%] sm:translate-y-[-50%]">
+      <DialogContent className="p-0 flex flex-col gap-0 sm:max-w-lg w-full max-h-[85dvh] overflow-hidden rounded-2xl top-4 translate-y-0 sm:top-[50%] sm:translate-y-[-50%]">
 
         {/* ── sticky header ──────────────────────────────────────── */}
         <div className={`px-4 pt-4 pb-3 ${meta.headerBg} border-b ${meta.borderColor}`}>
