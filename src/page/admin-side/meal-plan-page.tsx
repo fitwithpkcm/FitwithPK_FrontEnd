@@ -239,7 +239,7 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="p-0 flex flex-col gap-0 sm:max-w-lg w-full max-h-[92vh] overflow-hidden rounded-2xl">
+      <DialogContent className="p-0 flex flex-col gap-0 sm:max-w-lg w-full max-h-[85vh] overflow-hidden rounded-2xl top-4 translate-y-0 sm:top-[50%] sm:translate-y-[-50%]">
 
         {/* ── sticky header ──────────────────────────────────────── */}
         <div className={`px-4 pt-4 pb-3 ${meta.headerBg} border-b ${meta.borderColor}`}>
