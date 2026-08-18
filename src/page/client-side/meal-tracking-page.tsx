@@ -39,6 +39,8 @@ import {
   IMealPlan, IMealLog, IMealFoodItemWithLog, MealType,
   MEAL_TYPES, MEAL_META, mergePlanWithLogs, IMealPlanWithLogs, IExtraFoodLog,
 } from "../../interface/IMealPlan";
+import { getFoodBasedOnCatergoryApi } from "../../services/FoodService";
+import { IFoodCatergory } from "../../interface/IFoodAlternative";
 
 // ── helpers ──────────────────────────────────────────────────────
 
@@ -67,12 +69,13 @@ interface FoodItemRowProps {
   item: IMealFoodItemWithLog;
   isSaving: boolean;
   readOnly?: boolean;
+  foodNote?: string;
   onToggle: () => void;
   onQtyChange: (qty: number) => void;
   onNotesClick: () => void;
 }
 
-function FoodItemRow({ item, isSaving, readOnly, onToggle, onQtyChange, onNotesClick }: FoodItemRowProps) {
+function FoodItemRow({ item, isSaving, readOnly, foodNote, onToggle, onQtyChange, onNotesClick }: FoodItemRowProps) {
   const [localQty, setLocalQty] = useState(item.consumedQty.toString());
   const [showAlt, setShowAlt] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -129,8 +132,8 @@ function FoodItemRow({ item, isSaving, readOnly, onToggle, onQtyChange, onNotesC
         <p className="text-[10px] text-gray-400 dark:text-gray-500">
           Planned: {item.PlannedQty} {item.Unit}
         </p>
-        {item.Notes && (
-          <p className="text-[10px] text-gray-400 dark:text-gray-500 italic mt-0.5">{item.Notes}</p>
+        {(foodNote || item.Notes) && (
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 italic mt-0.5">{foodNote || item.Notes}</p>
         )}
       </div>
 
@@ -206,6 +209,7 @@ interface MealSectionProps {
   completionPercent: number;
   savingIds: Set<number>;
   readOnly?: boolean;
+  foodNoteMap: Map<string, string | undefined>;
   onToggle: (item: IMealFoodItemWithLog) => void;
   onQtyChange: (item: IMealFoodItemWithLog, qty: number) => void;
   onNotesClick: (item: IMealFoodItemWithLog) => void;
@@ -213,7 +217,7 @@ interface MealSectionProps {
 
 function MealSection({
   mealType, items, completedCount, totalCount, completionPercent,
-  savingIds, readOnly, onToggle, onQtyChange, onNotesClick,
+  savingIds, readOnly, foodNoteMap, onToggle, onQtyChange, onNotesClick,
 }: MealSectionProps) {
   const meta = MEAL_META[mealType];
   const [collapsed, setCollapsed] = useState(false);
@@ -254,6 +258,7 @@ function MealSection({
               item={item}
               isSaving={item.IdFoodItem != null && savingIds.has(item.IdFoodItem)}
               readOnly={readOnly}
+              foodNote={foodNoteMap.get(item.FoodName)}
               onToggle={() => onToggle(item)}
               onQtyChange={qty => onQtyChange(item, qty)}
               onNotesClick={() => onNotesClick(item)}
@@ -410,6 +415,24 @@ export default function MealTrackingPage() {
       return plans.length > 0 ? plans[0] : null;
     },
   });
+
+  const { data: foodCategoryData } = useQuery<IFoodCatergory>({
+    queryKey: ["foodcatergory_list"],
+    queryFn: () => getFoodBasedOnCatergoryApi(null).then((res: unknown) => {
+      const r = res as { data: { data: IFoodCatergory } };
+      return r?.data?.data;
+    }),
+    staleTime: Infinity,
+  });
+
+  const foodNoteMap = React.useMemo(() => {
+    const map = new Map<string, string | undefined>();
+    if (foodCategoryData) {
+      [...(foodCategoryData.Protein ?? []), ...(foodCategoryData.Carbs ?? []), ...(foodCategoryData.Fat ?? [])]
+        .forEach(f => map.set(f.name, f.note));
+    }
+    return map;
+  }, [foodCategoryData]);
 
   const { data: logsRaw = [], isLoading: logsLoading } = useQuery<IMealLog[]>({
     queryKey: ["my-meal-logs", selectedDate],
@@ -814,6 +837,7 @@ export default function MealTrackingPage() {
                   completionPercent={meal.completionPercent}
                   savingIds={savingIds}
                   readOnly={isFuture}
+                  foodNoteMap={foodNoteMap}
                   onToggle={handleToggle}
                   onQtyChange={handleQtyChange}
                   onNotesClick={handleNotesOpen}

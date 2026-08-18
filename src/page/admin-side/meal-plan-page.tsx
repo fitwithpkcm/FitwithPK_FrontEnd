@@ -674,6 +674,7 @@ function MealCard({ mealType, foodItems, logs, viewMode, foodDb, onBrowse, onAdd
   };
 
   const logMap      = new Map(logs.map(l => [l.IdFoodItem, l]));
+  const foodNoteMap = new Map(foodDb.map(f => [f.name, f.note]));
   const macros      = computeMacros(foodItems);
   const consumedCnt = foodItems.filter(f => f.IdFoodItem != null && logMap.get(f.IdFoodItem)?.IsConsumed === 1).length;
   const hasLogs     = logs.length > 0 && foodItems.length > 0;
@@ -722,6 +723,7 @@ function MealCard({ mealType, foodItems, logs, viewMode, foodDb, onBrowse, onAdd
             const log  = item.IdFoodItem != null ? logMap.get(item.IdFoodItem) : undefined;
             const eaten = log?.IsConsumed === 1;
             const kcal  = item.CaloriesPer100g ? Math.round(item.CaloriesPer100g * item.PlannedQty / 100) : null;
+            const foodNote = foodNoteMap.get(item.FoodName) || item.Notes;
 
             if (editingSO === item.SortOrder) {
               return (
@@ -752,8 +754,8 @@ function MealCard({ mealType, foodItems, logs, viewMode, foodDb, onBrowse, onAdd
                       {kcal ? `  ·  ${kcal} kcal` : ""}
                       {item.Category && <span className="ml-1.5 opacity-60">{item.Category}</span>}
                     </p>
-                    {item.Notes && (
-                      <p className="text-[10px] text-gray-400 italic mt-0.5">{item.Notes}</p>
+                    {foodNote && (
+                      <p className="text-[10px] text-gray-400 italic mt-0.5">{foodNote}</p>
                     )}
                   </div>
 
