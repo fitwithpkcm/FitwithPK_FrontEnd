@@ -274,6 +274,7 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
       Unit:            e.unit,
       SortOrder:       idx + 1,
       Category:        e.food.category,
+      Notes:           e.food.note,
       CaloriesPer100g: e.food.calories,
       ProteinPer100g:  e.food.protein,
       CarbsPer100g:    e.food.carbs,
@@ -751,6 +752,9 @@ function MealCard({ mealType, foodItems, logs, viewMode, foodDb, onBrowse, onAdd
                       {kcal ? `  ·  ${kcal} kcal` : ""}
                       {item.Category && <span className="ml-1.5 opacity-60">{item.Category}</span>}
                     </p>
+                    {item.Notes && (
+                      <p className="text-[10px] text-gray-400 italic mt-0.5">{item.Notes}</p>
+                    )}
                   </div>
 
                   {/* eaten badge */}

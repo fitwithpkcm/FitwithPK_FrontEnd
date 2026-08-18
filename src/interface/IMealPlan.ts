@@ -55,11 +55,7 @@ export const MEAL_META: Record<MealType, {
 };
 
 export const COMMON_UNITS = [
-  'g', 'kg', 'ml', 'L',
-  'cup', 'tbsp', 'tsp',
-  'piece', 'slice', 'bowl',
-  'plate', 'scoop', 'handful',
-  'serving',
+  'g',
 ];
 
 // ── Core food item ────────────────────────────────────────────────

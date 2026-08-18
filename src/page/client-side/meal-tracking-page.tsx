@@ -129,6 +129,9 @@ function FoodItemRow({ item, isSaving, readOnly, onToggle, onQtyChange, onNotesC
         <p className="text-[10px] text-gray-400 dark:text-gray-500">
           Planned: {item.PlannedQty} {item.Unit}
         </p>
+        {item.Notes && (
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 italic mt-0.5">{item.Notes}</p>
+        )}
       </div>
 
       {/* Consumed qty (visible when checked) */}
