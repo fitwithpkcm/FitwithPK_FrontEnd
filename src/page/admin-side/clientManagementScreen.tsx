@@ -100,11 +100,18 @@ export default function ClientManagementScreen() {
   });
 
 
+  // Active first, then Paused, then everything else (inactive/pending/payment-failed)
+  const getStatusRank = (status: number | undefined) => {
+    if (status === ACCESS_STATUS.ACTIVE.NUMBER) return 0;
+    if (status === ACCESS_STATUS.PAUSE.NUMBER) return 1;
+    return 2;
+  };
+
   const filteredClients = coach_client_list?.filter(client =>
     client.ActiveStatus !== ACCESS_STATUS.DELETE.NUMBER &&
     ((client.FirstName ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (client.EmailID ?? "").toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  ).sort((a, b) => getStatusRank(a.ActiveStatus) - getStatusRank(b.ActiveStatus));
 
   const getStatusColor = (status: number | undefined) => {
     switch (status) {
