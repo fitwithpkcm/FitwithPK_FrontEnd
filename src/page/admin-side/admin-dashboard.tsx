@@ -23,6 +23,8 @@ import {
   TrendingUp,
   Dumbbell,
   X,
+  Pill,
+  CircleCheck,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { IUser, SuperAdminResponse } from "../../interface/models/User";
@@ -288,6 +290,20 @@ export default function AdminDashboard() {
                 sub: "View detailed metrics",
                 color: "bg-green-100 dark:bg-green-950/50 text-green-600",
                 route: RENDER_URL.ADMIN_ANALYTICS,
+              },
+              {
+                icon: Pill,
+                label: "Supplements",
+                sub: "Manage supplement plans",
+                color: "bg-pink-100 dark:bg-pink-950/50 text-pink-600",
+                route: RENDER_URL.ADMIN_SUPPLEMENTS,
+              },
+              {
+                icon: CircleCheck,
+                label: "Habits",
+                sub: "Track client habits",
+                color: "bg-teal-100 dark:bg-teal-950/50 text-teal-600",
+                route: RENDER_URL.ADMIN_HABITS,
               },
             ].map(({ icon: Icon, label, sub, color, route }) => (
               <button
