@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Search, Calendar, CheckCircle, XCircle, Clock, Save, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { setBaseUrl } from '../../services/HttpService';
-import { BASE_URL } from '../../common/Constant';
+import { ACCESS_STATUS, BASE_URL } from '../../common/Constant';
 import { MobileAdminNav } from '../../components/layout/mobile-admin-nav';
 import { AdminPageHeader } from '../../components/layout/page-header';
 import { getUserListForACoach, setCoachingPlan } from '../../services/AdminServices';
@@ -33,7 +33,7 @@ export default function PricingPlanManagementScreen() {
         queryKey: ['coach-clients-plans'],
         queryFn: async () => {
             const res = await getUserListForACoach({});
-            return res.data?.data ?? [];
+            return (res.data?.data ?? []).filter((c: IUser) => c.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER);
         },
     });
 

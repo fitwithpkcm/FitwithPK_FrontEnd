@@ -223,3 +223,65 @@ export function createBlankPlan(userId: number, assignedDate: string): IMealPlan
     })),
   };
 }
+
+// ── Meal Plan Templates (coach-defined, client-independent) ──────
+
+export interface ITemplateMealFoodAlternative {
+  IdTemplateAlternative?: number;
+  IdTemplateFoodItem?: number;
+  FoodName: string;
+  PlannedQty?: number;
+  Unit?: string;
+  CaloriesPer100g?: number;
+  ProteinPer100g?: number;
+  CarbsPer100g?: number;
+  FatPer100g?: number;
+  SortOrder?: number;
+}
+
+export interface ITemplateMealFoodItem {
+  IdTemplateFoodItem?: number;
+  IdTemplateMeal?: number;
+  FoodName: string;
+  PlannedQty: number;
+  Unit: string;
+  Notes?: string;
+  SortOrder: number;
+  CaloriesPer100g?: number;
+  ProteinPer100g?: number;
+  CarbsPer100g?: number;
+  FatPer100g?: number;
+  FiberPer100g?: number;
+  Category?: string;
+  Alternatives?: ITemplateMealFoodAlternative[];
+}
+
+export interface ITemplateMeal {
+  IdTemplateMeal?: number;
+  IdTemplate?: number;
+  MealType: MealType;
+  FoodItems: ITemplateMealFoodItem[];
+}
+
+export interface IMealPlanTemplate {
+  IdTemplate?: number;
+  IdCoach?: number;
+  TemplateName: string;
+  Category?: string;
+  Notes?: string;
+  CreatedAt?: string;
+  UpdatedAt?: string;
+  Meals: ITemplateMeal[];
+}
+
+export function createBlankMealTemplate(): IMealPlanTemplate {
+  return {
+    TemplateName: '',
+    Category: '',
+    Meals: MEAL_TYPES.map(type => createBlankTemplateMeal(type)),
+  };
+}
+
+export function createBlankTemplateMeal(mealType: MealType): ITemplateMeal {
+  return { MealType: mealType, FoodItems: [] };
+}

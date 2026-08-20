@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { setBaseUrl } from "../../services/HttpService";
-import { BASE_URL, USER_TARGET } from "../../common/Constant";
+import { ACCESS_STATUS, BASE_URL, USER_TARGET } from "../../common/Constant";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { IUser } from "../../interface/models/User";
 import { IDailyStats, IUpdatesForUser } from "../../interface/IDailyUpdates";
@@ -250,7 +250,9 @@ export default function UserTargetsScreen() {
 
   const { data: coach_client_list = [] } = useQuery<IUser[]>({
     queryKey: ["target-userlist"],
-    queryFn: () => getUserListForACoach(null).then(res => res.data.data),
+    queryFn: () => getUserListForACoach(null).then(res =>
+      res.data.data.filter((c: IUser) => c.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER)
+    ),
   });
 
   const { data: UserList } = useQuery<IUpdatesForUser[]>({

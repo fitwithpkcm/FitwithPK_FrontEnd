@@ -7,6 +7,7 @@ import {
   GripVertical, Save, CalendarDays, User, UtensilsCrossed, AlertCircle,
   Search, Eye, Edit3, ShoppingBasket, ChevronLeft, ChevronRight,
   Settings2, Flame, Repeat2, HelpCircle, Send, MessageCircle, RefreshCw,
+  LayoutGrid,
 } from "lucide-react";
 import moment from "moment";
 import toast from "react-hot-toast";
@@ -34,6 +35,7 @@ import {
   getMealPlansForClient, createMealPlan, updateMealPlan,
   deleteMealPlan, copyMealPlan, getMealLogsForClient,
   getExtraFoodLogsForClient,
+  getMealPlanTemplates, createMealPlanTemplate, updateMealPlanTemplate, deleteMealPlanTemplate,
 } from "../../services/MealPlanService";
 import {
   IMealQuery, getMealQueriesForClient, replyMealQuery,
@@ -41,6 +43,7 @@ import {
 import {
   IMealPlan, IMealFoodItem, IMealLog, MealType,
   MEAL_TYPES, MEAL_META, COMMON_UNITS, createBlankPlan, IExtraFoodLog,
+  IMealPlanTemplate, ITemplateMealFoodItem, createBlankMealTemplate,
 } from "../../interface/IMealPlan";
 import { IUser } from "../../interface/models/User";
 import { IFoodCatergory, IFoodAlternative } from "../../interface/IFoodAlternative";
@@ -900,6 +903,209 @@ function MealCard({ mealType, foodItems, logs, viewMode, foodDb, onBrowse, onAdd
 }
 
 // ─────────────────────────────────────────────────────────────────
+// TemplatesDialog — manage reusable, client-independent meal plan
+// templates (create/edit/delete) and apply one to the selected
+// client + date. Reuses FoodBrowserDialog and MealCard as-is since
+// ITemplateMealFoodItem is field-for-field compatible with
+// IMealFoodItem (only the Id key names differ, and those aren't
+// used for anything beyond optional log-matching, which is a no-op
+// here because templates never carry logs).
+// ─────────────────────────────────────────────────────────────────
+
+function TemplatesDialog({
+  open, templates, canApply, applying, saving, foodDb, foodDbLoading, foodDbError,
+  onClose, onCreate, onUpdate, onDelete, onApply,
+}: {
+  open: boolean;
+  templates: IMealPlanTemplate[];
+  canApply: boolean;
+  applying: boolean;
+  saving: boolean;
+  foodDb: IFoodAlternative[];
+  foodDbLoading: boolean;
+  foodDbError: boolean;
+  onClose: () => void;
+  onCreate: (t: IMealPlanTemplate) => void;
+  onUpdate: (t: IMealPlanTemplate) => void;
+  onDelete: (t: IMealPlanTemplate) => void;
+  onApply: (t: IMealPlanTemplate) => void;
+}) {
+  const [mode, setMode] = useState<"list" | "editor">("list");
+  const [tpl, setTpl] = useState<IMealPlanTemplate | null>(null);
+  const [browserMeal, setBrowserMeal] = useState<MealType | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  useEffect(() => { if (open) { setMode("list"); setExpandedId(null); } }, [open]);
+
+  const openEditor = (t: IMealPlanTemplate) => { setTpl(JSON.parse(JSON.stringify(t))); setMode("editor"); };
+
+  const updateMealFoods = (mt: MealType, fn: (items: ITemplateMealFoodItem[]) => ITemplateMealFoodItem[]) =>
+    setTpl(prev => prev ? { ...prev, Meals: prev.Meals.map(m => m.MealType === mt ? { ...m, FoodItems: fn(m.FoodItems) } : m) } : prev);
+
+  const handleBrowseConfirm = (mt: MealType, newItems: Omit<IMealFoodItem, "IdFoodItem" | "IdMeal">[]) => {
+    updateMealFoods(mt, existing => {
+      const base = existing.length;
+      return [...existing, ...newItems.map((item, idx) => ({ ...item, SortOrder: base + idx + 1 } as ITemplateMealFoodItem))];
+    });
+    setBrowserMeal(null);
+  };
+  const handleAddManual = (mt: MealType, item: Omit<IMealFoodItem, "IdFoodItem" | "IdMeal">) =>
+    updateMealFoods(mt, items => [...items, { ...item, SortOrder: items.length + 1 } as ITemplateMealFoodItem]);
+  const handleEditFood = (mt: MealType, so: number, edited: Omit<IMealFoodItem, "IdFoodItem" | "IdMeal">) =>
+    updateMealFoods(mt, items => items.map(i => i.SortOrder === so ? { ...i, ...edited, SortOrder: so } : i));
+  const handleDeleteFood = (mt: MealType, so: number) =>
+    updateMealFoods(mt, items => items.filter(i => i.SortOrder !== so).map((i, idx) => ({ ...i, SortOrder: idx + 1 })));
+
+  const handleSaveTemplate = () => {
+    if (!tpl) return;
+    if (!tpl.TemplateName.trim()) { toast.error("Template name required"); return; }
+    const totalFoods = tpl.Meals.reduce((s, m) => s + m.FoodItems.length, 0);
+    if (totalFoods === 0) { toast.error("Add at least one food item"); return; }
+    if (tpl.IdTemplate) onUpdate(tpl); else onCreate(tpl);
+  };
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
+        <DialogContent className="sm:max-w-lg w-full max-h-[85dvh] overflow-hidden flex flex-col p-0">
+          {mode === "list" ? (
+            <>
+              <DialogHeader className="px-5 pt-5 pb-2">
+                <DialogTitle>Meal Plan Templates</DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-3">
+                <button onClick={() => openEditor(createBlankMealTemplate())}
+                  className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-colors shadow-sm">
+                  <Plus className="h-4 w-4" /> New Template
+                </button>
+
+                {templates.length === 0 ? (
+                  <div className="flex flex-col items-center py-12 text-center border-2 border-dashed border-gray-200 rounded-xl">
+                    <UtensilsCrossed className="h-8 w-8 text-gray-300 mb-2" />
+                    <p className="text-sm font-semibold text-gray-500">No templates yet</p>
+                    <p className="text-xs text-gray-400 mt-1">Create reusable meal plans to quickly assign to clients.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {templates.map(t => {
+                      const totalFoods = t.Meals.reduce((s, m) => s + m.FoodItems.length, 0);
+                      return (
+                        <div key={t.IdTemplate} className="rounded-xl border border-gray-100 bg-white overflow-hidden">
+                          <div className="flex items-center gap-3 px-4 py-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-800 truncate">{t.TemplateName}</p>
+                              <p className="text-[11px] text-gray-400">
+                                {t.Category ? `${t.Category} · ` : ""}{totalFoods} food{totalFoods !== 1 ? "s" : ""}
+                              </p>
+                            </div>
+                            <button onClick={() => setExpandedId(expandedId === t.IdTemplate ? null : t.IdTemplate ?? null)}
+                              className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors">
+                              {expandedId === t.IdTemplate ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </button>
+                            <button onClick={() => openEditor(t)} className="p-1.5 text-gray-400 hover:text-blue-500 transition-colors">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => { if (confirm(`Delete "${t.TemplateName}"?`)) onDelete(t); }}
+                              className="p-1.5 text-gray-300 hover:text-red-500 transition-colors">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          {expandedId === t.IdTemplate && (
+                            <div className="border-t border-gray-50 bg-gray-50/50 px-4 py-2 space-y-1">
+                              {MEAL_TYPES.map(mt => {
+                                const meal = t.Meals.find(m => m.MealType === mt);
+                                if (!meal || meal.FoodItems.length === 0) return null;
+                                return (
+                                  <div key={mt} className="text-[11px] text-gray-500">
+                                    <span className="font-semibold text-gray-600">{MEAL_META[mt].emoji} {mt}:</span>{" "}
+                                    {meal.FoodItems.map(f => `${f.FoodName} (${f.PlannedQty}${f.Unit})`).join(", ")}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {canApply && (
+                            <button
+                              onClick={() => onApply(t)}
+                              disabled={applying}
+                              className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border-t border-orange-100 transition-colors disabled:opacity-50"
+                            >
+                              <Check className="h-3.5 w-3.5" /> Use for selected client &amp; date
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : tpl ? (
+            <>
+              <DialogHeader className="px-5 pt-5 pb-2">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setMode("list")} className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <DialogTitle>{tpl.IdTemplate ? "Edit Template" : "New Template"}</DialogTitle>
+                </div>
+              </DialogHeader>
+              <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 block mb-1">Template Name *</label>
+                  <Input placeholder="e.g. High Protein Day" value={tpl.TemplateName}
+                    onChange={e => setTpl(t => t ? { ...t, TemplateName: e.target.value } : t)} className="h-9" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 block mb-1">Category</label>
+                  <Input placeholder="e.g. Cutting, Bulking, Maintenance" value={tpl.Category ?? ""}
+                    onChange={e => setTpl(t => t ? { ...t, Category: e.target.value } : t)} className="h-9" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 block mb-1">Notes</label>
+                  <Input placeholder="Optional notes..." value={tpl.Notes ?? ""}
+                    onChange={e => setTpl(t => t ? { ...t, Notes: e.target.value } : t)} className="h-9" />
+                </div>
+
+                {MEAL_TYPES.map(mt => (
+                  <MealCard
+                    key={mt}
+                    mealType={mt}
+                    foodItems={(tpl.Meals.find(m => m.MealType === mt)?.FoodItems ?? []) as unknown as IMealFoodItem[]}
+                    logs={[]}
+                    viewMode={false}
+                    foodDb={foodDb}
+                    onBrowse={() => setBrowserMeal(mt)}
+                    onAddManual={item => handleAddManual(mt, item)}
+                    onEditFood={(so, item) => handleEditFood(mt, so, item)}
+                    onDeleteFood={so => handleDeleteFood(mt, so)}
+                  />
+                ))}
+
+                <button onClick={handleSaveTemplate} disabled={saving}
+                  className="w-full h-12 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50 shadow-md">
+                  {saving ? "Saving…" : <><Check className="h-4 w-4" /> Save Template</>}
+                </button>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <FoodBrowserDialog
+        open={!!browserMeal}
+        mealType={browserMeal}
+        foodDb={foodDb}
+        foodDbLoading={foodDbLoading}
+        foodDbError={foodDbError}
+        onClose={() => setBrowserMeal(null)}
+        onConfirm={handleBrowseConfirm}
+      />
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
 // ExtraFoodAdminCard — read-only view of food the client logged
 // outside their assigned plan, including any photos they attached
 // ─────────────────────────────────────────────────────────────────
@@ -999,6 +1205,9 @@ export default function AdminMealPlanPage() {
   const [copyTargetDate,   setCopyTargetDate]   = useState<string>(todayStr());
   const [copyTargetUserId, setCopyTargetUserId] = useState<number | null>(null);
 
+  // meal plan templates dialog
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+
   // delete confirm
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -1046,6 +1255,14 @@ export default function AdminMealPlanPage() {
       return (r.data.data ?? []).filter(c => c.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER);
     }),
   });
+
+  // ── meal plan templates (coach-defined, client-independent) ───
+  const { data: templatesRes, refetch: refetchTemplates } = useQuery({
+    queryKey: ["meal-plan-templates"],
+    queryFn: () => getMealPlanTemplates(),
+    staleTime: 300_000,
+  });
+  const templates: IMealPlanTemplate[] = (templatesRes as any)?.data?.data ?? [];
 
   // ── TEST: default to Devu Mani ───────────────────────────────
   useEffect(() => {
@@ -1201,6 +1418,77 @@ export default function AdminMealPlanPage() {
     onError: (e: Error) => toast.error(`Failed to copy: ${e.message}`),
   });
 
+  // ── meal plan template mutations ───────────────────────────────
+  const createTemplateMut = useMutation({
+    mutationFn: createMealPlanTemplate,
+    onSuccess: () => { toast.success("Template created"); refetchTemplates(); setTemplatesOpen(false); },
+    onError: () => toast.error("Failed to create template"),
+  });
+  const updateTemplateMut = useMutation({
+    mutationFn: updateMealPlanTemplate,
+    onSuccess: () => { toast.success("Template updated"); refetchTemplates(); setTemplatesOpen(false); },
+    onError: () => toast.error("Failed to update template"),
+  });
+  const deleteTemplateMut = useMutation({
+    mutationFn: deleteMealPlanTemplate,
+    onSuccess: () => { toast.success("Template deleted"); refetchTemplates(); },
+    onError: () => toast.error("Failed to delete template"),
+  });
+  // Applying a template builds a fresh plan for the selected client/date and
+  // saves it via the same create/update endpoints the normal Save button uses —
+  // a meal plan is a single record per day (unlike workouts, which allow several
+  // independent records per day), so "apply" updates today's plan in place
+  // rather than inserting a duplicate row.
+  const applyTemplateMutation = useMutation({
+    mutationFn: (p: IMealPlan) => (p.IdMealPlan ? updateMealPlan(p) : createMealPlan(p)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meal-plan-admin", selectedUserId] });
+      toast.success("Template applied to plan!");
+      setTemplatesOpen(false);
+    },
+    onError: (e: Error) => toast.error(`Failed to apply template: ${e.message}`),
+  });
+
+  const handleApplyTemplate = (tpl: IMealPlanTemplate) => {
+    if (!selectedUserId || !selectedDate) { toast.error("Select a client and date first"); return; }
+    const basePlan: IMealPlan = (!isNewPlan && !isRangePlan && plan) ? plan : createBlankPlan(selectedUserId, selectedDate);
+    const newPlan: IMealPlan = {
+      ...basePlan,
+      IdUser: selectedUserId,
+      AssignedDate: selectedDate,
+      Meals: MEAL_TYPES.map(mt => {
+        const tm = tpl.Meals.find(m => m.MealType === mt);
+        return {
+          MealType: mt,
+          FoodItems: (tm?.FoodItems ?? []).map((f, i) => ({
+            FoodName: f.FoodName,
+            PlannedQty: f.PlannedQty,
+            Unit: f.Unit,
+            Notes: f.Notes,
+            SortOrder: i + 1,
+            CaloriesPer100g: f.CaloriesPer100g,
+            ProteinPer100g: f.ProteinPer100g,
+            CarbsPer100g: f.CarbsPer100g,
+            FatPer100g: f.FatPer100g,
+            FiberPer100g: f.FiberPer100g,
+            Category: f.Category,
+            Alternatives: (f.Alternatives ?? []).map((a, j) => ({
+              FoodName: a.FoodName,
+              PlannedQty: a.PlannedQty,
+              Unit: a.Unit,
+              CaloriesPer100g: a.CaloriesPer100g,
+              ProteinPer100g: a.ProteinPer100g,
+              CarbsPer100g: a.CarbsPer100g,
+              FatPer100g: a.FatPer100g,
+              SortOrder: j + 1,
+            })),
+          })),
+        };
+      }),
+    };
+    applyTemplateMutation.mutate(newPlan);
+  };
+
   const createSingleDayMutation = useMutation({
     mutationFn: (p: IMealPlan) => createMealPlan(p),
     onSuccess: (_, savedPlan) => {
@@ -1294,6 +1582,13 @@ export default function AdminMealPlanPage() {
       ══════════════════════════════════════════════════════════ */}
       <AdminPageHeader title="Meal Plans" subtitle="FitwithPK Admin" right={
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setTemplatesOpen(true)}
+            className="p-2 rounded-full bg-white/10 text-white/80 hover:bg-white/20 transition-colors"
+            title="Meal Plan Templates"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
           {plan && !isNewPlan && (
             <button
               onClick={() => guardedNavigate(() => setViewMode(v => !v))}
@@ -1735,6 +2030,23 @@ export default function AdminMealPlanPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Meal Plan Templates Dialog ────────────────────────────── */}
+      <TemplatesDialog
+        open={templatesOpen}
+        templates={templates}
+        canApply={!!selectedUserId && !!selectedDate}
+        applying={applyTemplateMutation.isPending}
+        saving={createTemplateMut.isPending || updateTemplateMut.isPending}
+        foodDb={allFoods}
+        foodDbLoading={foodDbLoading}
+        foodDbError={foodDbError}
+        onClose={() => setTemplatesOpen(false)}
+        onCreate={t => createTemplateMut.mutate(t)}
+        onUpdate={t => updateTemplateMut.mutate(t)}
+        onDelete={t => t.IdTemplate && deleteTemplateMut.mutate({ IdTemplate: t.IdTemplate })}
+        onApply={handleApplyTemplate}
+      />
 
       {/* ── Delete Dialog ─────────────────────────────────────────── */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

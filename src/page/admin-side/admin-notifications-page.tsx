@@ -6,7 +6,7 @@ import {
 import moment from "moment";
 import toast from "react-hot-toast";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
-import { BASE_URL } from "../../common/Constant";
+import { ACCESS_STATUS, BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService";
 import { queryClient } from "../../lib/queryClient";
 import {
@@ -269,7 +269,9 @@ export function MessengerPanel() {
 
   const { data: clients = [], isLoading: clientsLoading } = useQuery<IUser[]>({
     queryKey: ["coach-userlist-messenger"],
-    queryFn: () => getUserListForACoach(null).then((res: any) => res.data.data ?? []),
+    queryFn: () => getUserListForACoach(null).then((res: any) =>
+      (res.data.data ?? []).filter((c: IUser) => c.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER)
+    ),
     staleTime: 60000,
   });
 

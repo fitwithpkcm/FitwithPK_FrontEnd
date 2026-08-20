@@ -148,12 +148,20 @@ export default function SimpleTrackingView() {
    */
   const isComplete = (user: IUpdatesForUser): boolean => isDailyUpdateComplete(user, yesterday);
 
-  // Filter users based on active tab, then sort so missed updates surface first
+  // Parses "DD-MM-YYYY" into a timestamp; clients who've never updated (no Day) sort last
+  const dayTimestamp = (user: IUpdatesForUser): number => {
+    if (isEmpty(user.Day)) return -Infinity;
+    const [day, month, year] = user.Day!.split('-').map(Number);
+    return new Date(year, month - 1, day).getTime();
+  };
+
+  // Filter users based on active tab, then sort by most recent update date,
+  // pushing clients with no update at all to the bottom
   const filteredUsers = UserListWithUpdates?.filter(user => {
     if (activeTab === "updated") return isComplete(user);
     if (activeTab === "missed") return !isComplete(user);
     return true; // "all" tab
-  }).sort((a, b) => Number(isComplete(a)) - Number(isComplete(b)));
+  }).sort((a, b) => dayTimestamp(b) - dayTimestamp(a));
 
   // Count updated and missed users — both driven by the same isComplete check
   const updatedCount = UserListWithUpdates?.filter(isComplete).length ?? 0;

@@ -1,6 +1,6 @@
 import { httpCall, httpUpload } from "./HttpService";
 import { API_URL } from "../common/Urls";
-import { IMealPlan, IMealLog } from "../interface/IMealPlan";
+import { IMealPlan, IMealLog, IMealPlanTemplate } from "../interface/IMealPlan";
 
 // ── Admin: meal plan CRUD ─────────────────────────────────────────
 
@@ -52,3 +52,17 @@ export const getMyExtraFoodLogs = (params: { LogDate: string }) =>
 
 export const getExtraFoodLogsForClient = (params: { IdUser: number; LogDate: string }) =>
   httpCall({ method: "post", url: API_URL.GET_EXTRA_FOOD_LOGS_FOR_CLIENT, data: params });
+
+// ── Meal Plan Templates ────────────────────────────────────────────
+
+export const getMealPlanTemplates = () =>
+  httpCall({ method: "post", url: API_URL.GET_MEAL_PLAN_TEMPLATES, data: {} });
+
+export const createMealPlanTemplate = (params: IMealPlanTemplate) =>
+  httpCall({ method: "post", url: API_URL.CREATE_MEAL_PLAN_TEMPLATE, data: params });
+
+export const updateMealPlanTemplate = (params: IMealPlanTemplate) =>
+  httpCall({ method: "post", url: API_URL.UPDATE_MEAL_PLAN_TEMPLATE, data: params });
+
+export const deleteMealPlanTemplate = (params: { IdTemplate: number }) =>
+  httpCall({ method: "post", url: API_URL.DELETE_MEAL_PLAN_TEMPLATE, data: params });

@@ -15,7 +15,7 @@ import { Card, CardContent } from "../../components/ui/card";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { queryClient } from "../../lib/queryClient";
-import { BASE_URL } from "../../common/Constant";
+import { ACCESS_STATUS, BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService";
 import { getUserListForACoach } from "../../services/AdminServices";
 import {
@@ -336,7 +336,7 @@ export default function AdminSupplementPage() {
     queryFn: () => getUserListForACoach({}),
     staleTime: 60_000,
   });
-  const clients: IUser[] = clientsRes?.data?.data ?? [];
+  const clients: IUser[] = (clientsRes?.data?.data ?? []).filter((c: IUser) => c.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER);
 
   const { data: suppsRes, isLoading } = useQuery({
     queryKey: ["supplements", selectedClient],

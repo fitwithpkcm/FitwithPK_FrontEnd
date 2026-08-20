@@ -160,6 +160,12 @@ export const API_URL = {
     GET_MY_EXTRA_FOOD_LOGS: '/mealplan/getMyExtraFoodLogs',
     GET_EXTRA_FOOD_LOGS_FOR_CLIENT: '/mealplan/getExtraFoodLogsForClient',
 
+    // ── Meal Plan Templates (Admin) ────────────────────────────────
+    GET_MEAL_PLAN_TEMPLATES:    '/mealplan/template/getAll',
+    CREATE_MEAL_PLAN_TEMPLATE:  '/mealplan/template/create',
+    UPDATE_MEAL_PLAN_TEMPLATE:  '/mealplan/template/update',
+    DELETE_MEAL_PLAN_TEMPLATE:  '/mealplan/template/delete',
+
     // ── Meal Queries (client asks, coach replies) ─────────────────
     ASK_MEAL_QUERY: '/mealquery/ask',
     GET_MY_MEAL_QUERIES: '/mealquery/getMyQ',

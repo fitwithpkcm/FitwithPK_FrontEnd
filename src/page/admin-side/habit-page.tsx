@@ -11,7 +11,7 @@ import { Input } from "../../components/ui/input";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { queryClient } from "../../lib/queryClient";
-import { BASE_URL } from "../../common/Constant";
+import { ACCESS_STATUS, BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService";
 import { getUserListForACoach } from "../../services/AdminServices";
 import { IUser } from "../../interface/models/User";
@@ -61,7 +61,7 @@ export default function AdminHabitPage() {
     queryFn: () => getUserListForACoach({}),
     staleTime: 60_000,
   });
-  const clients: IUser[] = clientsRes?.data?.data ?? [];
+  const clients: IUser[] = (clientsRes?.data?.data ?? []).filter((c: IUser) => c.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER);
   const selectedClientName = useMemo(() => {
     const c = clients.find((x) => x.IdUser === selectedClient);
     return c ? `${c.FirstName} ${c.LastName ?? ""}`.trim() : "";
