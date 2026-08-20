@@ -2,9 +2,9 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Droplet, Sun, Moon, Trophy, Dumbbell, Flame, X, CreditCard, Pill, Check, Clock, Pencil, Bell, MessageCircle, Send, Loader2, RefreshCw, ChevronLeft } from "lucide-react";
+import { Droplet, Sun, Moon, Trophy, Dumbbell, Flame, X, CreditCard, Pill, Check, Clock, Pencil, Bell, MessageCircle, Send, Loader2, RefreshCw, ChevronLeft, UtensilsCrossed } from "lucide-react";
 import { formatDate, calculatePercentage, isEmpty } from "../../lib/utils";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { MobileNav } from "../../components/layout/mobile-nav";
 import { HabitTodayCard } from "../../components/habits/habit-today-card";
 import { getMyHabitsForDay } from "../../services/HabitService";
@@ -54,6 +54,7 @@ export interface WeeklyDay {
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
+  const [, setLocation] = useLocation();
   const currentDate = new Date();
 
   // Register Web Push subscription so coach can send reminders to this client
@@ -75,11 +76,6 @@ export default function HomePage() {
   const [sleepAmount, setSleepAmount] = useState<string | number | undefined>("");
   const [viewFeedback, setViewFeedback] = useState(false);
 
-  const [workoutCompleted, setWorkoutCompleted] = useState(false);
-  const [workoutRating, setWorkoutRating] = useState<1 | 2 | 3 | 4 | 5>(3);//smiley rating
-  const [workoutNotes, setWorkoutNotes] = useState("");
-
-  const [workoutRatingOpen, setWorkoutRatingOpen] = useState(false);
   const [chartDataType, setChartDataType] = useState<'Steps_Percent' | 'Water_Percent' | 'Sleep_Percent'>('Steps_Percent');
   const [chartInfoVisible, setChartInfoVisible] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -431,39 +427,6 @@ export default function HomePage() {
     },
   });
 
-  // Update workout status
-  const updateWorkoutMutation = useMutation({
-    mutationFn: async ({ workrating, notes }: { workrating: number; notes: string }) => {
-      const transformedData = {
-        WorkOut: workrating,
-        Notes: notes,
-        Day: moment(currentDate).format("DD-MM-YYYY")
-      };
-
-      return dailyUpdate(transformedData).then((res) => {
-        if (res.data.success) {
-          return res;
-        }
-      }).catch((error) => {
-        return error
-      })
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
-      queryClient.invalidateQueries({ queryKey: ['daily-updates-forweek'] })
-
-      toast.success('Workout status updated', {
-        position: 'bottom-center'
-      })
-
-    },
-    onError: (error) => {
-      toast.error('Failed to update Workout status', {
-        position: 'bottom-center'
-      })
-    },
-  });
-
   const handleWaterSubmit = () => {
     const amount = parseFloat("" + waterAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -506,27 +469,6 @@ export default function HomePage() {
     updateSleepMutation.mutate(hours);
   };
 
-
-  const handleWorkOutSubmit = () => {
-
-    if (isNaN(workoutRating)) {
-
-      toast.error('Please enter a valid number of sleep hours (between 0 and 24)', {
-        position: 'bottom-center'
-      })
-
-      return;
-    }
-    // Save to localStorage for auto-fill in updates page
-    updateWorkoutMutation.mutate({
-      workrating: workoutRating,
-      notes: workoutNotes
-    });
-    setWorkoutRating(1);
-    setWorkoutNotes("");
-    setWorkoutCompleted(true);
-    setWorkoutRatingOpen(false);
-  };
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -847,7 +789,7 @@ export default function HomePage() {
 
           {/* Workout */}
           <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 cursor-pointer"
-            onClick={() => { if (!latestUpdate?.WorkOut) setWorkoutRatingOpen(true); }}>
+            onClick={() => setLocation(RENDER_URL.STUDENT_WORKOUT)}>
             <CardContent className="p-3">
               <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-950/40 flex items-center justify-center mb-2">
                 <Dumbbell className="h-4 w-4 text-orange-500 dark:text-orange-400" />
@@ -868,7 +810,7 @@ export default function HomePage() {
               ) : (
                 <>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400 leading-tight mt-1">Not logged</p>
-                  <p className="text-[10px] text-blue-500 dark:text-blue-400 mt-1">Tap to rate</p>
+                  <p className="text-[10px] text-blue-500 dark:text-blue-400 mt-1">Tap to track</p>
                 </>
               )}
             </CardContent>
@@ -878,7 +820,7 @@ export default function HomePage() {
 
         {/* ── Quick log ── */}
         <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Quick log</p>
-        <div className="grid grid-cols-3 gap-2 mb-5">
+        <div className="grid grid-cols-2 gap-2 mb-5">
           <button
             className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 active:scale-95 transition-transform"
             onClick={() => { setWaterAmount(latestUpdate?.Water ?? ""); setWaterInputOpen(true); }}
@@ -899,6 +841,13 @@ export default function HomePage() {
           >
             <Moon className="h-4 w-4 text-indigo-400" />
             <span>+ Sleep</span>
+          </button>
+          <button
+            className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 active:scale-95 transition-transform"
+            onClick={() => setLocation(RENDER_URL.STUDENT_MEAL_TRACKING)}
+          >
+            <UtensilsCrossed className="h-4 w-4 text-emerald-500" />
+            <span>Log Food</span>
           </button>
         </div>
 
@@ -1919,124 +1868,6 @@ export default function HomePage() {
 
           <DialogFooter>
             <Button onClick={() => setViewFeedback(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-
-      {/* Workout Rating Dialog */}
-      <Dialog open={workoutRatingOpen} onOpenChange={setWorkoutRatingOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Rate Your Workout</DialogTitle>
-            <DialogDescription>
-              How did you follow your workout plan today?
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4 space-y-4">
-            <div className="flex justify-between items-center">
-              <label className="text-sm font-medium">Rating:</label>
-              <div className="flex space-x-2">
-                <div
-                  className={`cursor-pointer rounded-full w-8 h-8 flex items-center justify-center transition-all duration-200 ${workoutRating === 1 ? 'bg-red-500 transform scale-125 z-10' : 'bg-red-500 opacity-75 hover:opacity-100'}`}
-                  onClick={() => setWorkoutRating(1)}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm2.97 4.43l1.06-1.06 1.06 1.06 1.415-1.414-1.06-1.06 1.06-1.06-1.415-1.416-1.06 1.06-1.06-1.06-1.414 1.415 1.06 1.06-1.06 1.06 1.414 1.415z" />
-                  </svg>
-                </div>
-                <div
-                  className={`cursor-pointer rounded-full w-8 h-8 flex items-center justify-center transition-all duration-200 ${workoutRating === 2 ? 'bg-orange-500 transform scale-125 z-10' : 'bg-orange-500 opacity-75 hover:opacity-100'}`}
-                  onClick={() => setWorkoutRating(2)}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm8 5H9v2h6v-2z" />
-                  </svg>
-                </div>
-                <div
-                  className={`cursor-pointer rounded-full w-8 h-8 flex items-center justify-center transition-all duration-200 ${workoutRating === 3 ? 'bg-yellow-500 transform scale-125 z-10' : 'bg-yellow-500 opacity-75 hover:opacity-100'}`}
-                  onClick={() => setWorkoutRating(3)}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm8 5H9v2h6v-2z" />
-                  </svg>
-                </div>
-                <div
-                  className={`cursor-pointer rounded-full w-8 h-8 flex items-center justify-center transition-all duration-200 ${workoutRating === 4 ? 'bg-lime-500 transform scale-125 z-10' : 'bg-lime-500 opacity-75 hover:opacity-100'}`}
-                  onClick={() => setWorkoutRating(4)}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm1.146 5.146l1.414 1.414L12 15.12l2.44 2.44 1.414-1.414L12 12.292l-3.854 3.854z" />
-                  </svg>
-                </div>
-                <div
-                  className={`cursor-pointer rounded-full w-8 h-8 flex items-center justify-center transition-all duration-200 ${workoutRating === 5 ? 'bg-green-500 transform scale-125 z-10' : 'bg-green-500 opacity-75 hover:opacity-100'}`}
-                  onClick={() => setWorkoutRating(5)}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 100 16 8 8 0 000-16zm-5 7h10v2H7v-2zm4.592 4.295l2.7-4.055 1.416.943-3.85 5.776-3.374-2.7.943-1.176 2.165 1.212z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-xs border border-gray-200 dark:border-gray-700">
-              {workoutRating === 1 && (
-                <div className="flex items-start">
-                  <span className="w-3 h-3 rounded-full bg-red-500 mr-2 mt-0.5 flex-shrink-0"></span>
-                  <span className="text-gray-700 dark:text-gray-300">Off Plan (Did not do workout)</span>
-                </div>
-              )}
-              {workoutRating === 2 && (
-                <div className="flex items-start">
-                  <span className="w-3 h-3 rounded-full bg-orange-500 mr-2 mt-0.5 flex-shrink-0"></span>
-                  <span className="text-gray-700 dark:text-gray-300">Some Effort (Minimal workout)</span>
-                </div>
-              )}
-              {workoutRating === 3 && (
-                <div className="flex items-start">
-                  <span className="w-3 h-3 rounded-full bg-yellow-500 mr-2 mt-0.5 flex-shrink-0"></span>
-                  <span className="text-gray-700 dark:text-gray-300">Partially On Track (Modified workout)</span>
-                </div>
-              )}
-              {workoutRating === 4 && (
-                <div className="flex items-start">
-                  <span className="w-3 h-3 rounded-full bg-lime-500 mr-2 mt-0.5 flex-shrink-0"></span>
-                  <span className="text-gray-700 dark:text-gray-300">Workout Completed, Steps Missed</span>
-                </div>
-              )}
-              {workoutRating === 5 && (
-                <div className="flex items-start">
-                  <span className="w-3 h-3 rounded-full bg-green-500 mr-2 mt-0.5 flex-shrink-0"></span>
-                  <span className="text-gray-700 dark:text-gray-300">Workout and Step Goal Completed</span>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Notes:</label>
-              <textarea
-                className="w-full min-h-[80px] p-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                placeholder="Add any notes about your workout (optional)"
-                value={workoutNotes}
-                onChange={(e) => setWorkoutNotes(e.target.value)}
-              ></textarea>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              onClick={() => {
-
-                handleWorkOutSubmit();
-
-
-              }}
-              className="w-full"
-            >
-              Submit WorkOut Updates
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
