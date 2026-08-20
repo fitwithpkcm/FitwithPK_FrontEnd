@@ -22,4 +22,5 @@ export interface IDailyStats {
 export interface IUpdatesForUser extends IDailyStats{
   FirstName:string,
   LastName:string,
+  ActiveStatus?: number,
 }

@@ -34,4 +34,5 @@ export interface IWeeklyStatsExtended extends IWeeklyStats {
 export interface IWeeklyUpdatesForUser extends IWeeklyStatsExtended{
   FirstName:string,
   LastName:string,
+  ActiveStatus?: number,
 }

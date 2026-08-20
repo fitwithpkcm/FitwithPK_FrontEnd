@@ -102,8 +102,8 @@ export default function ClientManagementScreen() {
 
   const filteredClients = coach_client_list?.filter(client =>
     client.ActiveStatus !== ACCESS_STATUS.DELETE.NUMBER &&
-    (client.FirstName!.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.EmailID!.toLowerCase().includes(searchTerm.toLowerCase()))
+    ((client.FirstName ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (client.EmailID ?? "").toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const getStatusColor = (status: number | undefined) => {
@@ -111,6 +111,8 @@ export default function ClientManagementScreen() {
       case ACCESS_STATUS.ACTIVE.NUMBER: return "bg-green-100 text-green-800";
       case ACCESS_STATUS.PAUSE.NUMBER: return "bg-yellow-100 text-yellow-800";
       case ACCESS_STATUS.DE_ACTIVE.NUMBER: return "bg-gray-100 text-gray-800";
+      case ACCESS_STATUS.PENDING.NUMBER: return "bg-blue-100 text-blue-800";
+      case ACCESS_STATUS.PAYMENT_FAILED.NUMBER: return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
@@ -120,6 +122,8 @@ export default function ClientManagementScreen() {
       case ACCESS_STATUS.ACTIVE.NUMBER: return "🟢";
       case ACCESS_STATUS.PAUSE.NUMBER: return "⏸️";
       case ACCESS_STATUS.DE_ACTIVE.NUMBER: return "⭕";
+      case ACCESS_STATUS.PENDING.NUMBER: return "🕓";
+      case ACCESS_STATUS.PAYMENT_FAILED.NUMBER: return "⚠️";
       default: return "⭕";
     }
   };
@@ -129,6 +133,8 @@ export default function ClientManagementScreen() {
       case ACCESS_STATUS.ACTIVE.NUMBER: return ACCESS_STATUS.ACTIVE.NAME;
       case ACCESS_STATUS.PAUSE.NUMBER: return ACCESS_STATUS.PAUSE.NAME;
       case ACCESS_STATUS.DE_ACTIVE.NUMBER: return ACCESS_STATUS.DE_ACTIVE.NAME;
+      case ACCESS_STATUS.PENDING.NUMBER: return ACCESS_STATUS.PENDING.NAME;
+      case ACCESS_STATUS.PAYMENT_FAILED.NUMBER: return ACCESS_STATUS.PAYMENT_FAILED.NAME;
       default: return "Unknown";
     }
   };
@@ -191,8 +197,9 @@ export default function ClientManagementScreen() {
           <div className="bg-white p-4 rounded-lg border text-center">
             <div className="text-2xl font-bold text-gray-600">
               {coach_client_list?.filter(c =>
-                c.ActiveStatus === ACCESS_STATUS.DE_ACTIVE.NUMBER ||
-                c.ActiveStatus === ACCESS_STATUS.DELETE.NUMBER
+                c.ActiveStatus !== ACCESS_STATUS.DELETE.NUMBER &&
+                c.ActiveStatus !== ACCESS_STATUS.ACTIVE.NUMBER &&
+                c.ActiveStatus !== ACCESS_STATUS.PAUSE.NUMBER
               ).length}
             </div>
             <div className="text-sm text-gray-500">Inactive</div>

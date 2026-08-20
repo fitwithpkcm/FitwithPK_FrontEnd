@@ -9,6 +9,7 @@ import { IUser } from "../../interface/models/User";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { IDailyStats, IUpdatesForUser } from "../../interface/IDailyUpdates";
 import { getRandomColor, isEmpty } from "../../lib/utils";
+import { ACCESS_STATUS } from "../../common/Constant";
 import { getReviewDate, isDailyUpdateComplete } from "../../lib/dailyUpdateStatus";
 import UserDailyDetailView from "./user-details-view";
 import { IWeeklyStatsExtended, IWeeklyUpdatesForUser } from "../../interface/IWeeklyUpdates";
@@ -83,14 +84,18 @@ export default function SimpleTrackingView() {
   // Fetch user list with their update status for yesterday
   const { data: UserListWithUpdates } = useQuery<IUpdatesForUser[]>({
     queryKey: ["coach-userlist", yesterday],
-    queryFn: () => getUserListWithUpdates_ForCoach({ Day: yesterday }).then(res => res.data.data),
+    queryFn: () => getUserListWithUpdates_ForCoach({ Day: yesterday }).then(res =>
+      res.data.data.filter(user => user.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER)
+    ),
     staleTime: 0,
   });
 
-  //fetch weekly 
+  //fetch weekly
   const { data: UserListWithWeeklyUpdates } = useQuery<IWeeklyUpdatesForUser[]>({
     queryKey: ["coach-userlist-weekly"],
-    queryFn: () => getUserListWithWeeklyUpdates_ForCoach(0).then(res => res.data.data),
+    queryFn: () => getUserListWithWeeklyUpdates_ForCoach(0).then(res =>
+      res.data.data.filter(user => user.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER)
+    ),
     staleTime: 0,
   });
 
