@@ -1,15 +1,14 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, Cell, ReferenceLine,
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import moment from "moment";
-import { Pencil, Check, X } from "lucide-react";
+import { Pencil, Check, X, Dumbbell, TrendingUp, Target as TargetIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Card, CardContent, CardHeader } from "../ui/card";
-import { Badge } from "../ui/badge";
 import { queryClient } from "../../lib/queryClient";
 import {
   getVolumeHistory, getMuscleGroupVolume, getMuscleTargets, upsertMuscleTarget,
@@ -24,13 +23,18 @@ const LINE_COLORS = [
   "#ec4899","#14b8a6","#f97316","#84cc16","#06b6d4",
 ];
 
-// ── muscle group bar colours ─────────────────────────────────────────
+// ── muscle group progress bar colour by how close to target ──────────
 const muscleColor = (sets: number, target: number) => {
   const pct = sets / target;
-  if (pct >= 1)   return "#10b981"; // green — at or above target
-  if (pct >= 0.5) return "#f59e0b"; // amber — halfway
-  return "#ef4444";                  // red — undertrained
+  if (pct >= 1)   return { bar: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400", chip: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" };
+  if (pct >= 0.5) return { bar: "bg-amber-500", text: "text-amber-600 dark:text-amber-400", chip: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" };
+  return { bar: "bg-red-400", text: "text-red-500 dark:text-red-400", chip: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" };
 };
+
+function formatVolume(v: number) {
+  if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
+  return Math.round(v).toLocaleString();
+}
 
 // ── custom tooltip for volume line chart ─────────────────────────────
 function VolumeTooltip({ active, payload, label }: any) {
@@ -42,22 +46,9 @@ function VolumeTooltip({ active, payload, label }: any) {
       </p>
       {payload.map((p: any) => (
         <p key={p.dataKey} style={{ color: p.color }}>
-          {p.name}: <span className="font-bold">{Math.round(p.value).toLocaleString()} kg·reps</span>
+          {p.name}: <span className="font-bold">{formatVolume(p.value)} kg lifted</span>
         </p>
       ))}
-    </div>
-  );
-}
-
-// ── custom tooltip for muscle bar chart ─────────────────────────────
-function MuscleTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  const d = payload[0]?.payload as IMuscleVolumePoint & { target: number };
-  return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-lg text-xs">
-      <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">{label}</p>
-      <p>Sets: <span className="font-bold">{d?.WeeklySets}</span> / {d?.target}</p>
-      <p>Volume: <span className="font-bold">{Math.round(d?.WeeklyVolume ?? 0).toLocaleString()} kg·reps</span></p>
     </div>
   );
 }
@@ -69,21 +60,21 @@ function TargetEditor({ target, onSave }: {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(target.WeeklySetTarget.toString());
   if (!editing) return (
-    <button onClick={() => setEditing(true)} className="text-blue-500 hover:text-blue-700">
+    <button onClick={() => setEditing(true)} className="p-1 text-gray-300 dark:text-gray-600 hover:text-blue-500 transition-colors flex-shrink-0">
       <Pencil className="h-3 w-3" />
     </button>
   );
   return (
-    <span className="flex items-center gap-1">
+    <span className="flex items-center gap-1 flex-shrink-0">
       <input
         type="number" min={1} max={40} value={val}
         onChange={e => setVal(e.target.value)}
         className="w-12 text-xs border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800"
       />
       <button onClick={() => { onSave({ ...target, WeeklySetTarget: Number(val) }); setEditing(false); }}>
-        <Check className="h-3 w-3 text-green-500" />
+        <Check className="h-3.5 w-3.5 text-green-500" />
       </button>
-      <button onClick={() => setEditing(false)}><X className="h-3 w-3 text-gray-400" /></button>
+      <button onClick={() => setEditing(false)}><X className="h-3.5 w-3.5 text-gray-400" /></button>
     </span>
   );
 }
@@ -122,6 +113,9 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
     return row;
   });
 
+  const totalVolume = volumeRaw.reduce((sum, d) => sum + (d.Volume ?? 0), 0);
+  const sessionsLogged = allDates.length;
+
   // ── muscle group volume ─────────────────────────────────────────
   const { data: muscleRes, isLoading: muscleLoading } = useQuery({
     queryKey: ["muscle-volume", idUser, weeks],
@@ -150,7 +144,8 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
     onError: () => toast.error("Failed to update target"),
   });
 
-  // build bar chart data — all muscle groups, fill 0 if not trained
+  // build muscle progress data — all muscle groups, fill 0 if not trained,
+  // sorted so the ones needing the most attention surface first
   const muscleChartData = MUSCLE_GROUPS.map(mg => {
     const found = muscleRaw.find(m => m.MuscleGroup === mg);
     const targetRow = targets.find(t => t.MuscleGroup === mg);
@@ -161,9 +156,10 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
       WeeklyVolume: found?.WeeklyVolume ?? 0,
       target,
     };
-  });
+  }).sort((a, b) => (a.WeeklySets / a.target) - (b.WeeklySets / b.target));
 
-  const weeksLabel = weeks === 1 ? "This week" : `Last ${weeks} weeks`;
+  const onTargetCount = muscleChartData.filter(m => m.WeeklySets >= m.target).length;
+  const weeksLabel = weeks === 1 ? "this week" : `the last ${weeks} weeks`;
 
   return (
     <div className="space-y-5 px-4 py-4 pb-6">
@@ -186,27 +182,58 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
         ))}
       </div>
 
+      {/* ── friendly summary strip ───────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-2.5">
+        <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
+          <CardContent className="p-3 flex flex-col items-center text-center gap-1.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center">
+              <Dumbbell className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <p className="text-lg font-extrabold text-gray-900 dark:text-white leading-none">{sessionsLogged}</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">Sessions logged</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
+          <CardContent className="p-3 flex flex-col items-center text-center gap-1.5">
+            <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            </div>
+            <p className="text-lg font-extrabold text-gray-900 dark:text-white leading-none">{formatVolume(totalVolume)}<span className="text-xs font-normal text-gray-400"> kg</span></p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">Total lifted</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
+          <CardContent className="p-3 flex flex-col items-center text-center gap-1.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center">
+              <TargetIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <p className="text-lg font-extrabold text-gray-900 dark:text-white leading-none">{onTargetCount}<span className="text-xs font-normal text-gray-400">/{muscleChartData.length}</span></p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">Muscles on target</p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* ── workout volume line chart ────────────────────────────── */}
       <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
         <CardHeader className="px-4 pt-4 pb-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Workout Volume</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">sets × reps × weight — {weeksLabel}</p>
-            </div>
-          </div>
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">How much you're lifting</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Total weight moved per session, over {weeksLabel}</p>
         </CardHeader>
         <CardContent className="px-2 pb-4">
           {volLoading ? (
             <div className="h-48 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
           ) : volumeChartData.length === 0 ? (
-            <div className="h-48 flex items-center justify-center text-gray-400 text-sm">No workouts logged yet.</div>
+            <div className="h-48 flex flex-col items-center justify-center text-center gap-2 px-6">
+              <Dumbbell className="h-8 w-8 text-gray-200 dark:text-gray-700" />
+              <p className="text-sm font-medium text-gray-400 dark:text-gray-500">No workouts logged yet</p>
+              <p className="text-xs text-gray-400 dark:text-gray-600">Log a workout and your progress will show up here.</p>
+            </div>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={volumeChartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={v => formatVolume(v)} />
                 <Tooltip content={<VolumeTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                 {workoutNames.map((name, i) => (
@@ -227,70 +254,54 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
         </CardContent>
       </Card>
 
-      {/* ── muscle group bar chart ───────────────────────────────── */}
+      {/* ── muscle group progress list ───────────────────────────── */}
       <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
         <CardHeader className="px-4 pt-4 pb-2">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Muscle Group Volume</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Sets per muscle group — {weeksLabel}</p>
-            </div>
-            <div className="flex items-center gap-2 text-[10px]">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"/>Under</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block"/>50%+</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block"/>Target</span>
-            </div>
-          </div>
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Muscle group balance</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+            Sets per muscle group vs. your weekly target — {weeksLabel}
+            {isAdmin && <span> · tap ✏ to adjust a target</span>}
+          </p>
         </CardHeader>
-        <CardContent className="px-2 pb-4">
+        <CardContent className="px-4 pb-4">
           {muscleLoading ? (
-            <div className="h-48 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
+            <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
           ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={muscleChartData} margin={{ top: 5, right: 10, left: -10, bottom: 30 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="MuscleGroup" tick={{ fontSize: 9 }} angle={-35} textAnchor="end" interval={0} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip content={<MuscleTooltip />} />
-                <Bar dataKey="WeeklySets" name="Sets" radius={[4,4,0,0]}>
-                  {muscleChartData.map((entry, i) => (
-                    <Cell key={i} fill={muscleColor(entry.WeeklySets, entry.target)} />
-                  ))}
-                </Bar>
-                <ReferenceLine y={12} stroke="#6b7280" strokeDasharray="4 2" label={{ value: "Target", position: "insideTopRight", fontSize: 9, fill: "#6b7280" }} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="space-y-3">
+              {muscleChartData.map(m => {
+                const pct = Math.min(100, Math.round((m.WeeklySets / m.target) * 100));
+                const colors = muscleColor(m.WeeklySets, m.target);
+                return (
+                  <div key={m.MuscleGroup}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{m.MuscleGroup}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className={`text-[10px] font-semibold ${colors.text}`}>{m.WeeklySets}/{m.target} sets</span>
+                        {isAdmin && idUser && (
+                          <TargetEditor
+                            target={{ IdCoach: 0, IdUser: idUser, MuscleGroup: m.MuscleGroup, WeeklySetTarget: m.target, IdTarget: targets.find(t => t.MuscleGroup === m.MuscleGroup)?.IdTarget }}
+                            onSave={t => targetMut.mutate(t)}
+                          />
+                        )}
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${colors.bar}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
 
-          {/* per-muscle target table — admin can edit, client sees read-only */}
-          <div className="mt-4 space-y-1 px-2">
-            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
-              Weekly set targets {isAdmin && <span className="normal-case font-normal">(tap ✏ to adjust)</span>}
-            </p>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-              {muscleChartData.map(m => (
-                <div key={m.MuscleGroup} className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-600 dark:text-gray-300">{m.MuscleGroup}</span>
-                  <span className="flex items-center gap-1.5">
-                    <Badge className={`text-[10px] h-4 border-0 px-1.5 ${
-                      m.WeeklySets >= m.target
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                        : m.WeeklySets >= m.target * 0.5
-                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                    }`}>
-                      {m.WeeklySets}/{m.target}
-                    </Badge>
-                    {isAdmin && idUser && (
-                      <TargetEditor
-                        target={{ IdCoach: 0, IdUser: idUser, MuscleGroup: m.MuscleGroup, WeeklySetTarget: m.target, IdTarget: targets.find(t => t.MuscleGroup === m.MuscleGroup)?.IdTarget }}
-                        onSave={t => targetMut.mutate(t)}
-                      />
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
+          {/* legend */}
+          <div className="mt-4 flex items-center gap-3 text-[10px] text-gray-400 dark:text-gray-500 border-t border-gray-50 dark:border-gray-800 pt-3">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"/>Needs work</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block"/>Halfway there</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>On target</span>
           </div>
         </CardContent>
       </Card>
