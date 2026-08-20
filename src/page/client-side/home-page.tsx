@@ -810,9 +810,22 @@ export default function HomePage() {
               ) : (
                 <>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400 leading-tight mt-1">Not logged</p>
-                  <p className="text-[10px] text-blue-500 dark:text-blue-400 mt-1">Tap to track</p>
+                  <p className="text-[10px] text-blue-500 dark:text-blue-400 mt-1">Log Workout</p>
                 </>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Food */}
+          <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 cursor-pointer"
+            onClick={() => setLocation(RENDER_URL.STUDENT_MEAL_TRACKING)}>
+            <CardContent className="p-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center mb-2">
+                <UtensilsCrossed className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
+              </div>
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-0.5">Food</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 leading-tight mt-1">Not logged</p>
+              <p className="text-[10px] text-blue-500 dark:text-blue-400 mt-1">Log Food</p>
             </CardContent>
           </Card>
 
@@ -820,7 +833,7 @@ export default function HomePage() {
 
         {/* ── Quick log ── */}
         <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Quick log</p>
-        <div className="grid grid-cols-2 gap-2 mb-5">
+        <div className="grid grid-cols-3 gap-2 mb-5">
           <button
             className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 active:scale-95 transition-transform"
             onClick={() => { setWaterAmount(latestUpdate?.Water ?? ""); setWaterInputOpen(true); }}
@@ -841,13 +854,6 @@ export default function HomePage() {
           >
             <Moon className="h-4 w-4 text-indigo-400" />
             <span>+ Sleep</span>
-          </button>
-          <button
-            className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 active:scale-95 transition-transform"
-            onClick={() => setLocation(RENDER_URL.STUDENT_MEAL_TRACKING)}
-          >
-            <UtensilsCrossed className="h-4 w-4 text-emerald-500" />
-            <span>Log Food</span>
           </button>
         </div>
 

@@ -101,25 +101,6 @@ function FoodItemRow({ item, isSaving, readOnly, foodNote, onToggle, onQtyChange
         : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
     }`}>
     <div className="flex items-center gap-3">
-      {/* Checkbox — hidden on future dates */}
-      {!readOnly && (
-        <button
-          onClick={onToggle}
-          disabled={isSaving}
-          className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-            item.isConsumed
-              ? "bg-green-500 border-green-500 scale-110"
-              : "border-gray-300 dark:border-gray-600 hover:border-green-400"
-          }`}
-        >
-          {isSaving ? (
-            <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
-          ) : item.isConsumed ? (
-            <Check className="h-3.5 w-3.5 text-white" />
-          ) : null}
-        </button>
-      )}
-
       {/* Food details */}
       <div className="flex-1 min-w-0">
         <p className={`text-sm font-medium truncate ${
@@ -156,20 +137,39 @@ function FoodItemRow({ item, isSaving, readOnly, foodNote, onToggle, onQtyChange
       {/* Notes indicator / button */}
       <button
         onClick={onNotesClick}
-        className={`flex-shrink-0 p-1.5 rounded-lg transition-colors ${
+        className={`flex-shrink-0 p-1 rounded-lg transition-colors ${
           item.logNotes
             ? "text-blue-500 bg-blue-50 dark:bg-blue-900/30"
             : "text-gray-300 dark:text-gray-600 hover:text-gray-500"
         }`}
         title={item.logNotes || "Add note"}
       >
-        <MessageSquare className="h-3.5 w-3.5" />
+        <MessageSquare className="h-3 w-3" />
       </button>
+
+      {/* Complete toggle — hidden on future dates */}
+      {!readOnly && (
+        <button
+          onClick={onToggle}
+          disabled={isSaving}
+          className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all duration-200 ${
+            item.isConsumed
+              ? "bg-green-500 shadow-sm shadow-green-500/40"
+              : "border border-gray-300 dark:border-gray-600 hover:border-green-400"
+          }`}
+        >
+          {isSaving ? (
+            <Loader2 className="h-3 w-3 text-white animate-spin" />
+          ) : item.isConsumed ? (
+            <Check className="h-3 w-3 text-white" strokeWidth={3} />
+          ) : null}
+        </button>
+      )}
     </div>
 
     {/* Replacement food — optional admin-defined substitute */}
     {hasAlt && (
-      <div className="mt-1.5 pl-10">
+      <div className="mt-1.5">
         <button
           onClick={() => setShowAlt(s => !s)}
           className="flex items-center gap-1 text-[10px] font-semibold text-blue-500 dark:text-blue-400 hover:text-blue-700"
