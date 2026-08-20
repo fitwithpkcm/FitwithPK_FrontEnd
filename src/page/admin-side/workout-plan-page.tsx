@@ -21,7 +21,7 @@ import { Progress } from "../../components/ui/progress";
 import { Card, CardContent } from "../../components/ui/card";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
 import { queryClient } from "../../lib/queryClient";
-import { BASE_URL } from "../../common/Constant";
+import { ACCESS_STATUS, BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService";
 import { getUserListForACoach } from "../../services/AdminServices";
 import {
@@ -1622,7 +1622,7 @@ export default function AdminWorkoutPlanPage() {
     queryFn: () => getUserListForACoach({}),
     staleTime: Infinity,
   });
-  const clients: IUser[] = clientsRes?.data?.data ?? [];
+  const clients: IUser[] = (clientsRes?.data?.data ?? []).filter((c: IUser) => c.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER);
 
   const { data: libraryRes, refetch: refetchLibrary } = useQuery({
     queryKey: ["exercise-library"],

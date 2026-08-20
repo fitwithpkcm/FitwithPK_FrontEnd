@@ -26,7 +26,7 @@ import { useLocation } from "wouter";
 import { AdminPageHeader } from "../../components/layout/page-header";
 import { useAuth } from "../../hooks/use-auth";
 import { queryClient } from "../../lib/queryClient";
-import { BASE_URL } from "../../common/Constant";
+import { ACCESS_STATUS, BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService";
 import { getUserListForACoach } from "../../services/AdminServices";
 import { getFoodBasedOnCatergoryApi } from "../../services/FoodService";
@@ -1043,7 +1043,7 @@ export default function AdminMealPlanPage() {
     queryKey: ["coach-userlist-mealplan", user?.info?.EmailID],
     queryFn: () => getUserListForACoach(null).then((res: unknown) => {
       const r = res as { data: { data: IUser[] } };
-      return r.data.data ?? [];
+      return (r.data.data ?? []).filter(c => c.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER);
     }),
   });
 
