@@ -1756,9 +1756,9 @@ export default function AdminWorkoutPlanPage() {
       </div>
 
       {/* ── Page Tabs ─────────────────────────────────────────── */}
-      <div className="flex-shrink-0 flex bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+      <div className="flex-shrink-0 flex overflow-x-auto no-scrollbar bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
         <button onClick={() => setPageTab("workouts")}
-          className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+          className={`flex-shrink-0 px-4 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors ${
             pageTab === "workouts"
               ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
               : "text-gray-500 dark:text-gray-400"
@@ -1766,7 +1766,7 @@ export default function AdminWorkoutPlanPage() {
           <Dumbbell className="h-3.5 w-3.5" /> Workouts
         </button>
         <button onClick={() => setPageTab("templates")}
-          className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+          className={`flex-shrink-0 px-4 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors ${
             pageTab === "templates"
               ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
               : "text-gray-500 dark:text-gray-400"
@@ -1777,7 +1777,7 @@ export default function AdminWorkoutPlanPage() {
           )}
         </button>
         <button onClick={() => setPageTab("library")}
-          className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+          className={`flex-shrink-0 px-4 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors ${
             pageTab === "library"
               ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
               : "text-gray-500 dark:text-gray-400"
@@ -1788,7 +1788,7 @@ export default function AdminWorkoutPlanPage() {
           )}
         </button>
         <button onClick={() => setPageTab("weekly")}
-          className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+          className={`flex-shrink-0 px-4 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors ${
             pageTab === "weekly"
               ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
               : "text-gray-500 dark:text-gray-400"
@@ -1796,7 +1796,7 @@ export default function AdminWorkoutPlanPage() {
           <CalendarDays className="h-3.5 w-3.5" /> Weekly
         </button>
         <button onClick={() => setPageTab("progress")}
-          className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+          className={`flex-shrink-0 px-4 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors ${
             pageTab === "progress"
               ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
               : "text-gray-500 dark:text-gray-400"
