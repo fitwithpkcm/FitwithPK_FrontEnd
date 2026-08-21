@@ -656,8 +656,16 @@ export default function UpdatesPage() {
   });
 
 
-  // Use fetched data if available, otherwise use mock data
-  const dailyUpdates = fetchedUpdates.length > 0 ? fetchedUpdates : [];
+  // Use fetched data if available, otherwise use mock data. The backend can
+  // return placeholder rows for days before the user ever submitted anything
+  // (all fields empty) — filter those out so the history starts at the
+  // user's actual first entry instead of a run of blank cards.
+  const dailyUpdates = fetchedUpdates.filter(u =>
+    u.Steps != null || u.Water != null || u.Weight != null ||
+    u.Sleep != null || u.Diet_Follow != null ||
+    u.WorkOut != null || u.WorkOut_Follow != null ||
+    (u.Notes != null && u.Notes !== '')
+  );
 
   // Sort updates by date (newest first)
   const sortedUpdates = [...dailyUpdates].sort((a, b) => {
