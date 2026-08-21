@@ -117,7 +117,15 @@ export function HabitMonthCalendar({ history, onSelectDay, selectedDay }: HabitM
                       strokeLinecap="round"
                       strokeDasharray={2 * Math.PI * 15}
                       strokeDashoffset={2 * Math.PI * 15 * (1 - pct / 100)}
-                      className={pct >= 100 ? "stroke-amber-400" : "stroke-emerald-500"}
+                      className={
+                        pct >= 100
+                          ? "stroke-amber-400"
+                          : pct >= 60
+                          ? "stroke-emerald-500"
+                          : pct >= 30
+                          ? "stroke-orange-400"
+                          : "stroke-red-400"
+                      }
                     />
                   )}
                 </svg>

@@ -631,6 +631,9 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* ── Today's habits — renders nothing if the coach hasn't assigned any ── */}
+        <HabitTodayCard />
+
         {/* ── Today's Supplements ── */}
         {supplements.length > 0 && (
           <>
@@ -694,9 +697,6 @@ export default function HomePage() {
             </Card>
           </>
         )}
-
-        {/* ── Today's habits — renders nothing if the coach hasn't assigned any ── */}
-        <HabitTodayCard />
 
         {/* ── Today's stats ── */}
         <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Today's stats</p>
