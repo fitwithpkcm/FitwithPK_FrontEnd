@@ -54,7 +54,7 @@ export default function NutriSwapScreen() {
     const [benefits, setBenefits] = useState<string[]>([]);
     const [notes, setNotes] = useState<string>("");
     const [showNotes, setShowNotes] = useState<boolean>(false);
-    const [category, setFoodCatergory] = useState<"protein" | "carbs" | "fat">("protein");
+    const [category, setFoodCatergory] = useState<"protein" | "carbs" | "fat" | "fruit">("protein");
     const [healthscore, setHealthScore] = useState<string>("");
 
 
@@ -205,7 +205,7 @@ export default function NutriSwapScreen() {
         setNotes(food.note ?? "");
         setShowNotes(!!food.note);
         setHealthScore(food.health_score != null ? String(food.health_score) : "");
-        setFoodCatergory((food.category?.toLowerCase() as "protein" | "carbs" | "fat") ?? "protein");
+        setFoodCatergory((food.category?.toLowerCase() as "protein" | "carbs" | "fat" | "fruit") ?? "protein");
         setExistingImageUrl(food.imageUrl ?? "");
         setUploadedImages([]);
         setFiles([]);
@@ -388,12 +388,13 @@ export default function NutriSwapScreen() {
                                 <label className="block text-sm font-medium mb-1">Category</label>
                                 <select
                                     value={category}
-                                    onChange={(e) => setFoodCatergory(e.target.value as "protein" | "carbs" | "fat")}
+                                    onChange={(e) => setFoodCatergory(e.target.value as "protein" | "carbs" | "fat" | "fruit")}
                                     className="w-full px-3 py-2 border rounded-md"
                                 >
                                     <option value="protein">Protein</option>
                                     <option value="carbs">Carbs</option>
                                     <option value="fat">Fat</option>
+                                    <option value="fruit">Fruit</option>
                                 </select>
                             </div>
 

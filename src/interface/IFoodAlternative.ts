@@ -13,7 +13,7 @@ export interface IFoodAlternative {
   benefits: string[];
   health_score:number,
   note?:string,
-  category?:string,
+  category?: 'Protein' | 'Carbs' | 'Fat' | 'Fruit',
 };
 
 
@@ -21,4 +21,5 @@ export interface IFoodCatergory {
   Protein: IFoodAlternative[]
   Fat: IFoodAlternative[]
   Carbs:IFoodAlternative[]
+  Fruit: IFoodAlternative[]
 }

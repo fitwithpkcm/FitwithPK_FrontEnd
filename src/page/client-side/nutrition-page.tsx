@@ -208,17 +208,18 @@ export default function NutritionPage() {
             <Tabs
               value={activeNutrient}
               onValueChange={(value) => {
-                setActiveNutrient(value as "Carbs" | "Protein" | "Fat");
+                setActiveNutrient(value as "Carbs" | "Protein" | "Fat" | "Fruit");
                 setFoodItem(null);
                 setQuantity(null);
                 setShowResults(false);
               }}
               className="w-full"
             >
-              <TabsList className="grid grid-cols-3 mb-6">
+              <TabsList className="grid grid-cols-4 mb-6">
                 <TabsTrigger value="Carbs">Carbs</TabsTrigger>
                 <TabsTrigger value="Protein">Protein</TabsTrigger>
                 <TabsTrigger value="Fat">Fat</TabsTrigger>
+                <TabsTrigger value="Fruit">Fruit</TabsTrigger>
               </TabsList>
             </Tabs>
 

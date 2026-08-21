@@ -8,14 +8,14 @@ import { setBaseUrl } from "../../services/HttpService";
 import { BASE_URL } from "../../common/Constant";
 
 interface FoodListProps {
-    lastCatergory: "protein" | "carbs" | "fat"
+    lastCatergory: "protein" | "carbs" | "fat" | "fruit"
     onEditFood: (food: IFoodAlternative) => void;
     onDeleteFood: (food: IFoodAlternative) => void;
 }
 
 
 const FoodList = (props: FoodListProps) => {
-    const [activeTab, setActiveTab] = useState<"protein" | "carbs" | "fat">("protein");
+    const [activeTab, setActiveTab] = useState<"protein" | "carbs" | "fat" | "fruit">("protein");
     const [searchTerm, setSearchTerm] = useState<string>("");
 
     //constructor basil
@@ -51,6 +51,9 @@ const FoodList = (props: FoodListProps) => {
         ) || [],
         fat: foodCategories?.Fat?.filter(food =>
             food.name.toLowerCase().includes(searchTerm.toLowerCase())
+        ) || [],
+        fruit: foodCategories?.Fruit?.filter(food =>
+            food.name.toLowerCase().includes(searchTerm.toLowerCase())
         ) || []
     };
 
@@ -85,6 +88,15 @@ const FoodList = (props: FoodListProps) => {
                         }}
                     >
                         Fats
+                    </button>
+                    <button
+                        className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === "fruit" ? "text-pink-600 border-b-2 border-pink-600" : "text-gray-500"}`}
+                        onClick={() => {
+                            setActiveTab("fruit");
+                            setSearchTerm("");
+                        }}
+                    >
+                        Fruit
                     </button>
                 </div>
             </div>
@@ -150,6 +162,20 @@ const FoodList = (props: FoodListProps) => {
                         ) : (
                             <div className="col-span-3 text-center py-4 text-gray-500">
                                 {searchTerm ? "No matching fat foods found" : "No fat foods available"}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === "fruit" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredFoods.fruit.length > 0 ? (
+                            filteredFoods.fruit.map((food) => (
+                                <FoodCard key={`fruit-${food.name}`} food={food} onEdit={props.onEditFood} onDelete={props.onDeleteFood} />
+                            ))
+                        ) : (
+                            <div className="col-span-3 text-center py-4 text-gray-500">
+                                {searchTerm ? "No matching fruit foods found" : "No fruit foods available"}
                             </div>
                         )}
                     </div>

@@ -70,12 +70,13 @@ type CartEntry = {
   food: IFoodAlternative; qty: string; unit: string;
   alternatives: CartAltEntry[];
 };
-type CategoryFilter = "All" | "Protein" | "Carbs" | "Fat";
+type CategoryFilter = "All" | "Protein" | "Carbs" | "Fat" | "Fruit";
 
 const CAT_COLOR: Record<string, string> = {
   Protein: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
   Carbs:   "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
   Fat:     "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+  Fruit:   "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300",
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -431,7 +432,7 @@ function FoodBrowserDialog({ open, mealType, foodDb, foodDbLoading, foodDbError,
 
           {/* category pills */}
           <div className="flex gap-2 mt-2 overflow-x-auto pb-0.5 scrollbar-none">
-            {(["All", "Protein", "Carbs", "Fat"] as CategoryFilter[]).map(cat => (
+            {(["All", "Protein", "Carbs", "Fat", "Fruit"] as CategoryFilter[]).map(cat => (
               <button
                 key={cat}
                 onClick={() => setCatFilter(cat)}
@@ -1236,14 +1237,15 @@ export default function AdminMealPlanPage() {
   const allFoods: IFoodAlternative[] = React.useMemo(() => {
     if (!foodCategoryData) return [];
     if (Array.isArray(foodCategoryData)) {
-      const CAT_MAP: Record<string, string> = { protein:"Protein",Protein:"Protein",carbs:"Carbs",Carbs:"Carbs",fat:"Fat",Fat:"Fat" };
-      return (foodCategoryData as unknown as IFoodAlternative[]).map(f => ({ ...f, category: CAT_MAP[f.category ?? ""] ?? f.category ?? "Protein" }));
+      const CAT_MAP: Record<string, string> = { protein:"Protein",Protein:"Protein",carbs:"Carbs",Carbs:"Carbs",fat:"Fat",Fat:"Fat",fruit:"Fruit",Fruit:"Fruit" };
+      return (foodCategoryData as unknown as IFoodAlternative[]).map(f => ({ ...f, category: (CAT_MAP[f.category ?? ""] ?? f.category ?? "Protein") as IFoodAlternative["category"] }));
     }
     const d = foodCategoryData as unknown as Record<string, IFoodAlternative[]>;
     return [
       ...(d.Protein ?? d.protein ?? []).map(f => ({ ...f, category: "Protein" as const })),
       ...(d.Carbs   ?? d.carbs   ?? []).map(f => ({ ...f, category: "Carbs"   as const })),
       ...(d.Fat     ?? d.fat     ?? []).map(f => ({ ...f, category: "Fat"     as const })),
+      ...(d.Fruit   ?? d.fruit   ?? []).map(f => ({ ...f, category: "Fruit"   as const })),
     ];
   }, [foodCategoryData]);
 
