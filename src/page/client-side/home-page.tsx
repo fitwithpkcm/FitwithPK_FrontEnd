@@ -33,6 +33,8 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { getMySupplements, getMySupplementLogs, logSupplement, updateSupplementReminderTime } from "@/services/SupplementService";
 import { ISupplement, ISupplementLog, SUPPLEMENT_TIMINGS, TIMING_ICONS } from "@/interface/ISupplement";
 import { IMealQuery, getMyMealQueries, askMealQuery, notifyCoachQuery } from "../../services/MealQueryService";
+import { getMyMealPlans, getMyMealLogs } from "../../services/MealPlanService";
+import { IMealPlan, IMealLog, mergePlanWithLogs } from "../../interface/IMealPlan";
 
 import toast from 'react-hot-toast';
 
@@ -114,6 +116,28 @@ export default function HomePage() {
     staleTime: 30_000,
   });
   const suppLogs: ISupplementLog[] = Array.isArray(suppLogRes?.data?.data) ? suppLogRes.data.data : [];
+
+  const { data: mealPlanRes } = useQuery({
+    queryKey: ["my-meal-plan", todayStr],
+    queryFn: () => getMyMealPlans({ AssignedDate: todayStr }),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+  const todayMealPlan: IMealPlan | null = Array.isArray(mealPlanRes?.data?.data) && mealPlanRes.data.data.length > 0
+    ? mealPlanRes.data.data[0]
+    : null;
+
+  const { data: mealLogRes } = useQuery({
+    queryKey: ["my-meal-logs", todayStr],
+    queryFn: () => getMyMealLogs({ LogDate: todayStr }),
+    enabled: !!user && !!todayMealPlan,
+    staleTime: 30_000,
+  });
+  const todayMealLogs: IMealLog[] = Array.isArray(mealLogRes?.data?.data) ? mealLogRes.data.data : [];
+
+  const todayMealSummary = todayMealPlan ? mergePlanWithLogs(todayMealPlan, todayMealLogs) : null;
+  const foodCompletedCount = todayMealSummary?.mealsWithLogs.reduce((s, m) => s + m.completedCount, 0) ?? 0;
+  const foodTotalCount = todayMealSummary?.mealsWithLogs.reduce((s, m) => s + m.totalCount, 0) ?? 0;
 
   const { mutate: toggleSupp } = useMutation({
     mutationFn: logSupplement,
@@ -824,8 +848,22 @@ export default function HomePage() {
                 <UtensilsCrossed className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
               </div>
               <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-0.5">Food</p>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 leading-tight mt-1">Not logged</p>
-              <p className="text-[10px] text-blue-500 dark:text-blue-400 mt-1">Log Food</p>
+              {foodTotalCount > 0 ? (
+                <>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
+                    {foodCompletedCount}
+                    <span className="text-sm font-normal text-gray-400 dark:text-gray-500">/{foodTotalCount}</span>
+                  </p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                    {foodCompletedCount === foodTotalCount ? "All logged" : "Log Food"}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 leading-tight mt-1">Not logged</p>
+                  <p className="text-[10px] text-blue-500 dark:text-blue-400 mt-1">Log Food</p>
+                </>
+              )}
             </CardContent>
           </Card>
 
