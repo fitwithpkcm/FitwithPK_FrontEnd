@@ -509,6 +509,53 @@ export default function MealTrackingPage() {
     onError: (e: Error) => toast.error(`Save failed: ${e.message}`),
   });
 
+  const markAllMutation = useMutation({
+    mutationFn: async () => {
+      if (!rawPlan?.IdMealPlan || !mergedPlan) return;
+      const pending = mergedPlan.mealsWithLogs
+        .flatMap(m => m.foodItemsWithLogs)
+        .filter(item => !item.isConsumed && item.IdFoodItem != null);
+      if (pending.length === 0) return;
+
+      const logs: IMealLog[] = pending.map(item => ({
+        ...(localLogs.get(item.IdFoodItem!) ?? {}),
+        IdFoodItem: item.IdFoodItem!,
+        IdMealPlan: rawPlan.IdMealPlan!,
+        LogDate: selectedDate,
+        ConsumedQty: item.consumedQty,
+        IsConsumed: 1,
+        Notes: item.logNotes,
+      }));
+
+      // optimistic update
+      setLocalLogs(prev => {
+        const next = new Map(prev);
+        logs.forEach(l => next.set(l.IdFoodItem, l));
+        return next;
+      });
+      setSavingIds(prev => {
+        const next = new Set(prev);
+        logs.forEach(l => next.add(l.IdFoodItem));
+        return next;
+      });
+
+      try {
+        await Promise.all(logs.map(l => logFoodConsumption(l)));
+      } finally {
+        setSavingIds(prev => {
+          const next = new Set(prev);
+          logs.forEach(l => next.delete(l.IdFoodItem));
+          return next;
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-meal-logs", selectedDate] });
+      toast.success("All meals marked complete!");
+    },
+    onError: (e: Error) => toast.error(`Failed to mark all complete: ${e.message}`),
+  });
+
   const resetExtraFoodForm = () => {
     setExtraFoodOpen(false);
     setEditingExtraFoodId(null);
@@ -588,6 +635,14 @@ export default function MealTrackingPage() {
       },
     });
   }, [rawPlan, selectedDate, localLogs, logMutation]);
+
+  const handleMarkAllComplete = useCallback(() => {
+    if (moment(selectedDate, "DD-MM-YYYY").isAfter(moment().startOf("day"), "day")) {
+      toast.error("You can't mark meals for future days");
+      return;
+    }
+    markAllMutation.mutate();
+  }, [selectedDate, markAllMutation]);
 
   const handleQtyChange = useCallback((item: IMealFoodItemWithLog, qty: number) => {
     if (!rawPlan?.IdMealPlan || item.IdFoodItem == null) return;
@@ -820,6 +875,23 @@ export default function MealTrackingPage() {
                       : "🎯 Let's start eating!"}
                   </span>
                 </div>
+
+                {!isFuture && mergedPlan.overallAdherence < 100 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full mt-3 h-8 text-xs border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30"
+                    disabled={markAllMutation.isPending}
+                    onClick={handleMarkAllComplete}
+                  >
+                    {markAllMutation.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Check className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Mark all as complete
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
