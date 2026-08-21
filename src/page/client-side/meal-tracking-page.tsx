@@ -41,6 +41,7 @@ import {
 } from "../../interface/IMealPlan";
 import { getFoodBasedOnCatergoryApi } from "../../services/FoodService";
 import { IFoodCatergory } from "../../interface/IFoodAlternative";
+import { dailyUpdate } from "../../services/UpdateServices";
 
 // ── helpers ──────────────────────────────────────────────────────
 
@@ -552,6 +553,18 @@ export default function MealTrackingPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-meal-logs", selectedDate] });
       toast.success("All meals marked complete!");
+
+      // Every planned food item is now consumed — if nothing extra was eaten
+      // outside the plan, that's a fully-followed diet day. Reflect it in the
+      // daily update's "Diet Adherence" rating too.
+      if (extraFoodLogs.length === 0) {
+        dailyUpdate({ Diet_Follow: 5, Day: selectedDate }).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["daily-updates"] });
+          queryClient.invalidateQueries({ queryKey: ["daily-updates-forweek"] });
+          queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
+          queryClient.invalidateQueries({ queryKey: ["currentday-updates"] });
+        }).catch(() => {});
+      }
     },
     onError: (e: Error) => toast.error(`Failed to mark all complete: ${e.message}`),
   });
