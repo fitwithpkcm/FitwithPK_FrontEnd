@@ -239,10 +239,13 @@ export default function NutritionPage() {
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command>
+                  <PopoverContent
+                    className="w-[--radix-popover-trigger-width] p-0 flex flex-col overflow-hidden"
+                    align="start"
+                  >
+                    <Command className="flex-1 min-h-0">
                       <CommandInput placeholder="Type to filter foods…" />
-                      <CommandList>
+                      <CommandList className="max-h-[min(300px,calc(var(--radix-popover-content-available-height)-3rem))]">
                         <CommandEmpty>No foods found.</CommandEmpty>
                         <CommandGroup>
                           {(foodListBasedOnCatergory?.[activeNutrient] ?? []).map((item, idx) => (
