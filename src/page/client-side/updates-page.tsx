@@ -1373,7 +1373,7 @@ export default function UpdatesPage() {
                         onChange={(e) => setMeasurementForm({ ...measurementForm, Weight: e.target.value })}
                         min="20"
                         max="300"
-                        step="0.1"
+                        step="any"
                       />
                     </div>
 
@@ -1388,7 +1388,7 @@ export default function UpdatesPage() {
                         onChange={(e) => setMeasurementForm({ ...measurementForm, BodyFat: e.target.value })}
                         min="1"
                         max="70"
-                        step="0.1"
+                        step="any"
                       />
                     </div>
 
@@ -1403,7 +1403,7 @@ export default function UpdatesPage() {
                         onChange={(e) => setMeasurementForm({ ...measurementForm, Waist: e.target.value })}
                         min="20"
                         max="200"
-                        step="0.1"
+                        step="any"
                       />
                     </div>
 
@@ -1418,7 +1418,7 @@ export default function UpdatesPage() {
                         onChange={(e) => setMeasurementForm({ ...measurementForm, Chest: e.target.value })}
                         min="30"
                         max="200"
-                        step="0.1"
+                        step="any"
                       />
                     </div>
 
@@ -1433,7 +1433,7 @@ export default function UpdatesPage() {
                         onChange={(e) => setMeasurementForm({ ...measurementForm, BodyHip: e.target.value })}
                         min="30"
                         max="200"
-                        step="0.1"
+                        step="any"
                       />
                     </div>
 
@@ -1448,7 +1448,7 @@ export default function UpdatesPage() {
                         onChange={(e) => setMeasurementForm({ ...measurementForm, Neck: e.target.value })}
                         min="20"
                         max="100"
-                        step="0.1"
+                        step="any"
                       />
                     </div>
 
@@ -1463,7 +1463,7 @@ export default function UpdatesPage() {
                         onChange={(e) => setMeasurementForm({ ...measurementForm, Quadriceps: e.target.value })}
                         min="20"
                         max="100"
-                        step="0.1"
+                        step="any"
                       />
                     </div>
 
@@ -1478,7 +1478,7 @@ export default function UpdatesPage() {
                         onChange={(e) => setMeasurementForm({ ...measurementForm, UpperArm: e.target.value })}
                         min="15"
                         max="80"
-                        step="0.1"
+                        step="any"
                       />
                     </div>
                   </div>
@@ -1612,7 +1612,7 @@ export default function UpdatesPage() {
                         <FormItem>
                           <div className="flex items-center">
                             <FormControl>
-                              <Input type="number" placeholder="Enter water intake" min="0" step="0.1" className="flex-1" {...field} value={field.value ?? ""} />
+                              <Input type="number" placeholder="Enter water intake" min="0" step="any" className="flex-1" {...field} value={field.value ?? ""} />
                             </FormControl>
                             <span className="ml-3 text-gray-500 dark:text-gray-400">liters</span>
                           </div>
@@ -1660,7 +1660,7 @@ export default function UpdatesPage() {
                         <FormItem>
                           <div className="flex items-center">
                             <FormControl>
-                              <Input type="number" placeholder="Enter weight" min="0" step="0.1" className="flex-1" {...field} value={field.value ?? ""} />
+                              <Input type="number" placeholder="Enter weight" min="0" step="any" className="flex-1" {...field} value={field.value ?? ""} />
                             </FormControl>
                             <span className="ml-3 text-gray-500 dark:text-gray-400">kg</span>
                           </div>
@@ -1915,7 +1915,7 @@ export default function UpdatesPage() {
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Weight (kg)</label>
                     <Input
                       type="number"
-                      step="0.1"
+                      step="any"
                       min="30"
                       max="250"
                       placeholder="78.4"
@@ -1928,7 +1928,7 @@ export default function UpdatesPage() {
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Waist (cm)</label>
                     <Input
                       type="number"
-                      step="0.1"
+                      step="any"
                       placeholder="90"
                       value={measurementForm.Waist}
                       onChange={(e) => setMeasurementForm({ ...measurementForm, Waist: e.target.value })}
@@ -1939,7 +1939,7 @@ export default function UpdatesPage() {
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Hip (cm)</label>
                     <Input
                       type="number"
-                      step="0.1"
+                      step="any"
                       placeholder="97"
                       value={measurementForm.BodyHip}
                       onChange={(e) => setMeasurementForm({ ...measurementForm, BodyHip: e.target.value })}
@@ -1950,7 +1950,7 @@ export default function UpdatesPage() {
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Neck (cm)</label>
                     <Input
                       type="number"
-                      step="0.1"
+                      step="any"
                       placeholder="41"
                       value={measurementForm.Neck || ''}
                       onChange={(e) => setMeasurementForm({ ...measurementForm, Neck: e.target.value })}
@@ -1961,7 +1961,7 @@ export default function UpdatesPage() {
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Chest (cm)</label>
                     <Input
                       type="number"
-                      step="0.1"
+                      step="any"
                       placeholder="102.5"
                       value={measurementForm.Chest}
                       onChange={(e) => setMeasurementForm({ ...measurementForm, Chest: e.target.value })}
@@ -1972,7 +1972,7 @@ export default function UpdatesPage() {
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Thigh (cm)</label>
                     <Input
                       type="number"
-                      step="0.1"
+                      step="any"
                       placeholder="61.5"
                       value={measurementForm.Quadriceps || ''}
                       onChange={(e) => setMeasurementForm({ ...measurementForm, Quadriceps: e.target.value })}
@@ -1983,7 +1983,7 @@ export default function UpdatesPage() {
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Biceps (cm)</label>
                     <Input
                       type="number"
-                      step="0.1"
+                      step="any"
                       placeholder="34.3"
                       value={measurementForm.UpperArm || ''}
                       onChange={(e) => setMeasurementForm({ ...measurementForm, UpperArm: e.target.value })}
