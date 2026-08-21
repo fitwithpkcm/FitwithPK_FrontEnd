@@ -252,6 +252,7 @@ import moment from 'moment';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../../components/ui/dialog";
 import { IDailyStats } from "../../interface/IDailyUpdates";
 import RatingSmiley from "../../components/ui/rating-smiley";
+import DietAdherenceBadge from "../../components/ui/diet-adherence-badge";
 import { calculatePercentage } from "../../lib/utils";
 
 import { setBaseUrl } from "../../services/HttpService"
@@ -903,11 +904,9 @@ export default function UpdatesPage() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Diet follow</p>
-                        <div className={`font-medium ${update.Diet_Follow == 1 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {typeof update.Diet_Follow === 'number' && update.Diet_Follow > 0 && (
-                            <RatingSmiley rating={update.Diet_Follow} />
-                          )}
-                        </div>
+                        {typeof update.Diet_Follow === 'number' && update.Diet_Follow > 0 && (
+                          <DietAdherenceBadge rating={update.Diet_Follow} />
+                        )}
                       </div>
                     </div>
 

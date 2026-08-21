@@ -9,7 +9,7 @@ import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
 import moment from 'moment';
 import { getDailyUpdate } from "../../services/UpdateServices";
-import RatingSmiley from "../../components/ui/rating-smiley";
+import DietAdherenceBadge from "../../components/ui/diet-adherence-badge";
 import { Card, CardContent } from "../../components/ui/card";
 import { isEmpty } from "../../lib/utils";
 
@@ -157,17 +157,9 @@ export default function UserDailyDetailView({ userId, onBack }: UserDetailViewPr
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Diet follow</p>
-                          <div className={`font-medium ${update.Diet_Follow == 1 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                            {typeof update.Diet_Follow === 'number' && (
-
-                              <div>
-                                <div className={`inline-flex items-center justify-center w-7 h-7 rounded-full ${update.Diet_Follow >= 3 ? 'bg-orange-100 text-orange-600' : 'bg-red-100 text-red-600'
-                                  }`}>
-                                  {update.Diet_Follow}/5
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          {typeof update.Diet_Follow === 'number' && update.Diet_Follow > 0 && (
+                            <DietAdherenceBadge rating={update.Diet_Follow} />
+                          )}
                         </div>
                       </div>
 
