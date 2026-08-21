@@ -502,10 +502,29 @@ export default function MealTrackingPage() {
 
   // ── mutation ──────────────────────────────────────────────────
 
+  // Diet Adherence (the Updates page's Diet_Follow rating) auto-tracks how
+  // closely today's plan was followed: proportional to food items completed,
+  // minus 1 point per additional/extra food item logged outside the plan.
+  const syncDietFollow = useCallback((completedCount: number, totalCount: number, extraCount: number) => {
+    if (totalCount === 0) return;
+    const score = Math.max(0, Math.round((completedCount / totalCount) * 5) - extraCount);
+    dailyUpdate({ Diet_Follow: score, Day: selectedDate }).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["daily-updates"] });
+      queryClient.invalidateQueries({ queryKey: ["daily-updates-forweek"] });
+      queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
+      queryClient.invalidateQueries({ queryKey: ["currentday-updates"] });
+    }).catch(() => {});
+  }, [selectedDate]);
+
   const logMutation = useMutation({
     mutationFn: (log: IMealLog) => logFoodConsumption(log),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-meal-logs", selectedDate] });
+      if (mergedPlan) {
+        const completedCount = mergedPlan.mealsWithLogs.reduce((s, m) => s + m.completedCount, 0);
+        const totalCount = mergedPlan.mealsWithLogs.reduce((s, m) => s + m.totalCount, 0);
+        syncDietFollow(completedCount, totalCount, extraFoodLogs.length);
+      }
     },
     onError: (e: Error) => toast.error(`Save failed: ${e.message}`),
   });
@@ -554,16 +573,10 @@ export default function MealTrackingPage() {
       queryClient.invalidateQueries({ queryKey: ["my-meal-logs", selectedDate] });
       toast.success("All meals marked complete!");
 
-      // Every planned food item is now consumed — if nothing extra was eaten
-      // outside the plan, that's a fully-followed diet day. Reflect it in the
-      // daily update's "Diet Adherence" rating too.
-      if (extraFoodLogs.length === 0) {
-        dailyUpdate({ Diet_Follow: 5, Day: selectedDate }).then(() => {
-          queryClient.invalidateQueries({ queryKey: ["daily-updates"] });
-          queryClient.invalidateQueries({ queryKey: ["daily-updates-forweek"] });
-          queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
-          queryClient.invalidateQueries({ queryKey: ["currentday-updates"] });
-        }).catch(() => {});
+      // Every planned food item is now consumed.
+      if (mergedPlan) {
+        const totalCount = mergedPlan.mealsWithLogs.reduce((s, m) => s + m.totalCount, 0);
+        syncDietFollow(totalCount, totalCount, extraFoodLogs.length);
       }
     },
     onError: (e: Error) => toast.error(`Failed to mark all complete: ${e.message}`),
@@ -586,6 +599,11 @@ export default function MealTrackingPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-extra-food-logs", selectedDate] });
       toast.success("Additional food logged");
+      if (mergedPlan) {
+        const completedCount = mergedPlan.mealsWithLogs.reduce((s, m) => s + m.completedCount, 0);
+        const totalCount = mergedPlan.mealsWithLogs.reduce((s, m) => s + m.totalCount, 0);
+        syncDietFollow(completedCount, totalCount, extraFoodLogs.length + 1);
+      }
       resetExtraFoodForm();
     },
     onError: (e: Error) => toast.error(`Save failed: ${e.message}`),
@@ -606,6 +624,11 @@ export default function MealTrackingPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-extra-food-logs", selectedDate] });
       toast.success("Additional food deleted");
+      if (mergedPlan) {
+        const completedCount = mergedPlan.mealsWithLogs.reduce((s, m) => s + m.completedCount, 0);
+        const totalCount = mergedPlan.mealsWithLogs.reduce((s, m) => s + m.totalCount, 0);
+        syncDietFollow(completedCount, totalCount, Math.max(0, extraFoodLogs.length - 1));
+      }
       setDeleteExtraFoodTarget(null);
     },
     onError: (e: Error) => toast.error(`Delete failed: ${e.message}`),
