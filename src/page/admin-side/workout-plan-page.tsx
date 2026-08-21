@@ -1614,6 +1614,7 @@ export default function AdminWorkoutPlanPage() {
   const [logViewerOpen, setLogViewerOpen]   = useState(false);
   const [viewingWorkout, setViewingWorkout] = useState<IWorkout|null>(null);
   const [logsForViewer, setLogsForViewer]   = useState<IExerciseLog[]>([]);
+  const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false);
 
   // ── Queries ────────────────────────────────────────────────────
 
@@ -1676,6 +1677,26 @@ export default function AdminWorkoutPlanPage() {
   const rescheduleMut = useMutation({ mutationFn: rescheduleWorkout, onSuccess: () => { toast.success("Rescheduled!");      invalidate(); setRescheduleOpen(false); }, onError: (error: Error) => toast.error(error.message || "Failed to reschedule") });
 
   const handleSave    = (w: IWorkout) => w.IdWorkout ? updateMut.mutate(w) : createMut.mutate(w);
+  const handleAddFromTemplate = (tpl: IWorkoutTemplate) => {
+    if (!selectedClient) return;
+    createMut.mutate({
+      WorkoutName: tpl.TemplateName,
+      IdUser: selectedClient,
+      ScheduledDate: selectedDate,
+      Status: 'Planned',
+      Exercises: tpl.Exercises.map((ex, i) => ({
+        ExerciseName: ex.ExerciseName,
+        VideoUrl: ex.VideoUrl,
+        Sets: ex.Sets,
+        TargetReps: ex.TargetReps,
+        TargetWeight: ex.TargetWeight,
+        WeightUnit: ex.WeightUnit,
+        RestSeconds: ex.RestSeconds,
+        Notes: ex.Notes,
+        SortOrder: i,
+      })),
+    });
+  };
   const handleDelete  = (w: IWorkout) => { if (!confirm(`Delete "${w.WorkoutName}"?`)) return; deleteMut.mutate({ IdWorkout: w.IdWorkout! }); };
   const handleViewLog = (w: IWorkout) => {
     setLogsForViewer(allLogs.filter(l => l.IdWorkout === w.IdWorkout));
@@ -1698,15 +1719,25 @@ export default function AdminWorkoutPlanPage() {
             <span className="text-lg font-bold text-white">Workout Planner</span>
           </div>
           {pageTab === "workouts" && (
-            <button
-              onClick={() => {
-                if (!selectedClient) { toast.error("Select a client first"); return; }
-                setEditingWorkout(createBlankWorkout(selectedClient, selectedDate));
-                setEditorOpen(true);
-              }}
-              className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white font-bold text-sm px-3 py-1.5 rounded-full transition-colors">
-              <Plus className="h-4 w-4" /> New
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => {
+                  if (!selectedClient) { toast.error("Select a client first"); return; }
+                  setTemplateDrawerOpen(true);
+                }}
+                className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white font-bold text-sm px-3 py-1.5 rounded-full transition-colors">
+                <LayoutGrid className="h-4 w-4" /> From Template
+              </button>
+              <button
+                onClick={() => {
+                  if (!selectedClient) { toast.error("Select a client first"); return; }
+                  setEditingWorkout(createBlankWorkout(selectedClient, selectedDate));
+                  setEditorOpen(true);
+                }}
+                className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white font-bold text-sm px-3 py-1.5 rounded-full transition-colors">
+                <Plus className="h-4 w-4" /> New
+              </button>
+            </div>
           )}
         </div>
 
@@ -1884,10 +1915,16 @@ export default function AdminWorkoutPlanPage() {
               <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
                 <Dumbbell className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
                 <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">No workouts for this date</p>
-                <button onClick={() => { setEditingWorkout(createBlankWorkout(selectedClient!, selectedDate)); setEditorOpen(true); }}
-                  className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-                  <Plus className="h-4 w-4" /> Create workout
-                </button>
+                <div className="mt-3 flex items-center gap-4">
+                  <button onClick={() => setTemplateDrawerOpen(true)}
+                    className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                    <LayoutGrid className="h-4 w-4" /> From template
+                  </button>
+                  <button onClick={() => { setEditingWorkout(createBlankWorkout(selectedClient!, selectedDate)); setEditorOpen(true); }}
+                    className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                    <Plus className="h-4 w-4" /> Create workout
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1906,6 +1943,16 @@ export default function AdminWorkoutPlanPage() {
 
       <MobileAdminNav />
 
+      <DayAssignDrawer
+        open={templateDrawerOpen}
+        date={selectedDate}
+        existingWorkouts={workouts}
+        saving={createMut.isPending}
+        templates={templates}
+        onClose={() => setTemplateDrawerOpen(false)}
+        onAddFromTemplate={handleAddFromTemplate}
+        onRemove={id => deleteMut.mutate({ IdWorkout: id })}
+      />
       <WorkoutEditorDrawer open={editorOpen} initial={editingWorkout} saving={saving}
         library={library}
         onClose={() => setEditorOpen(false)} onSave={handleSave} />
