@@ -145,6 +145,16 @@ function WeekStrip({ selected, onSelect }: { selected: string; onSelect: (d: str
 
 // ── Log Set Sheet ─────────────────────────────────────────────────
 
+// Weights come back from the DB as fixed-decimal strings (e.g. "10.00").
+// Shown as-is, the numpad's backspace only removes one trailing character
+// at a time, so editing "10.00" down to "10" takes 3 taps. Strip the
+// redundant decimal so a whole-number weight shows as a clean "10".
+function formatWeightInput(val: number | string | null | undefined): string {
+  if (val === undefined || val === null || val === "") return "";
+  const n = parseFloat(String(val));
+  return isNaN(n) ? "" : String(n);
+}
+
 interface LogSetSheetProps {
   open: boolean;
   exercise: IExercise;
@@ -160,7 +170,7 @@ interface LogSetSheetProps {
 function LogSetSheet({ open, exercise, setNumber, existing, prefill, saving, onClose, onConfirm, onDelete }: LogSetSheetProps) {
   const source = existing ?? prefill;   // prefer existing log; fall back to previous set's values
   const [reps, setReps]     = useState(String(source?.RepsCompleted ?? exercise.TargetReps ?? 10));
-  const [weight, setWeight] = useState(String(source?.WeightUsed ?? exercise.TargetWeight ?? ""));
+  const [weight, setWeight] = useState(formatWeightInput(source?.WeightUsed ?? exercise.TargetWeight));
   const [unit, setUnit]     = useState(source?.WeightUnit ?? exercise.WeightUnit ?? "kg");
   const [notes, setNotes]   = useState(existing?.Notes ?? "");   // notes not copied from prefill
   const [activeField, setActiveField] = useState<"reps"|"weight">("reps");
@@ -169,7 +179,7 @@ function LogSetSheet({ open, exercise, setNumber, existing, prefill, saving, onC
     if (open) {
       const src = existing ?? prefill;
       setReps(String(src?.RepsCompleted ?? exercise.TargetReps ?? 10));
-      setWeight(String(src?.WeightUsed ?? exercise.TargetWeight ?? ""));
+      setWeight(formatWeightInput(src?.WeightUsed ?? exercise.TargetWeight));
       setUnit(src?.WeightUnit ?? exercise.WeightUnit ?? "kg");
       setNotes(existing?.Notes ?? "");   // notes not copied from prefill
       setActiveField("reps");
