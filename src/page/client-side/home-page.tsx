@@ -117,23 +117,33 @@ export default function HomePage() {
   });
   const suppLogs: ISupplementLog[] = Array.isArray(suppLogRes?.data?.data) ? suppLogRes.data.data : [];
 
-  const { data: mealPlanRes } = useQuery({
+  // Same query keys as meal-tracking-page.tsx's queries — the queryFn shapes
+  // below must match exactly (already-unwrapped plan / logs array), otherwise
+  // whichever page populates the shared cache first breaks the other.
+  const { data: todayMealPlan } = useQuery<IMealPlan | null>({
     queryKey: ["my-meal-plan", todayStr],
-    queryFn: () => getMyMealPlans({ AssignedDate: todayStr }),
+    queryFn: async () => {
+      const res = await getMyMealPlans({ AssignedDate: todayStr }) as {
+        data: { data: IMealPlan[] };
+      };
+      const plans = res.data?.data ?? [];
+      return plans.length > 0 ? plans[0] : null;
+    },
     enabled: !!user,
     staleTime: 30_000,
   });
-  const todayMealPlan: IMealPlan | null = Array.isArray(mealPlanRes?.data?.data) && mealPlanRes.data.data.length > 0
-    ? mealPlanRes.data.data[0]
-    : null;
 
-  const { data: mealLogRes } = useQuery({
+  const { data: todayMealLogs = [] } = useQuery<IMealLog[]>({
     queryKey: ["my-meal-logs", todayStr],
-    queryFn: () => getMyMealLogs({ LogDate: todayStr }),
+    queryFn: async () => {
+      const res = await getMyMealLogs({ LogDate: todayStr }) as {
+        data: { data: IMealLog[] };
+      };
+      return res.data?.data ?? [];
+    },
     enabled: !!user && !!todayMealPlan,
     staleTime: 30_000,
   });
-  const todayMealLogs: IMealLog[] = Array.isArray(mealLogRes?.data?.data) ? mealLogRes.data.data : [];
 
   const todayMealSummary = todayMealPlan ? mergePlanWithLogs(todayMealPlan, todayMealLogs) : null;
   const foodCompletedCount = todayMealSummary?.mealsWithLogs.reduce((s, m) => s + m.completedCount, 0) ?? 0;
