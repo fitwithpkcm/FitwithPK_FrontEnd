@@ -174,6 +174,11 @@ function LogSetSheet({ open, exercise, setNumber, existing, prefill, saving, onC
   const [unit, setUnit]     = useState(source?.WeightUnit ?? exercise.WeightUnit ?? "kg");
   const [notes, setNotes]   = useState(existing?.Notes ?? "");   // notes not copied from prefill
   const [activeField, setActiveField] = useState<"reps"|"weight">("reps");
+  // Reps/weight open pre-filled from the existing log or the previous set.
+  // Without this, the first tap just appends onto that old value, forcing
+  // the user to backspace it all away first. Track whether each field has
+  // been touched yet so the first keystroke replaces it outright instead.
+  const [freshField, setFreshField] = useState({ reps: true, weight: true });
 
   useEffect(() => {
     if (open) {
@@ -183,22 +188,33 @@ function LogSetSheet({ open, exercise, setNumber, existing, prefill, saving, onC
       setUnit(src?.WeightUnit ?? exercise.WeightUnit ?? "kg");
       setNotes(existing?.Notes ?? "");   // notes not copied from prefill
       setActiveField("reps");
+      setFreshField({ reps: true, weight: true });
     }
   }, [open, exercise, existing, prefill]);
 
   const numpad = (val: string) => {
     const setter = activeField === "reps" ? setReps : setWeight;
+    const isFresh = freshField[activeField];
+
     setter(prev => {
+      if (isFresh) {
+        if (val === "⌫") return "0";
+        if (val === ".") return "0.";
+        return val;
+      }
       if (val === "⌫") return prev.slice(0,-1) || "0";
       if (val === "." && prev.includes(".")) return prev;
       if (prev === "0" && val !== ".") return val;
       return prev + val;
     });
+
+    setFreshField(f => ({ ...f, [activeField]: false }));
   };
 
   const adj = (field: "reps"|"weight", delta: number) => {
     if (field === "reps") setReps(v => String(Math.max(1, parseInt(v)||0) + delta));
     else setWeight(v => String(Math.max(0, parseFloat(v)||0) + delta));
+    setFreshField(f => ({ ...f, [field]: false }));
   };
 
   return (
