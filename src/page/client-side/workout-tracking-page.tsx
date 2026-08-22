@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Check, Dumbbell, Video,
   Plus, Loader2, AlertCircle, ChevronDown, ChevronUp,
   BarChart2, Zap, ArrowLeft, MessageSquare, X, Trash2,
-  Pencil, Play, ArrowRightLeft,
+  Pencil, Play, ArrowRightLeft, Search,
 } from "lucide-react";
 import moment from "moment";
 import toast from "react-hot-toast";
@@ -25,10 +25,11 @@ import { setBaseUrl } from "../../services/HttpService";
 import {
   getMyWorkouts, getMyWorkoutLogs, getMyWorkoutHistory,
   logSet, deleteSetLog, getSetLogsForDate, rescheduleMyWorkout,
+  getExerciseLibrary, swapMyExercise,
 } from "../../services/WorkoutService";
 import WorkoutProgressCharts from "../../components/workout/WorkoutProgressCharts";
 import {
-  IWorkout, IExercise, IExerciseLog, ISetLog,
+  IWorkout, IExercise, IExerciseLog, ISetLog, IExerciseLibraryItem,
   mergeWorkoutWithLogs, WEIGHT_UNITS,
 } from "../../interface/IWorkout";
 
@@ -373,7 +374,7 @@ function SwipeableRow({ onDelete, children, disabled }: {
 
 // ── Exercise Row with inline sets ─────────────────────────────────
 
-function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDeleteSet, onAddExtraSet }: {
+function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDeleteSet, onAddExtraSet, onSwap }: {
   exercise: IExercise;
   setLogs: ISetLog[];   // all set logs for this exercise on selectedDate
   workout: IWorkout;
@@ -381,6 +382,7 @@ function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDel
   onLogSet: (ex: IExercise, setNumber: number, existing: ISetLog|null) => void;
   onDeleteSet: (setLog: ISetLog) => void;
   onAddExtraSet: (ex: IExercise, nextSetNum: number, prev: ISetLog) => void;
+  onSwap?: (ex: IExercise) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
@@ -445,6 +447,15 @@ function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDel
               : <span className="ml-1">· {exercise.TargetReps} reps</span>}
           </p>
         </div>
+
+        {onSwap && (
+          <button
+            onClick={e => { e.stopPropagation(); onSwap(exercise); }}
+            title="Can't do this? Swap it for another exercise"
+            className="flex-shrink-0 p-1.5 text-gray-300 dark:text-gray-600 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors">
+            <ArrowRightLeft className="h-3.5 w-3.5" />
+          </button>
+        )}
 
         <span className="p-1 text-gray-300 dark:text-gray-600 flex-shrink-0">
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -898,9 +909,74 @@ function MoveWorkoutDrawer({ open, workout, saving, onClose, onConfirm }: {
   );
 }
 
+// ── Swap Exercise Drawer ────────────────────────────────────────────
+// "I can't do this exercise" — let the client replace it with something else
+// from the shared exercise library before they've logged any sets against it.
+
+function SwapExerciseDrawer({ open, exercise, library, saving, onClose, onConfirm }: {
+  open: boolean; exercise: IExercise | null; library: IExerciseLibraryItem[]; saving: boolean;
+  onClose: () => void; onConfirm: (item: IExerciseLibraryItem) => void;
+}) {
+  const [search, setSearch] = useState("");
+  useEffect(() => { if (open) setSearch(""); }, [open]);
+
+  const filtered = search.trim()
+    ? library.filter(l => l.ExerciseName.toLowerCase().includes(search.toLowerCase()) ||
+        (l.Category ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        (l.MuscleGroup ?? "").toLowerCase().includes(search.toLowerCase()))
+    : library;
+
+  return (
+    <Drawer open={open} onOpenChange={v => { if (!v) onClose(); }}>
+      <DrawerContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 max-h-[85vh] flex flex-col">
+        <div className="px-5 pb-2">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <ArrowRightLeft className="h-4 w-4 text-amber-500" /> Swap Exercise
+          </h3>
+          {exercise && (
+            <p className="text-xs text-gray-400 mt-0.5">Replacing "{exercise.ExerciseName}"</p>
+          )}
+        </div>
+
+        <div className="px-5 relative">
+          <Search className="absolute left-8 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input placeholder="Search exercises…" value={search} onChange={e => setSearch(e.target.value)}
+            className="pl-9 bg-white dark:bg-gray-800" />
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-1.5">
+          {library.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-8">No other exercises available.</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-8">No exercises match "{search}"</p>
+          ) : (
+            filtered.map((item, i) => (
+              <button
+                key={item.IdLibraryItem ?? i}
+                disabled={saving}
+                onClick={() => onConfirm(item)}
+                className="w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors text-left disabled:opacity-40">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{item.ExerciseName}</p>
+                  {(item.MuscleGroup || item.Category) && (
+                    <p className="text-[11px] text-gray-400">{item.MuscleGroup || item.Category}</p>
+                  )}
+                </div>
+                <span className="text-[11px] text-gray-400 flex-shrink-0">
+                  {item.DefaultSets} × {item.DefaultReps}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
 // ── Workout Card ──────────────────────────────────────────────────
 
-function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet, onAddExtraSet, onMove }: {
+function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet, onAddExtraSet, onMove, onSwap }: {
   workout: IWorkout;
   setLogs: ISetLog[];
   onExerciseClick: (ex: IExercise) => void;
@@ -908,6 +984,7 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
   onDeleteSet: (setLog: ISetLog) => void;
   onAddExtraSet: (ex: IExercise, nextSetNum: number, prev: ISetLog) => void;
   onMove: (workout: IWorkout) => void;
+  onSwap?: (workout: IWorkout, ex: IExercise) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -974,6 +1051,7 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
               onLogSet={onLogSet}
               onDeleteSet={onDeleteSet}
               onAddExtraSet={onAddExtraSet}
+              onSwap={onSwap ? (exer) => onSwap(workout, exer) : undefined}
             />
           ))}
         </div>
@@ -1051,8 +1129,17 @@ export default function WorkoutTrackingPage() {
   const [logSheet, setLogSheet] = useState<{ex: IExercise; setNumber: number; existing: ISetLog|null; prefill: ISetLog|null}|null>(null);
   const [tab, setTab] = useState<"today"|"history"|"progress">("today");
   const [movingWorkout, setMovingWorkout] = useState<IWorkout|null>(null);
+  const [swappingEx, setSwappingEx] = useState<{workout: IWorkout; exercise: IExercise}|null>(null);
 
   // ── Queries ──────────────────────────────────────────────────────
+
+  const { data: libraryRes } = useQuery({
+    queryKey: ["exercise-library"],
+    queryFn: () => getExerciseLibrary(),
+    enabled: !!swappingEx,
+    staleTime: 300_000,
+  });
+  const exerciseLibrary: IExerciseLibraryItem[] = Array.isArray(libraryRes?.data?.data) ? libraryRes.data.data : [];
 
   const { data: workoutsRes, isLoading: workoutsLoading, isError } = useQuery({
     queryKey: ["my-workouts", selectedDate],
@@ -1108,6 +1195,42 @@ export default function WorkoutTrackingPage() {
     },
     onError: (error: Error) => toast.error(error.message || "Failed to move workout"),
   });
+
+  const swapMut = useMutation({
+    mutationFn: swapMyExercise,
+    onSuccess: () => {
+      toast.success("Exercise swapped!");
+      queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
+      setSwappingEx(null);
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to swap exercise"),
+  });
+
+  const handleSwapExercise = (workout: IWorkout, ex: IExercise) => {
+    const alreadyLogged = allSetLogs.some(l => l.IdExercise === ex.IdExercise);
+    if (alreadyLogged) {
+      toast.error("You've already logged sets for this exercise — remove them first to swap it.");
+      return;
+    }
+    setSwappingEx({ workout, exercise: ex });
+  };
+
+  const handleConfirmSwap = (item: IExerciseLibraryItem) => {
+    if (!swappingEx) return;
+    swapMut.mutate({
+      IdWorkout: swappingEx.workout.IdWorkout!,
+      IdExercise: swappingEx.exercise.IdExercise!,
+      ExerciseName: item.ExerciseName,
+      MuscleGroup: item.MuscleGroup,
+      VideoUrl: item.VideoUrl,
+      Sets: item.DefaultSets ?? swappingEx.exercise.Sets,
+      TargetReps: item.DefaultReps ?? swappingEx.exercise.TargetReps,
+      TargetWeight: item.DefaultWeight,
+      WeightUnit: item.WeightUnit ?? swappingEx.exercise.WeightUnit ?? 'kg',
+      RestSeconds: item.RestSeconds ?? swappingEx.exercise.RestSeconds,
+      Notes: item.Notes,
+    });
+  };
 
   const handleLogSet = (ex: IExercise, setNumber: number, existing: ISetLog|null) => {
     // when logging a new set (not editing), pre-fill from the most recently logged set of this exercise
@@ -1304,6 +1427,7 @@ export default function WorkoutTrackingPage() {
                 onDeleteSet={handleDeleteSet}
                 onAddExtraSet={handleAddExtraSet}
                 onMove={() => setMovingWorkout(w)}
+                onSwap={handleSwapExercise}
               />
             ))}
           </>
@@ -1347,6 +1471,15 @@ export default function WorkoutTrackingPage() {
         saving={rescheduleMut.isPending}
         onClose={() => setMovingWorkout(null)}
         onConfirm={(IdWorkout, NewDate) => rescheduleMut.mutate({ IdWorkout, NewDate })}
+      />
+
+      <SwapExerciseDrawer
+        open={!!swappingEx}
+        exercise={swappingEx?.exercise ?? null}
+        library={exerciseLibrary.filter(l => l.ExerciseName !== swappingEx?.exercise.ExerciseName)}
+        saving={swapMut.isPending}
+        onClose={() => setSwappingEx(null)}
+        onConfirm={handleConfirmSwap}
       />
     </div>
   );

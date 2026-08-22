@@ -56,6 +56,16 @@ export const rescheduleMyWorkout = (params: { IdWorkout: number; NewDate: string
     return response;
   });
 
+export const swapMyExercise = (params: {
+  IdWorkout: number; IdExercise: number; ExerciseName: string;
+  MuscleGroup?: string; VideoUrl?: string; Sets: number; TargetReps: number;
+  TargetWeight?: number; WeightUnit?: string; RestSeconds?: number; Notes?: string;
+}) =>
+  httpCall({ method: "post", url: API_URL.SWAP_MY_EXERCISE, data: params }).then((response) => {
+    if (!response.data?.success) throw new Error(response.data?.message || "Failed to swap exercise");
+    return response;
+  });
+
 export const logExercise = (params: IExerciseLog) =>
   httpCall({ method: "post", url: API_URL.LOG_EXERCISE, data: params });
 
