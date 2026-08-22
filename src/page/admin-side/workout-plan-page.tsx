@@ -909,6 +909,22 @@ function LibraryPickerDialog({ open, library, onClose, onAdd }: {
 
   useEffect(() => { if (open) { setSearch(""); setSelected(new Set()); } }, [open]);
 
+  // CSS vh/dvh sizing on a fixed-position element is inconsistent across
+  // mobile browsers when the on-screen keyboard opens — some resize the
+  // layout viewport, some don't, some only update dvh with a delay. Track
+  // the real visible area directly via visualViewport so the dialog always
+  // fits above the keyboard instead of guessing with CSS units.
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setViewportHeight(vv.height);
+    update();
+    vv.addEventListener('resize', update);
+    return () => vv.removeEventListener('resize', update);
+  }, [open]);
+
   const filtered = search.trim()
     ? library.filter(l => l.ExerciseName.toLowerCase().includes(search.toLowerCase()) ||
         (l.Category ?? "").toLowerCase().includes(search.toLowerCase()))
@@ -936,7 +952,10 @@ function LibraryPickerDialog({ open, library, onClose, onAdd }: {
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-md h-[80dvh] max-h-[80dvh] top-[4%] translate-y-0 flex flex-col">
+      <DialogContent
+        className="max-w-md top-4 translate-y-0 flex flex-col"
+        style={viewportHeight ? { height: Math.round(viewportHeight - 32), maxHeight: Math.round(viewportHeight - 32) } : { maxHeight: '80vh' }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-blue-500" />
