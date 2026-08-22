@@ -936,7 +936,7 @@ function LibraryPickerDialog({ open, library, onClose, onAdd }: {
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-md h-[80dvh] max-h-[80dvh] top-[4%] translate-y-0 flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-blue-500" />
