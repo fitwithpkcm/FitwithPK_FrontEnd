@@ -1274,6 +1274,24 @@ function DayAssignDrawer({ open, date, existingWorkouts, saving, templates, onCl
   onAddFromTemplate: (template: IWorkoutTemplate) => void;
   onRemove: (id: number) => void;
 }) {
+  // Tick several workouts and add them all at once, rather than reopening
+  // this drawer once per workout.
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  useEffect(() => { if (open) setSelectedIds(new Set()); }, [open, date]);
+
+  const toggle = (id: number) => setSelectedIds(s => {
+    const next = new Set(s);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
+  const handleAddSelected = () => {
+    templates
+      .filter(tpl => tpl.IdTemplate != null && selectedIds.has(tpl.IdTemplate))
+      .forEach(tpl => onAddFromTemplate(tpl));
+    onClose();
+  };
+
   return (
     <Drawer open={open} onOpenChange={v => { if (!v) onClose(); }}>
       <DrawerContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 max-h-[85vh]">
@@ -1313,22 +1331,32 @@ function DayAssignDrawer({ open, date, existingWorkouts, saving, templates, onCl
             </div>
           )}
 
-          {/* Templates as colored grid */}
+          {/* Templates as colored grid — tap to select, multiple at once */}
           {templates.length > 0 ? (
             <div>
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
-                {existingWorkouts.length > 0 ? 'Add another workout' : 'Select Workout'}
+                {existingWorkouts.length > 0 ? 'Add more workouts' : 'Select workouts'}
               </p>
               <div className="grid grid-cols-3 gap-2">
-                {templates.map(tpl => (
-                  <button key={tpl.IdTemplate} disabled={saving}
-                    onClick={() => { onAddFromTemplate(tpl); onClose(); }}
-                    className={`py-2.5 px-2 rounded-xl text-xs font-bold text-center transition-all active:scale-95 hover:opacity-90 ${
-                      TYPE_COLORS[tpl.Category ?? ''] ?? TYPE_COLORS[tpl.TemplateName] ?? 'bg-blue-500 text-white'
-                    } ${existingWorkouts.some(w => w.WorkoutName === tpl.TemplateName) ? 'opacity-40' : ''}`}>
-                    {tpl.TemplateName}
-                  </button>
-                ))}
+                {templates.map(tpl => {
+                  const isSelected = tpl.IdTemplate != null && selectedIds.has(tpl.IdTemplate);
+                  return (
+                    <button key={tpl.IdTemplate} disabled={saving || tpl.IdTemplate == null}
+                      onClick={() => toggle(tpl.IdTemplate!)}
+                      className={`relative py-2.5 px-2 rounded-xl text-xs font-bold text-center transition-all active:scale-95 hover:opacity-90 ${
+                        TYPE_COLORS[tpl.Category ?? ''] ?? TYPE_COLORS[tpl.TemplateName] ?? 'bg-blue-500 text-white'
+                      } ${isSelected ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900' : ''} ${
+                        existingWorkouts.some(w => w.WorkoutName === tpl.TemplateName) ? 'opacity-40' : ''
+                      }`}>
+                      {isSelected && (
+                        <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-white">
+                          <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                        </span>
+                      )}
+                      {tpl.TemplateName}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ) : (
@@ -1339,6 +1367,18 @@ function DayAssignDrawer({ open, date, existingWorkouts, saving, templates, onCl
             </div>
           )}
         </div>
+
+        {templates.length > 0 && (
+          <div className="px-5 pt-2 pb-5 border-t border-gray-100 dark:border-gray-800">
+            <button
+              onClick={handleAddSelected}
+              disabled={saving || selectedIds.size === 0}
+              className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {selectedIds.size > 0 ? `Add ${selectedIds.size} workout${selectedIds.size > 1 ? 's' : ''}` : 'Select workouts to add'}
+            </button>
+          </div>
+        )}
       </DrawerContent>
     </Drawer>
   );
