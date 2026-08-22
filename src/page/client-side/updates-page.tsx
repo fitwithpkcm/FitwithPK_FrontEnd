@@ -658,12 +658,16 @@ export default function UpdatesPage() {
 
   // Use fetched data if available, otherwise use mock data. The backend can
   // return placeholder rows for days before the user ever submitted anything
-  // (all fields empty) — filter those out so the history starts at the
-  // user's actual first entry instead of a run of blank cards.
+  // — filter those out so the history starts at the user's actual first
+  // entry instead of a run of blank cards. Diet_Follow/WorkOut default to 0
+  // on insert (never null) even for untouched rows, and the rating picker
+  // never lets a user submit 0, so treat 0 as "unset" for those two fields.
   const dailyUpdates = fetchedUpdates.filter(u =>
     u.Steps != null || u.Water != null || u.Weight != null ||
-    u.Sleep != null || u.Diet_Follow != null ||
-    u.WorkOut != null || u.WorkOut_Follow != null ||
+    u.Sleep != null ||
+    (u.Diet_Follow != null && u.Diet_Follow > 0) ||
+    (u.WorkOut != null && u.WorkOut > 0) ||
+    (u.WorkOut_Follow != null && u.WorkOut_Follow > 0) ||
     (u.Notes != null && u.Notes !== '')
   );
 
