@@ -2,8 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Droplet, Sun, Moon, Trophy, Dumbbell, Flame, X, CreditCard, Pill, Check, Clock, Pencil, Bell, MessageCircle, Send, Loader2, RefreshCw, ChevronLeft, UtensilsCrossed, Scale, TrendingDown, TrendingUp, Minus } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { Droplet, Sun, Moon, Trophy, Dumbbell, Flame, X, CreditCard, Pill, Check, Clock, Pencil, Bell, MessageCircle, Send, Loader2, RefreshCw, ChevronLeft, UtensilsCrossed, Scale } from "lucide-react";
+import { AreaChart, Area, YAxis, ResponsiveContainer } from "recharts";
 import { formatDate, calculatePercentage, isEmpty } from "../../lib/utils";
 import { Link, useLocation } from "wouter";
 import { MobileNav } from "../../components/layout/mobile-nav";
@@ -878,6 +878,64 @@ export default function HomePage() {
             );
           })()}
 
+          {/* Weight */}
+          {(() => {
+            const weight = latestUpdate?.Weight;
+            const trend = weight != null && previousWeightEntry ? weight - previousWeightEntry.Weight : null;
+            const chartData = weeklyData.map((d: WeeklyDay & { Weight?: number }) => ({ weight: d.Weight ?? null }));
+            const hasChartData = chartData.some(d => d.weight != null);
+            return (
+              <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 cursor-pointer"
+                onClick={openWeightDialog}>
+                <CardContent className="p-3">
+                  <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/40 flex items-center justify-center mb-2">
+                    <Scale className="h-4 w-4 text-rose-500 dark:text-rose-400" />
+                  </div>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-0.5">Weight</p>
+                  {weight != null ? (
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
+                      {weight}
+                      <span className="text-sm font-normal text-gray-400 dark:text-gray-500"> kg</span>
+                    </p>
+                  ) : (
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 leading-tight">Not logged</p>
+                  )}
+                  <p className={`text-[10px] mt-0.5 ${
+                    trend == null ? "text-gray-400 dark:text-gray-500"
+                      : trend > 0 ? "text-amber-500" : trend < 0 ? "text-emerald-500" : "text-gray-400 dark:text-gray-500"
+                  }`}>
+                    {trend == null ? (weight != null ? "Logged today" : "Log Weight") : trend === 0 ? "No change" : `${trend > 0 ? "+" : ""}${trend.toFixed(1)} kg`}
+                  </p>
+                  {hasChartData && (
+                    <div className="h-6 mt-1.5 -mx-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="weightSparkFill" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.3} />
+                              <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
+                          <Area
+                            type="monotone"
+                            dataKey="weight"
+                            stroke="#f43f5e"
+                            strokeWidth={1.5}
+                            fill="url(#weightSparkFill)"
+                            connectNulls
+                            dot={false}
+                            isAnimationActive={false}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           {/* Workout */}
           <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 cursor-pointer"
             onClick={() => setLocation(RENDER_URL.STUDENT_WORKOUT)}>
@@ -935,90 +993,6 @@ export default function HomePage() {
           </Card>
 
         </div>
-
-        {/* ── Weight ── */}
-        <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Weight</p>
-        {(() => {
-          const weight = latestUpdate?.Weight;
-          const trend = weight != null && previousWeightEntry ? weight - previousWeightEntry.Weight : null;
-          const chartData = weeklyData.map((d: WeeklyDay & { Weight?: number }) => ({
-            day: d.WeekDay,
-            weight: d.Weight ?? null,
-          }));
-          const hasChartData = chartData.some(d => d.weight != null);
-          return (
-            <Card
-              className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 mb-5 cursor-pointer"
-              onClick={openWeightDialog}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/40 flex items-center justify-center flex-shrink-0">
-                      <Scale className="h-4 w-4 text-rose-500 dark:text-rose-400" />
-                    </div>
-                    <div>
-                      {weight != null ? (
-                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
-                          {weight}<span className="text-sm font-normal text-gray-400 dark:text-gray-500"> kg</span>
-                        </p>
-                      ) : (
-                        <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">Not logged today</p>
-                      )}
-                    </div>
-                  </div>
-                  {trend != null && trend !== 0 && (
-                    <span className={`flex items-center gap-1 text-xs font-semibold ${trend > 0 ? "text-amber-500" : "text-emerald-500"}`}>
-                      {trend > 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                      {trend > 0 ? "+" : ""}{trend.toFixed(1)} kg
-                    </span>
-                  )}
-                  {trend === 0 && (
-                    <span className="flex items-center gap-1 text-xs font-semibold text-gray-400 dark:text-gray-500">
-                      <Minus className="h-3.5 w-3.5" /> No change
-                    </span>
-                  )}
-                </div>
-
-                {hasChartData ? (
-                  <div className="h-24 -mx-2 mt-2">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="weightFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.25} />
-                            <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                        <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
-                        <Tooltip
-                          formatter={(v: number) => [`${v} kg`, "Weight"]}
-                          contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="weight"
-                          stroke="#f43f5e"
-                          strokeWidth={2}
-                          fill="url(#weightFill)"
-                          connectNulls
-                          dot={{ r: 3, fill: "#f43f5e", strokeWidth: 0 }}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Log your weight to start tracking your trend.</p>
-                )}
-
-                <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mt-2">
-                  {weight != null ? "Update weight" : "Log weight"} →
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })()}
 
         {/* ── Weekly chart ── */}
         <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">This week</p>
