@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Droplet, Sun, Moon, Trophy, Dumbbell, Flame, X, CreditCard, Pill, Check, Clock, Pencil, Bell, MessageCircle, Send, Loader2, RefreshCw, ChevronLeft, UtensilsCrossed } from "lucide-react";
+import { Droplet, Sun, Moon, Trophy, Dumbbell, Flame, X, CreditCard, Pill, Check, Clock, Pencil, Bell, MessageCircle, Send, Loader2, RefreshCw, ChevronLeft, UtensilsCrossed, Scale } from "lucide-react";
 import { formatDate, calculatePercentage, isEmpty } from "../../lib/utils";
 import { Link, useLocation } from "wouter";
 import { MobileNav } from "../../components/layout/mobile-nav";
@@ -71,11 +71,13 @@ export default function HomePage() {
   const [waterInputOpen, setWaterInputOpen] = useState(false);
   const [stepsInputOpen, setStepsInputOpen] = useState(false);
   const [sleepInputOpen, setSleepInputOpen] = useState(false);
+  const [weightInputOpen, setWeightInputOpen] = useState(false);
   const [paymentFailedAlert, setPaymentFailedAlert] = useState(false);
 
   const [waterAmount, setWaterAmount] = useState<string | number | undefined>("");
   const [stepsAmount, setStepsAmount] = useState<string | number | undefined>("");
   const [sleepAmount, setSleepAmount] = useState<string | number | undefined>("");
+  const [weightAmount, setWeightAmount] = useState<string | number | undefined>("");
   const [viewFeedback, setViewFeedback] = useState(false);
 
   const [chartDataType, setChartDataType] = useState<'Steps_Percent' | 'Water_Percent' | 'Sleep_Percent'>('Steps_Percent');
@@ -284,8 +286,13 @@ export default function HomePage() {
       setWaterAmount(latestUpdate?.Water);
       setStepsAmount(latestUpdate?.Steps);
       setSleepAmount(latestUpdate?.Sleep);
+      setWeightAmount(latestUpdate?.Weight);
     }
   }, [latestUpdate])
+
+  // Most recent logged weight and the entry before it, used for the trend arrow on the home tile
+  const weightEntries = (dailyUpdatesForWeek ?? []).filter((d): d is IDailyStats & { Weight: number } => d.Weight != null);
+  const previousWeightEntry = weightEntries.length > 1 ? weightEntries[weightEntries.length - 2] : null;
 
 
   /**
@@ -460,6 +467,49 @@ export default function HomePage() {
 
     },
   });
+
+  // Weight update mutation
+  const updateWeightMutation = useMutation({
+    mutationFn: async (weight: number) => {
+      const transformedData = {
+        Weight: weight,
+        Day: moment(currentDate).format("DD-MM-YYYY")
+      };
+
+      return dailyUpdate(transformedData).then((res) => {
+        if (res.data.success) {
+          return res;
+        }
+      }).catch((error) => {
+        return error
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
+      queryClient.invalidateQueries({ queryKey: ['daily-updates-forweek'] })
+      toast.success('Your weight has been recorded successfully', {
+        position: 'bottom-center'
+      })
+
+      setWeightInputOpen(false);
+    },
+    onError: (error) => {
+      toast.error(`Failed to update weight ${error.message}`, {
+        position: 'bottom-center'
+      })
+    },
+  });
+
+  const handleWeightSubmit = () => {
+    const weight = parseFloat("" + weightAmount);
+    if (isNaN(weight) || weight <= 0) {
+      toast.error('Please enter a valid weight', {
+        position: 'bottom-center'
+      })
+      return;
+    }
+    updateWeightMutation.mutate(weight);
+  };
 
   const handleWaterSubmit = () => {
     const amount = parseFloat("" + waterAmount);
@@ -821,6 +871,42 @@ export default function HomePage() {
             );
           })()}
 
+          {/* Weight */}
+          {(() => {
+            const weight = latestUpdate?.Weight;
+            const trend = weight != null && previousWeightEntry ? weight - previousWeightEntry.Weight : null;
+            return (
+              <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 cursor-pointer"
+                onClick={() => { setWeightAmount(weight ?? ""); setWeightInputOpen(true); }}>
+                <CardContent className="p-3">
+                  <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/40 flex items-center justify-center mb-2">
+                    <Scale className="h-4 w-4 text-rose-500 dark:text-rose-400" />
+                  </div>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-0.5">Weight</p>
+                  {weight != null ? (
+                    <>
+                      <p className="text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
+                        {weight}
+                        <span className="text-sm font-normal text-gray-400 dark:text-gray-500"> kg</span>
+                      </p>
+                      <p className={`text-[10px] mt-0.5 ${
+                        trend == null ? "text-gray-400 dark:text-gray-500"
+                          : trend > 0 ? "text-amber-500" : trend < 0 ? "text-emerald-500" : "text-gray-400 dark:text-gray-500"
+                      }`}>
+                        {trend == null ? "Logged today" : trend === 0 ? "No change" : `${trend > 0 ? "+" : ""}${trend.toFixed(1)} kg`}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 leading-tight mt-1">Not logged</p>
+                      <p className="text-[10px] text-blue-500 dark:text-blue-400 mt-1">Log Weight</p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           {/* Workout */}
           <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 cursor-pointer"
             onClick={() => setLocation(RENDER_URL.STUDENT_WORKOUT)}>
@@ -881,7 +967,7 @@ export default function HomePage() {
 
         {/* ── Quick log ── */}
         <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Quick log</p>
-        <div className="grid grid-cols-3 gap-2 mb-5">
+        <div className="grid grid-cols-2 gap-2 mb-5">
           <button
             className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 active:scale-95 transition-transform"
             onClick={() => { setWaterAmount(latestUpdate?.Water ?? ""); setWaterInputOpen(true); }}
@@ -902,6 +988,13 @@ export default function HomePage() {
           >
             <Moon className="h-4 w-4 text-indigo-400" />
             <span>+ Sleep</span>
+          </button>
+          <button
+            className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 active:scale-95 transition-transform"
+            onClick={() => { setWeightAmount(latestUpdate?.Weight ?? ""); setWeightInputOpen(true); }}
+          >
+            <Scale className="h-4 w-4 text-rose-400" />
+            <span>+ Weight</span>
           </button>
         </div>
 
@@ -1828,6 +1921,60 @@ export default function HomePage() {
               </>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Weight Dialog ── */}
+      <Dialog open={weightInputOpen} onOpenChange={(open) => { setWeightInputOpen(open); if (!open) setWeightAmount(latestUpdate?.Weight ?? ""); }}>
+        <DialogContent className="sm:max-w-[360px] p-0 overflow-hidden rounded-3xl border-0">
+          {(() => {
+            const w = parseFloat("" + weightAmount) || 0;
+            return (
+              <div className="relative bg-gradient-to-b from-rose-400 to-pink-600 px-6 pt-6 pb-5 text-white text-center overflow-hidden">
+                <h2 className="text-xl font-bold">Body Weight</h2>
+                <p className="text-rose-100 text-xs mt-0.5">Track your progress</p>
+                <div className="flex justify-center mt-4">
+                  <div className="w-20 h-20 rounded-full bg-white/15 border-2 border-white/40 flex items-center justify-center">
+                    <Scale className="h-9 w-9" />
+                  </div>
+                </div>
+                <div className="mt-3 inline-flex items-baseline gap-1 bg-white/20 rounded-2xl px-5 py-2">
+                  <span className="text-4xl font-bold">{w.toFixed(1)}</span>
+                  <span className="text-base font-medium">kg</span>
+                </div>
+              </div>
+            );
+          })()}
+          <div className="bg-white px-6 pt-4 pb-6 space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setWeightAmount(Math.max(0, (parseFloat("" + weightAmount) || 0) - 0.5).toFixed(1))}
+                className="py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 active:scale-95 transition-all">
+                − 0.5 kg
+              </button>
+              <button
+                onClick={() => setWeightAmount(((parseFloat("" + weightAmount) || 0) + 0.5).toFixed(1))}
+                className="py-2 rounded-xl text-sm font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-95 transition-all">
+                + 0.5 kg
+              </button>
+            </div>
+            <div className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-2 border border-gray-200">
+              <span className="text-gray-400 text-sm">Custom (kg)</span>
+              <Input type="number" placeholder="0.0" step="0.1" value={weightAmount}
+                onChange={(e) => setWeightAmount(e.target.value)}
+                className="border-0 bg-transparent p-0 text-right font-semibold text-gray-800 focus-visible:ring-0 text-lg" />
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button onClick={() => { setWeightInputOpen(false); setWeightAmount(latestUpdate?.Weight ?? ""); }}
+                className="flex-1 py-3 rounded-2xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">
+                Cancel
+              </button>
+              <button onClick={handleWeightSubmit} disabled={updateWeightMutation.isPending}
+                className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-rose-400 to-pink-500 text-white font-semibold text-sm hover:opacity-90 disabled:opacity-60">
+                {updateWeightMutation.isPending ? "Saving…" : "Log Weight ⚖️"}
+              </button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

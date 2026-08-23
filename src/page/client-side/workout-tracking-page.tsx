@@ -386,6 +386,8 @@ function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDel
 }) {
   const [expanded, setExpanded] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
+  // per-set weight bump (+/-2.5) applied on top of the previous set's weight before quick-logging
+  const [weightAdjust, setWeightAdjust] = useState<Record<number, number>>({});
 
   const totalSets = exercise.Sets;
   const loggedSets = setLogs.filter(l => l.IdExercise === exercise.IdExercise);
@@ -504,20 +506,44 @@ function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDel
                   </>
                 ) : (
                   <>
-                    <span className="flex-1 text-xs text-gray-400 dark:text-gray-500">
-                      {prevLog ? `${prevLog.RepsCompleted} reps${prevLog.WeightUsed ? ` @ ${prevLog.WeightUsed}${prevLog.WeightUnit ?? "kg"}` : ""} · tap to log` : "Set " + setNum + " — tap to log"}
-                    </span>
-                    <button
-                      onClick={() => {
-                        if (prevLog) {
-                          onAddExtraSet(exercise, setNum, prevLog);
-                        } else {
-                          onLogSet(exercise, setNum, null);
-                        }
-                      }}
-                      className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-1 rounded-lg hover:bg-blue-100 transition-colors flex-shrink-0">
-                      <Plus className="h-3 w-3" /> Log
-                    </button>
+                    {(() => {
+                      const adjust = weightAdjust[setNum] ?? 0;
+                      const adjustedWeight = prevLog?.WeightUsed != null ? prevLog.WeightUsed + adjust : null;
+                      return (
+                        <>
+                          <span className="flex-1 text-xs text-gray-400 dark:text-gray-500">
+                            {prevLog ? `${prevLog.RepsCompleted} reps${adjustedWeight != null ? ` @ ${adjustedWeight}${prevLog.WeightUnit ?? "kg"}` : ""} · tap to log` : "Set " + setNum + " — tap to log"}
+                          </span>
+                          {prevLog?.WeightUsed != null && (
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <button
+                                onClick={() => setWeightAdjust(a => ({ ...a, [setNum]: (a[setNum] ?? 0) - 2.5 }))}
+                                title="-2.5"
+                                className="w-5 h-5 flex items-center justify-center rounded-md text-[11px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 active:scale-95 transition-all">
+                                −
+                              </button>
+                              <button
+                                onClick={() => setWeightAdjust(a => ({ ...a, [setNum]: (a[setNum] ?? 0) + 2.5 }))}
+                                title="+2.5"
+                                className="w-5 h-5 flex items-center justify-center rounded-md text-[11px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 active:scale-95 transition-all">
+                                +
+                              </button>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (prevLog) {
+                                onAddExtraSet(exercise, setNum, adjustedWeight != null ? { ...prevLog, WeightUsed: adjustedWeight } : prevLog);
+                              } else {
+                                onLogSet(exercise, setNum, null);
+                              }
+                            }}
+                            className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-1 rounded-lg hover:bg-blue-100 transition-colors flex-shrink-0">
+                            <Plus className="h-3 w-3" /> Log
+                          </button>
+                        </>
+                      );
+                    })()}
                   </>
                 )}
               </div>
