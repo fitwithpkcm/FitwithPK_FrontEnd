@@ -186,6 +186,14 @@ export const setCoachingPlan = (params: {
 };
 
 
+export const setClientNotificationPreference = (params: {
+    IdUser: number;
+    Enabled: boolean;
+}): Promise<ApiResponse<unknown>> => {
+    return httpCall({ url: API_URL.SET_CLIENT_NOTIFICATION_PREFERENCE, method: 'post', data: params });
+};
+
+
 // ── Medical documents / blood reports (admin-uploaded, per client) ────────
 
 export const uploadMedicalDocument = (params: FormData): Promise<ApiResponse<IMedicalDocument[]>> => {

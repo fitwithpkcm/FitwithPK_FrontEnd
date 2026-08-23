@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Calendar, FileText, Eye, Plus, Save, X, CheckCircle, AlertTriangle, Upload, Trash2 } from "lucide-react";
+import { User, Calendar, FileText, Eye, Plus, Save, X, CheckCircle, AlertTriangle, Upload, Trash2, Bell, BellOff } from "lucide-react";
 import { getLoggedUserDetails } from "../../services/ProfileService";
-import { setCoachingPlan, uploadMedicalDocument, getMedicalDocuments, deleteMedicalDocument } from "../../services/AdminServices";
+import { setCoachingPlan, setClientNotificationPreference, uploadMedicalDocument, getMedicalDocuments, deleteMedicalDocument } from "../../services/AdminServices";
 import toast from "react-hot-toast";
 import { IUser } from "../../interface/models/User";
 import { IMedicalDocument, MedicalDocumentType } from "../../interface/IMedicalDocument";
@@ -12,6 +12,7 @@ import moment from "moment";
 import { RENDER_URL } from "@/common/Urls";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AdminPageHeader } from "../../components/layout/page-header";
+import { Switch } from "../../components/ui/switch";
 
 export default function ClientProfileScreen() {
 
@@ -58,6 +59,19 @@ export default function ClientProfileScreen() {
       toast.success('Coaching plan saved!');
     },
     onError: () => toast.error('Failed to save plan'),
+  });
+
+  const notificationsEnabled = profileData?.PushNotificationsEnabled !== 'N';
+
+  const { mutate: saveNotificationPreference, isPending: savingNotificationPreference } = useMutation({
+    mutationFn: (Enabled: boolean) => setClientNotificationPreference({ IdUser: selectedUserID, Enabled }),
+    onSuccess: (_res, Enabled) => {
+      queryClient.setQueryData<Partial<IUser> | undefined>([`subscription_date_${selectedUserID}`], (old) =>
+        old ? { ...old, PushNotificationsEnabled: Enabled ? 'Y' : 'N' } : old
+      );
+      toast.success(Enabled ? 'Notifications enabled for this client' : 'Notifications disabled for this client');
+    },
+    onError: () => toast.error('Failed to update notification preference'),
   });
 
   const { data: medicalDocuments = [], isLoading: medicalDocsLoading } = useQuery<IMedicalDocument[]>({
@@ -620,6 +634,32 @@ export default function ClientProfileScreen() {
     <div className="space-y-6">
 
       {renderPaymentDetail()}
+
+      {/* Notification Preference */}
+      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+              notificationsEnabled ? "bg-blue-50" : "bg-gray-100"
+            }`}>
+              {notificationsEnabled
+                ? <Bell className="w-4 h-4 text-blue-600" />
+                : <BellOff className="w-4 h-4 text-gray-400" />}
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
+              <p className="text-xs text-gray-500">
+                {notificationsEnabled ? "This client can receive push notifications" : "This client won't receive any notifications"}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={notificationsEnabled}
+            disabled={savingNotificationPreference}
+            onCheckedChange={(checked) => saveNotificationPreference(checked)}
+          />
+        </div>
+      </div>
 
       {/* Basic Information */}
       <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">

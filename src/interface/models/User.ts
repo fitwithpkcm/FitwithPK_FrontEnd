@@ -83,6 +83,7 @@ export interface IUser extends IprofileInfo {
   ActiveStatus?: number;
   PlanDescription?: string;
   BillingCycle?: string;
+  PushNotificationsEnabled?: "Y" | "N";
 }
 
 

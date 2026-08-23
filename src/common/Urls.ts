@@ -86,6 +86,7 @@ export const API_URL = {
     REMOVE_COACH_STUDENT: "/user/removeCoachToStudent",
     ASSIGNED_COACH_LIST: "/user/getAllCoachAssignedUser",
     SET_COACHING_PLAN: "/user/setCoachingPlan",
+    SET_CLIENT_NOTIFICATION_PREFERENCE: "/user/setClientNotificationPreference",
     GET_COACHING_HISTORY: "/user/getCoachingHistory",
     GET_PROFILE_DETAILS: "/student/getStudentProfile",
     GET_SINGLE_DAY: '/student/getSingleDayUpdate',
