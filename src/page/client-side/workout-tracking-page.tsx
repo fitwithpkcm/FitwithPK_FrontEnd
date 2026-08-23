@@ -374,7 +374,7 @@ function SwipeableRow({ onDelete, children, disabled }: {
 
 // ── Exercise Row with inline sets ─────────────────────────────────
 
-function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDeleteSet, onAddExtraSet, onSwap }: {
+function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDeleteSet, onAddExtraSet, onAdjustSetWeight, onSwap }: {
   exercise: IExercise;
   setLogs: ISetLog[];   // all set logs for this exercise on selectedDate
   workout: IWorkout;
@@ -382,6 +382,7 @@ function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDel
   onLogSet: (ex: IExercise, setNumber: number, existing: ISetLog|null) => void;
   onDeleteSet: (setLog: ISetLog) => void;
   onAddExtraSet: (ex: IExercise, nextSetNum: number, prev: ISetLog) => void;
+  onAdjustSetWeight: (setLog: ISetLog, delta: number) => void;
   onSwap?: (ex: IExercise) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -512,6 +513,22 @@ function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDel
                         <span className="text-[11px] text-gray-400 truncate italic">"{setLog!.Notes}"</span>
                       )}
                     </div>
+                    {setLog!.WeightUsed != null && (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => onAdjustSetWeight(setLog!, -2.5)}
+                          title="-2.5"
+                          className="w-5 h-5 flex items-center justify-center rounded-md text-[11px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 active:scale-95 transition-all">
+                          −
+                        </button>
+                        <button
+                          onClick={() => onAdjustSetWeight(setLog!, +2.5)}
+                          title="+2.5"
+                          className="w-5 h-5 flex items-center justify-center rounded-md text-[11px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 active:scale-95 transition-all">
+                          +
+                        </button>
+                      </div>
+                    )}
                     <button onClick={() => onLogSet(exercise, setNum, setLog)}
                       className="p-1.5 text-gray-400 hover:text-blue-500 flex-shrink-0 transition-colors">
                       <Pencil className="h-3.5 w-3.5" />
@@ -1092,13 +1109,14 @@ function AddExerciseDrawer({ open, workout, library, saving, onClose, onConfirm 
 
 // ── Workout Card ──────────────────────────────────────────────────
 
-function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet, onAddExtraSet, onMove, onSwap, onAddExercise }: {
+function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet, onAddExtraSet, onAdjustSetWeight, onMove, onSwap, onAddExercise }: {
   workout: IWorkout;
   setLogs: ISetLog[];
   onExerciseClick: (ex: IExercise) => void;
   onLogSet: (ex: IExercise, setNumber: number, existing: ISetLog|null) => void;
   onDeleteSet: (setLog: ISetLog) => void;
   onAddExtraSet: (ex: IExercise, nextSetNum: number, prev: ISetLog) => void;
+  onAdjustSetWeight: (setLog: ISetLog, delta: number) => void;
   onMove: (workout: IWorkout) => void;
   onSwap?: (workout: IWorkout, ex: IExercise) => void;
   onAddExercise?: (workout: IWorkout) => void;
@@ -1181,6 +1199,7 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
               onLogSet={onLogSet}
               onDeleteSet={onDeleteSet}
               onAddExtraSet={onAddExtraSet}
+              onAdjustSetWeight={onAdjustSetWeight}
               onSwap={onSwap ? (exer) => onSwap(workout, exer) : undefined}
             />
           ))}
@@ -1428,6 +1447,14 @@ export default function WorkoutTrackingPage() {
     } as ISetLog);
   };
 
+  // quick +/-2.5 bump on an already-logged set's weight — no need to open the edit sheet
+  const handleAdjustSetWeight = (setLog: ISetLog, delta: number) => {
+    logSetMut.mutate({
+      ...setLog,
+      WeightUsed: Math.max(0, (setLog.WeightUsed ?? 0) + delta),
+    });
+  };
+
   const handleDeleteSet = (setLog: ISetLog) => {
     if (!setLog.IdSetLog) return;
     deleteSetMut.mutate({ IdSetLog: setLog.IdSetLog });
@@ -1594,6 +1621,7 @@ export default function WorkoutTrackingPage() {
                 onLogSet={handleLogSet}
                 onDeleteSet={handleDeleteSet}
                 onAddExtraSet={handleAddExtraSet}
+                onAdjustSetWeight={handleAdjustSetWeight}
                 onMove={() => setMovingWorkout(w)}
                 onSwap={handleSwapExercise}
                 onAddExercise={() => setAddingExerciseTo(w)}
