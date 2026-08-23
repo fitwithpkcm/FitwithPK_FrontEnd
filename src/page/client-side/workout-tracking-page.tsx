@@ -520,14 +520,26 @@ function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDel
                 ) : (
                   <>
                     {(() => {
+                      // No previous set logged yet (e.g. this is set 1) — fall back to the
+                      // exercise's own target reps/weight so the +/-2.5 steppers and quick-log
+                      // still work on the very first set, not just from the second set onward.
+                      const quickLogBase: ISetLog | null = prevLog ?? (exercise.TargetWeight != null ? {
+                        IdExercise: exercise.IdExercise!,
+                        IdWorkout: workout.IdWorkout!,
+                        LogDate: selectedDate,
+                        SetNumber: 0,
+                        RepsCompleted: exercise.TargetReps,
+                        WeightUsed: exercise.TargetWeight,
+                        WeightUnit: exercise.WeightUnit,
+                      } : null);
                       const adjust = weightAdjust[setNum] ?? 0;
-                      const adjustedWeight = prevLog?.WeightUsed != null ? prevLog.WeightUsed + adjust : null;
+                      const adjustedWeight = quickLogBase?.WeightUsed != null ? quickLogBase.WeightUsed + adjust : null;
                       return (
                         <>
                           <span className="flex-1 text-xs text-gray-400 dark:text-gray-500">
-                            {prevLog ? `${prevLog.RepsCompleted} reps${adjustedWeight != null ? ` @ ${adjustedWeight}${prevLog.WeightUnit ?? "kg"}` : ""} · tap to log` : "Set " + setNum + " — tap to log"}
+                            {quickLogBase ? `${quickLogBase.RepsCompleted} reps${adjustedWeight != null ? ` @ ${adjustedWeight}${quickLogBase.WeightUnit ?? "kg"}` : ""} · tap to log` : "Set " + setNum + " — tap to log"}
                           </span>
-                          {prevLog?.WeightUsed != null && (
+                          {quickLogBase?.WeightUsed != null && (
                             <div className="flex items-center gap-1 flex-shrink-0">
                               <button
                                 onClick={() => setWeightAdjust(a => ({ ...a, [setNum]: (a[setNum] ?? 0) - 2.5 }))}
@@ -545,8 +557,8 @@ function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDel
                           )}
                           <button
                             onClick={() => {
-                              if (prevLog) {
-                                onAddExtraSet(exercise, setNum, adjustedWeight != null ? { ...prevLog, WeightUsed: adjustedWeight } : prevLog);
+                              if (quickLogBase) {
+                                onAddExtraSet(exercise, setNum, adjustedWeight != null ? { ...quickLogBase, WeightUsed: adjustedWeight } : quickLogBase);
                               } else {
                                 onLogSet(exercise, setNum, null);
                               }
