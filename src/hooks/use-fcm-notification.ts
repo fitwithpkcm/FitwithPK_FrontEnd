@@ -15,12 +15,20 @@ async function getFcmToken(): Promise<string | null> {
   return token ?? null;
 }
 
+// Persisted across pages/reloads so every screen that mounts this hook (home,
+// supplements, admin dashboard, …) doesn't re-POST the same token on its own
+// mount — the backend saw that as a new subscription each time, so a single
+// reminder was sent once per saved duplicate instead of once per client.
+const LAST_SAVED_TOKEN_KEY = 'fcm_last_saved_token';
+
 async function saveTokenToBackend(token: string): Promise<void> {
+  if (localStorage.getItem(LAST_SAVED_TOKEN_KEY) === token) return;
   await httpCall({
     url: API_URL.SAVE_PUSH_SUBSCRIPTION,
     method: 'post',
     data: { fcmToken: token },
   });
+  localStorage.setItem(LAST_SAVED_TOKEN_KEY, token);
 }
 
 export function useFcmNotification(): {

@@ -66,10 +66,16 @@ onBackgroundMessage(messaging, (payload) => {
   // Increment badge on every incoming background notification
   setBadge(badgeCount + 1);
 
+  // Tag by type (or title+body when the backend doesn't send one) so a duplicate
+  // delivery of the same reminder replaces the existing notification instead of
+  // stacking a second one in the tray.
+  const tag = d['type'] ?? `${title}::${body}`;
+
   self.registration.showNotification(title, {
     body,
     icon,
     badge,
+    tag,
     silent: false,
     data: { ...d, notifId: notif.id },
   });
