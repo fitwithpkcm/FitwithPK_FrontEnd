@@ -197,6 +197,7 @@ export const API_URL = {
     GET_MY_WORKOUT_HISTORY: '/workout/getHistory',
     RESCHEDULE_MY_WORKOUT: '/workout/rescheduleMyWorkout',
     SWAP_MY_EXERCISE: '/workout/swapMyExercise',
+    ADD_MY_EXERCISE: '/workout/addMyExercise',
 
     // ── Per-set logging ───────────────────────────────────────────
     LOG_SET:                    '/workout/logSet',

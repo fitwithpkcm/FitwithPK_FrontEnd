@@ -25,7 +25,7 @@ import { setBaseUrl } from "../../services/HttpService";
 import {
   getMyWorkouts, getMyWorkoutLogs, getMyWorkoutHistory,
   logSet, deleteSetLog, getSetLogsForDate, rescheduleMyWorkout,
-  getExerciseLibrary, swapMyExercise,
+  getExerciseLibrary, swapMyExercise, addMyExercise,
 } from "../../services/WorkoutService";
 import WorkoutProgressCharts from "../../components/workout/WorkoutProgressCharts";
 import {
@@ -1013,9 +1013,74 @@ function SwapExerciseDrawer({ open, exercise, library, saving, onClose, onConfir
   );
 }
 
+// ── Add Exercise Drawer ─────────────────────────────────────────────
+// "I did something extra today" — let the client append an exercise from the
+// shared library to their assigned workout, beyond what the coach planned.
+
+function AddExerciseDrawer({ open, workout, library, saving, onClose, onConfirm }: {
+  open: boolean; workout: IWorkout | null; library: IExerciseLibraryItem[]; saving: boolean;
+  onClose: () => void; onConfirm: (item: IExerciseLibraryItem) => void;
+}) {
+  const [search, setSearch] = useState("");
+  useEffect(() => { if (open) setSearch(""); }, [open]);
+
+  const filtered = search.trim()
+    ? library.filter(l => l.ExerciseName.toLowerCase().includes(search.toLowerCase()) ||
+        (l.Category ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        (l.MuscleGroup ?? "").toLowerCase().includes(search.toLowerCase()))
+    : library;
+
+  return (
+    <Drawer open={open} onOpenChange={v => { if (!v) onClose(); }}>
+      <DrawerContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 max-h-[85vh] flex flex-col">
+        <div className="px-5 pb-2">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Plus className="h-4 w-4 text-blue-500" /> Add Exercise
+          </h3>
+          {workout && (
+            <p className="text-xs text-gray-400 mt-0.5">Adding to "{workout.WorkoutName}"</p>
+          )}
+        </div>
+
+        <div className="px-5 relative">
+          <Search className="absolute left-8 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input placeholder="Search exercises…" value={search} onChange={e => setSearch(e.target.value)}
+            className="pl-9 bg-white dark:bg-gray-800" />
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-1.5">
+          {library.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-8">No exercises available.</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-8">No exercises match "{search}"</p>
+          ) : (
+            filtered.map((item, i) => (
+              <button
+                key={item.IdLibraryItem ?? i}
+                disabled={saving}
+                onClick={() => onConfirm(item)}
+                className="w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left disabled:opacity-40">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{item.ExerciseName}</p>
+                  {(item.MuscleGroup || item.Category) && (
+                    <p className="text-[11px] text-gray-400">{item.MuscleGroup || item.Category}</p>
+                  )}
+                </div>
+                <span className="text-[11px] text-gray-400 flex-shrink-0">
+                  {item.DefaultSets} × {item.DefaultReps}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
 // ── Workout Card ──────────────────────────────────────────────────
 
-function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet, onAddExtraSet, onMove, onSwap }: {
+function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet, onAddExtraSet, onMove, onSwap, onAddExercise }: {
   workout: IWorkout;
   setLogs: ISetLog[];
   onExerciseClick: (ex: IExercise) => void;
@@ -1024,6 +1089,7 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
   onAddExtraSet: (ex: IExercise, nextSetNum: number, prev: ISetLog) => void;
   onMove: (workout: IWorkout) => void;
   onSwap?: (workout: IWorkout, ex: IExercise) => void;
+  onAddExercise?: (workout: IWorkout) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -1106,6 +1172,13 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
               onSwap={onSwap ? (exer) => onSwap(workout, exer) : undefined}
             />
           ))}
+          {onAddExercise && (
+            <button
+              onClick={() => onAddExercise(workout)}
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+              <Plus className="h-3.5 w-3.5" /> Add Exercise
+            </button>
+          )}
         </div>
       )}
 
@@ -1182,13 +1255,14 @@ export default function WorkoutTrackingPage() {
   const [tab, setTab] = useState<"today"|"history"|"progress">("today");
   const [movingWorkout, setMovingWorkout] = useState<IWorkout|null>(null);
   const [swappingEx, setSwappingEx] = useState<{workout: IWorkout; exercise: IExercise}|null>(null);
+  const [addingExerciseTo, setAddingExerciseTo] = useState<IWorkout|null>(null);
 
   // ── Queries ──────────────────────────────────────────────────────
 
   const { data: libraryRes } = useQuery({
     queryKey: ["exercise-library"],
     queryFn: () => getExerciseLibrary(),
-    enabled: !!swappingEx,
+    enabled: !!swappingEx || !!addingExerciseTo,
     staleTime: 300_000,
   });
   const exerciseLibrary: IExerciseLibraryItem[] = Array.isArray(libraryRes?.data?.data) ? libraryRes.data.data : [];
@@ -1280,6 +1354,36 @@ export default function WorkoutTrackingPage() {
       TargetWeight: item.DefaultWeight,
       WeightUnit: item.WeightUnit ?? swappingEx.exercise.WeightUnit ?? 'kg',
       RestSeconds: item.RestSeconds ?? swappingEx.exercise.RestSeconds,
+      Notes: item.Notes,
+    });
+  };
+
+  const addExerciseMut = useMutation({
+    mutationFn: addMyExercise,
+    onSuccess: (response) => {
+      toast.success("Exercise added!");
+      queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
+      setAddingExerciseTo(null);
+      const created: IExercise | undefined = response.data?.data;
+      if (created?.IdExercise) {
+        setLogSheet({ ex: created, setNumber: 1, existing: null, prefill: null });
+      }
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to add exercise"),
+  });
+
+  const handleConfirmAddExercise = (item: IExerciseLibraryItem) => {
+    if (!addingExerciseTo) return;
+    addExerciseMut.mutate({
+      IdWorkout: addingExerciseTo.IdWorkout!,
+      ExerciseName: item.ExerciseName,
+      MuscleGroup: item.MuscleGroup,
+      VideoUrl: item.VideoUrl,
+      Sets: item.DefaultSets ?? 3,
+      TargetReps: item.DefaultReps ?? 10,
+      TargetWeight: item.DefaultWeight,
+      WeightUnit: item.WeightUnit ?? 'kg',
+      RestSeconds: item.RestSeconds,
       Notes: item.Notes,
     });
   };
@@ -1480,6 +1584,7 @@ export default function WorkoutTrackingPage() {
                 onAddExtraSet={handleAddExtraSet}
                 onMove={() => setMovingWorkout(w)}
                 onSwap={handleSwapExercise}
+                onAddExercise={() => setAddingExerciseTo(w)}
               />
             ))}
           </>
@@ -1532,6 +1637,15 @@ export default function WorkoutTrackingPage() {
         saving={swapMut.isPending}
         onClose={() => setSwappingEx(null)}
         onConfirm={handleConfirmSwap}
+      />
+
+      <AddExerciseDrawer
+        open={!!addingExerciseTo}
+        workout={addingExerciseTo}
+        library={exerciseLibrary}
+        saving={addExerciseMut.isPending}
+        onClose={() => setAddingExerciseTo(null)}
+        onConfirm={handleConfirmAddExercise}
       />
     </div>
   );
