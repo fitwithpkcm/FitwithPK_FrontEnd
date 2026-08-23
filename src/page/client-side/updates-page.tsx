@@ -1672,7 +1672,7 @@ export default function UpdatesPage() {
                         <FormItem>
                           <div className="flex items-center">
                             <FormControl>
-                              <Input type="number" placeholder="Enter weight" min="0" step="any" className="flex-1" {...field} value={field.value ?? ""} />
+                              <Input type="number" placeholder="Enter weight" min="0" step="any" className="flex-1" {...field} value={field.value ?? ""} onFocus={(e) => e.target.select()} />
                             </FormControl>
                             <span className="ml-3 text-gray-500 dark:text-gray-400">kg</span>
                           </div>
