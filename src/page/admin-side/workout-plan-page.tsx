@@ -199,6 +199,7 @@ function ExerciseEditorRow({ ex, index, library, onChange, onRemove }: {
     onChange(index, "ExerciseName", item.ExerciseName);
     onChange(index, "Sets", item.DefaultSets);
     onChange(index, "TargetReps", item.DefaultReps);
+    if (item.MuscleGroup) onChange(index, "MuscleGroup", item.MuscleGroup);
     if (item.DefaultWeight) onChange(index, "TargetWeight", item.DefaultWeight);
     if (item.WeightUnit) onChange(index, "WeightUnit", item.WeightUnit);
     if (item.RestSeconds) onChange(index, "RestSeconds", item.RestSeconds);
@@ -1543,6 +1544,7 @@ function WeeklyPlannerTab({ selectedClient, library }: {
         WeightUnit: ex.WeightUnit,
         RestSeconds: ex.RestSeconds,
         Notes: ex.Notes,
+        MuscleGroup: ex.MuscleGroup,
         SortOrder: i,
       })),
     });
@@ -1752,6 +1754,7 @@ export default function AdminWorkoutPlanPage() {
         WeightUnit: ex.WeightUnit,
         RestSeconds: ex.RestSeconds,
         Notes: ex.Notes,
+        MuscleGroup: ex.MuscleGroup,
         SortOrder: i,
       })),
     });
