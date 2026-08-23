@@ -222,11 +222,26 @@ function MealSection({
 }: MealSectionProps) {
   const meta = MEAL_META[mealType];
   const [collapsed, setCollapsed] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
+
+  // Re-expanding a section reveals its items in-place with no scroll adjustment; without
+  // this, re-opening a section near the bottom of the viewport leaves its items hidden
+  // behind the fixed bottom nav with no indication there's more to scroll to.
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    if (!collapsed) {
+      const raf = requestAnimationFrame(() => {
+        sectionRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [collapsed]);
 
   if (totalCount === 0) return null;
 
   return (
-    <div className={`rounded-xl overflow-hidden border-2 ${meta.borderColor}`}>
+    <div ref={sectionRef} className={`rounded-xl overflow-hidden border-2 ${meta.borderColor}`}>
       {/* header */}
       <button
         className={`w-full flex items-center justify-between px-4 py-3 ${meta.headerBg}`}

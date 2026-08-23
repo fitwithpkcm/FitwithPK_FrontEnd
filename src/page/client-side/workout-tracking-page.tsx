@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ChevronLeft, ChevronRight, Check, Dumbbell, Video,
@@ -388,6 +388,19 @@ function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDel
   const [videoOpen, setVideoOpen] = useState(false);
   // per-set weight bump (+/-2.5) applied on top of the previous set's weight before quick-logging
   const [weightAdjust, setWeightAdjust] = useState<Record<number, number>>({});
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  // Set rows render in-place with no scroll adjustment; without this, expanding a row
+  // near the bottom of the viewport leaves the newly-revealed sets hidden behind the
+  // fixed bottom nav with no indication there's more to scroll to.
+  useEffect(() => {
+    if (expanded) {
+      const raf = requestAnimationFrame(() => {
+        rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [expanded]);
 
   const totalSets = exercise.Sets;
   const loggedSets = setLogs.filter(l => l.IdExercise === exercise.IdExercise);
@@ -395,7 +408,7 @@ function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDel
   const allDone = doneCount >= totalSets;
 
   return (
-    <div className={`border-b border-gray-50 dark:border-gray-700/50 last:border-0 ${allDone ? "bg-green-50/40 dark:bg-green-950/10" : ""}`}>
+    <div ref={rowRef} className={`border-b border-gray-50 dark:border-gray-700/50 last:border-0 ${allDone ? "bg-green-50/40 dark:bg-green-950/10" : ""}`}>
       {/* exercise header row */}
       <div
         className="flex items-center gap-3 px-4 py-3 cursor-pointer"
@@ -1013,6 +1026,19 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
   onSwap?: (workout: IWorkout, ex: IExercise) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Expanding reveals the exercise list in-place with no scroll adjustment; without this,
+  // expanding a card near the bottom of the viewport leaves its exercises hidden behind
+  // the fixed bottom nav with no indication there's more to scroll to.
+  useEffect(() => {
+    if (expanded) {
+      const raf = requestAnimationFrame(() => {
+        cardRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [expanded]);
 
   // compute completion based on set logs
   const totalSets   = workout.Exercises.reduce((s, ex) => s + ex.Sets, 0);
@@ -1024,7 +1050,7 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
   }).length;
 
   return (
-    <Card className="bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 overflow-hidden">
+    <Card ref={cardRef} className="bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 overflow-hidden">
       <div
         className="px-4 pt-3 pb-2 cursor-pointer"
         onClick={() => setExpanded(e => !e)}
