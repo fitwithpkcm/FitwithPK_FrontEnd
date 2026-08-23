@@ -1958,6 +1958,7 @@ export default function HomePage() {
               <span className="text-gray-400 text-sm">Custom (kg)</span>
               <Input type="number" placeholder="0.0" step="0.1" value={weightAmount}
                 onChange={(e) => setWeightAmount(e.target.value)}
+                onFocus={(e) => e.target.select()}
                 className="border-0 bg-transparent p-0 text-right font-semibold text-gray-800 focus-visible:ring-0 text-lg" />
             </div>
             <div className="flex gap-3 pt-1">
