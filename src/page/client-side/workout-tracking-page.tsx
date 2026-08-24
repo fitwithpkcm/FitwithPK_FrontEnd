@@ -29,70 +29,13 @@ import {
 } from "../../services/WorkoutService";
 import WorkoutProgressCharts from "../../components/workout/WorkoutProgressCharts";
 import MuscleTargetDiagram from "../../components/workout/MuscleTargetDiagram";
+import VideoSheet from "../../components/workout/VideoSheet";
+import GuidedWorkoutSession from "../../components/workout/GuidedWorkoutSession";
+import { getYoutubeThumbnail } from "../../lib/workout/video";
 import {
   IWorkout, IExercise, IExerciseLog, ISetLog, IExerciseLibraryItem,
   mergeWorkoutWithLogs, WEIGHT_UNITS,
 } from "../../interface/IWorkout";
-
-// ── Video helpers ─────────────────────────────────────────────────
-
-function getEmbedUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    // youtu.be/ID
-    if (u.hostname === "youtu.be") {
-      return `https://www.youtube.com/embed${u.pathname}?autoplay=1&mute=1&rel=0`;
-    }
-    // youtube.com/shorts/ID
-    if (u.pathname.startsWith("/shorts/")) {
-      const id = u.pathname.replace("/shorts/", "");
-      return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&rel=0`;
-    }
-    // youtube.com/watch?v=ID
-    const v = u.searchParams.get("v");
-    if (v) return `https://www.youtube.com/embed/${v}?autoplay=1&mute=1&rel=0`;
-    // already an embed or other direct video URL — use as-is
-    return url;
-  } catch {
-    return url;
-  }
-}
-
-function getYoutubeThumbnail(url: string): string | null {
-  try {
-    const u = new URL(url);
-    let id: string | null = null;
-    if (u.hostname === "youtu.be") id = u.pathname.slice(1);
-    else if (u.pathname.startsWith("/shorts/")) id = u.pathname.replace("/shorts/", "");
-    else id = u.searchParams.get("v");
-    return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : null;
-  } catch { return null; }
-}
-
-function VideoSheet({ url, title, onClose }: { url: string; title: string; onClose: () => void }) {
-  const embedUrl = getEmbedUrl(url);
-  return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      {/* header */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 pt-10 pb-3 bg-black">
-        <p className="text-sm font-semibold text-white truncate flex-1 pr-3">{title}</p>
-        <button onClick={onClose} className="p-2 text-gray-400 hover:text-white flex-shrink-0">
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-      {/* iframe fills remaining height */}
-      <div className="flex-1 w-full">
-        <iframe
-          src={embedUrl}
-          title={title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-          allowFullScreen
-          className="w-full h-full border-0"
-        />
-      </div>
-    </div>
-  );
-}
 
 // ── helpers ───────────────────────────────────────────────────────
 
@@ -1110,7 +1053,7 @@ function AddExerciseDrawer({ open, workout, library, saving, onClose, onConfirm 
 
 // ── Workout Card ──────────────────────────────────────────────────
 
-function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet, onAddExtraSet, onAdjustSetWeight, onMove, onSwap, onAddExercise }: {
+function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet, onAddExtraSet, onAdjustSetWeight, onMove, onSwap, onAddExercise, onStartWorkout }: {
   workout: IWorkout;
   setLogs: ISetLog[];
   onExerciseClick: (ex: IExercise) => void;
@@ -1121,6 +1064,7 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
   onMove: (workout: IWorkout) => void;
   onSwap?: (workout: IWorkout, ex: IExercise) => void;
   onAddExercise?: (workout: IWorkout) => void;
+  onStartWorkout?: (workout: IWorkout) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -1186,6 +1130,13 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
         <div className="mt-2">
           <Progress value={completePct} className="h-1.5" />
         </div>
+        {onStartWorkout && (
+          <button
+            onClick={e => { e.stopPropagation(); onStartWorkout(workout); }}
+            className="mt-2.5 w-full h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors">
+            <Play className="h-3.5 w-3.5" fill="currentColor" /> Start Workout
+          </button>
+        )}
       </div>
 
       {expanded && (
@@ -1288,6 +1239,7 @@ export default function WorkoutTrackingPage() {
   const [movingWorkout, setMovingWorkout] = useState<IWorkout|null>(null);
   const [swappingEx, setSwappingEx] = useState<{workout: IWorkout; exercise: IExercise}|null>(null);
   const [addingExerciseTo, setAddingExerciseTo] = useState<IWorkout|null>(null);
+  const [guidedWorkout, setGuidedWorkout] = useState<IWorkout|null>(null);
 
   // ── Queries ──────────────────────────────────────────────────────
 
@@ -1487,6 +1439,22 @@ export default function WorkoutTrackingPage() {
     } as ISetLog);
   };
 
+  // Guided workout session — a direct commit per row (no sheet), same underlying mutation.
+  const handleGuidedCommitSet = (ex: IExercise, setNumber: number, reps: number, weight: number|undefined, unit: string, existing: ISetLog|null) => {
+    if (!user || !guidedWorkout) return;
+    logSetMut.mutate({
+      ...(existing ?? {}),
+      IdExercise:    ex.IdExercise!,
+      IdWorkout:     guidedWorkout.IdWorkout!,
+      IdUser:        user.info.IsUser,
+      LogDate:       selectedDate,
+      SetNumber:     setNumber,
+      RepsCompleted: reps,
+      WeightUsed:    weight,
+      WeightUnit:    unit,
+    } as ISetLog);
+  };
+
   // stats summary
   const totalSets = allSetLogs.length;
   const totalReps = allSetLogs.reduce((s,l) => s + l.RepsCompleted, 0);
@@ -1495,6 +1463,22 @@ export default function WorkoutTrackingPage() {
     count + wk.Exercises.filter(ex => allSetLogs.filter(l => l.IdExercise === ex.IdExercise).length >= ex.Sets).length
   , 0);
   const totalExCount = workouts.reduce((s,w) => s + w.Exercises.length, 0);
+
+  // ── Guided workout session ───────────────────────────────────────
+  if (guidedWorkout) {
+    const liveWorkout = workouts.find(w => w.IdWorkout === guidedWorkout.IdWorkout) ?? guidedWorkout;
+    return (
+      <GuidedWorkoutSession
+        workout={liveWorkout}
+        allSetLogs={allSetLogs.filter(l => liveWorkout.Exercises.some(ex => ex.IdExercise === l.IdExercise))}
+        selectedDate={selectedDate}
+        saving={logSetMut.isPending || deleteSetMut.isPending}
+        onClose={() => setGuidedWorkout(null)}
+        onCommitSet={handleGuidedCommitSet}
+        onDeleteSet={handleDeleteSet}
+      />
+    );
+  }
 
   // ── Exercise detail screen ──────────────────────────────────────
   if (detailEx && detailWk) {
@@ -1635,6 +1619,7 @@ export default function WorkoutTrackingPage() {
                 onMove={() => setMovingWorkout(w)}
                 onSwap={handleSwapExercise}
                 onAddExercise={() => setAddingExerciseTo(w)}
+                onStartWorkout={() => setGuidedWorkout(w)}
               />
             ))}
           </>

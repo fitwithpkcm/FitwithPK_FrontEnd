@@ -99,7 +99,7 @@ export const deleteSetLog = (params: { IdSetLog: number }) =>
 export const getSetLogsForDate = (params: { LogDate: string }) =>
   httpCall({ method: "post", url: API_URL.GET_SET_LOGS_FOR_DATE, data: params });
 
-export const getSetLogsForExercise = (params: { IdExercise: number }) =>
+export const getSetLogsForExercise = (params: { ExerciseName: string }) =>
   httpCall({ method: "post", url: API_URL.GET_SET_LOGS_FOR_EXERCISE, data: params });
 
 // ── Workout Templates ─────────────────────────────────────────────

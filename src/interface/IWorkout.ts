@@ -19,6 +19,9 @@ export const MUSCLE_GROUPS = [
 ] as const;
 export type MuscleGroup = typeof MUSCLE_GROUPS[number];
 
+export const PROGRESSION_POLICIES = ['off', 'linear', 'greyskull', 'double'] as const;
+export type ProgressionPolicy = typeof PROGRESSION_POLICIES[number];
+
 export interface ISetLog {
   IdSetLog?:     number;
   IdExercise:    number;
@@ -61,6 +64,7 @@ export interface IExercise {
   RestSeconds?: number;
   Notes?: string;
   SortOrder: number;
+  ProgressionPolicy?: ProgressionPolicy;
 }
 
 export interface IWorkout {
@@ -106,6 +110,7 @@ export interface ITemplateExercise {
   RestSeconds?:        number;
   Notes?:              string;
   SortOrder:           number;
+  ProgressionPolicy?:  ProgressionPolicy;
 }
 
 export interface IWorkoutTemplate {

@@ -35,6 +35,7 @@ import {
   IWorkout, IExercise, IExerciseLog, ISetLog, IExerciseLibraryItem,
   createBlankWorkout, createBlankExercise, mergeWorkoutWithLogs, WEIGHT_UNITS, WORKOUT_TYPES, MUSCLE_GROUPS,
   IWorkoutTemplate, ITemplateExercise, createBlankTemplate, createBlankTemplateExercise,
+  PROGRESSION_POLICIES,
 } from "../../interface/IWorkout";
 import { IUser } from "../../interface/models/User";
 
@@ -266,7 +267,7 @@ function ExerciseEditorRow({ ex, index, library, onChange, onRemove }: {
                 className="h-8 text-sm text-center" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <div>
               <label className="text-[10px] text-gray-500 block mb-1">Unit</label>
               <select value={ex.WeightUnit ?? "kg"} onChange={e => onChange(index,"WeightUnit",e.target.value)}
@@ -279,6 +280,13 @@ function ExerciseEditorRow({ ex, index, library, onChange, onRemove }: {
               <Input type="number" min={0} placeholder="Optional" value={ex.RestSeconds ?? ""}
                 onChange={e => onChange(index,"RestSeconds",parseInt(e.target.value)||0)}
                 className="h-8 text-sm" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1">Progression</label>
+              <select value={ex.ProgressionPolicy ?? "off"} onChange={e => onChange(index,"ProgressionPolicy",e.target.value)}
+                className="w-full h-8 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-2 text-gray-800 dark:text-gray-200">
+                {PROGRESSION_POLICIES.map(p => <option key={p} value={p}>{p === "off" ? "Off" : p[0].toUpperCase()+p.slice(1)}</option>)}
+              </select>
             </div>
           </div>
           <div>
@@ -1289,6 +1297,7 @@ function TemplateEditorDrawer({ open, initial, saving, library, onClose, onSave 
   const exAsIExercise = (ex: ITemplateExercise): IExercise => ({
     IdExercise: ex.IdTemplateExercise,
     ExerciseName: ex.ExerciseName,
+    MuscleGroup: ex.MuscleGroup,
     VideoUrl: ex.VideoUrl,
     Sets: ex.Sets,
     TargetReps: ex.TargetReps,
@@ -1297,6 +1306,7 @@ function TemplateEditorDrawer({ open, initial, saving, library, onClose, onSave 
     RestSeconds: ex.RestSeconds,
     Notes: ex.Notes,
     SortOrder: ex.SortOrder,
+    ProgressionPolicy: ex.ProgressionPolicy,
   });
 
   const addEx = () => setTpl(t => t ? { ...t, Exercises: [...t.Exercises, createBlankTemplateExercise(t.Exercises.length)] } : t);
