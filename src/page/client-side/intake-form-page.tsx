@@ -241,14 +241,11 @@ export default function IntakeFormPage() {
   // Submit profile update
   const updateProfileMutation = useMutation({
     mutationFn: async (data: IntakeFormValues) => {
-
-      return onBoardProfileAttributeUpdates(data).then((res) => {
-        if (res.data.success) {
-          return res;
-        }
-      }).catch((error) => {
-        return error
-      })
+      const res = await onBoardProfileAttributeUpdates(data);
+      if (!res.data.success) {
+        throw new Error(res.data.message || "Failed to save profile");
+      }
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["onboarduser-attributes"] });
