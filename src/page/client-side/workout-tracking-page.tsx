@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ChevronLeft, ChevronRight, Check, Dumbbell, Video,
@@ -28,6 +28,7 @@ import {
   getExerciseLibrary, swapMyExercise, addMyExercise,
 } from "../../services/WorkoutService";
 import WorkoutProgressCharts from "../../components/workout/WorkoutProgressCharts";
+import MuscleTargetDiagram from "../../components/workout/MuscleTargetDiagram";
 import {
   IWorkout, IExercise, IExerciseLog, ISetLog, IExerciseLibraryItem,
   mergeWorkoutWithLogs, WEIGHT_UNITS,
@@ -1306,6 +1307,13 @@ export default function WorkoutTrackingPage() {
   });
   const workouts: IWorkout[] = Array.isArray(workoutsRes?.data?.data) ? workoutsRes.data.data : [];
 
+  const todayMuscleGroups = useMemo(
+    () => Array.from(new Set(
+      workouts.flatMap(w => w.Exercises).map(e => e.MuscleGroup).filter((mg): mg is string => !!mg)
+    )),
+    [workouts]
+  );
+
   const { data: setLogsRes, refetch: refetchSetLogs } = useQuery({
     queryKey: ["my-set-logs", selectedDate],
     queryFn: () => getSetLogsForDate({ LogDate: selectedDate }),
@@ -1571,6 +1579,8 @@ export default function WorkoutTrackingPage() {
 
         {tab === "today" && (
           <>
+            <MuscleTargetDiagram muscleGroups={todayMuscleGroups} />
+
             {/* Stats row */}
             {allSetLogs.length > 0 && (
               <div className="grid grid-cols-4 gap-2">
