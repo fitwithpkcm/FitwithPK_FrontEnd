@@ -404,7 +404,7 @@ function ExerciseBrowserDialog({ open, library, baseSortOrder, onClose, onConfir
       <span className={`flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
         inCart ? "bg-blue-600 text-white" : "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
       }`}>
-        {inCart ? "Added" : "+ Plan"}
+        {inCart ? "Added" : "+ Add"}
       </span>
     </button>
   );
