@@ -38,6 +38,7 @@ export interface IExerciseLibraryItem {
   ExerciseName:   string;
   Category?:      string;
   MuscleGroup?:   string;
+  Equipment?:     string;
   DefaultSets:    number;
   DefaultReps:    number;
   DefaultWeight?: number;

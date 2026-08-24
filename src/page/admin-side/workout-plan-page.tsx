@@ -105,6 +105,24 @@ function WeekStrip({ selected, onSelect }: { selected: string; onSelect: (d: str
   );
 }
 
+// Copies a library item's defaults onto a new/existing exercise-in-plan row.
+// Shared by the inline autocomplete (ExerciseEditorRow) and the exercise
+// browser dialog so both stay in sync with a single mapping.
+function libraryItemToExercise(item: IExerciseLibraryItem, sortOrder: number): Omit<IExercise, "IdExercise" | "IdWorkout"> {
+  return {
+    ExerciseName: item.ExerciseName,
+    Sets: item.DefaultSets,
+    TargetReps: item.DefaultReps,
+    MuscleGroup: item.MuscleGroup,
+    TargetWeight: item.DefaultWeight,
+    WeightUnit: item.WeightUnit,
+    RestSeconds: item.RestSeconds,
+    VideoUrl: item.VideoUrl,
+    Notes: item.Notes,
+    SortOrder: sortOrder,
+  };
+}
+
 // ── Exercise Name Input with Library Dropdown ─────────────────────
 
 function ExerciseNameInput({ value, library, autoOpenLibrary, onChange, onSelectFromLibrary }: {
@@ -196,15 +214,16 @@ function ExerciseEditorRow({ ex, index, library, onChange, onRemove }: {
 
   const handleSelectFromLibrary = (item: IExerciseLibraryItem) => {
     // Patch all fields at once via individual onChange calls
-    onChange(index, "ExerciseName", item.ExerciseName);
-    onChange(index, "Sets", item.DefaultSets);
-    onChange(index, "TargetReps", item.DefaultReps);
-    if (item.MuscleGroup) onChange(index, "MuscleGroup", item.MuscleGroup);
-    if (item.DefaultWeight) onChange(index, "TargetWeight", item.DefaultWeight);
-    if (item.WeightUnit) onChange(index, "WeightUnit", item.WeightUnit);
-    if (item.RestSeconds) onChange(index, "RestSeconds", item.RestSeconds);
-    if (item.VideoUrl) onChange(index, "VideoUrl", item.VideoUrl);
-    if (item.Notes) onChange(index, "Notes", item.Notes);
+    const mapped = libraryItemToExercise(item, ex.SortOrder);
+    onChange(index, "ExerciseName", mapped.ExerciseName);
+    onChange(index, "Sets", mapped.Sets);
+    onChange(index, "TargetReps", mapped.TargetReps);
+    if (mapped.MuscleGroup) onChange(index, "MuscleGroup", mapped.MuscleGroup);
+    if (mapped.TargetWeight) onChange(index, "TargetWeight", mapped.TargetWeight);
+    if (mapped.WeightUnit) onChange(index, "WeightUnit", mapped.WeightUnit);
+    if (mapped.RestSeconds) onChange(index, "RestSeconds", mapped.RestSeconds);
+    if (mapped.VideoUrl) onChange(index, "VideoUrl", mapped.VideoUrl);
+    if (mapped.Notes) onChange(index, "Notes", mapped.Notes);
   };
 
   return (
@@ -280,14 +299,220 @@ function ExerciseEditorRow({ ex, index, library, onChange, onRemove }: {
   );
 }
 
+// ── Exercise Browser Dialog ────────────────────────────────────────
+// Browse the full exercise library (muscle group + equipment filters), pick
+// several at once, confirm to append them all to the draft workout in one go.
+// Modeled directly on FoodBrowserDialog's cart/search/chip pattern.
+
+function ExerciseBrowserDialog({ open, library, baseSortOrder, onClose, onConfirm, onLibraryRefresh }: {
+  open: boolean;
+  library: IExerciseLibraryItem[];
+  baseSortOrder: number;
+  onClose: () => void;
+  onConfirm: (items: Omit<IExercise, "IdExercise" | "IdWorkout">[]) => void;
+  onLibraryRefresh: () => void;
+}) {
+  const [cart, setCart] = useState<Map<string, IExerciseLibraryItem>>(new Map());
+  const [query, setQuery] = useState("");
+  const [muscleFilter, setMuscleFilter] = useState<string>("All");
+  const [equipmentFilter, setEquipmentFilter] = useState<string>("All");
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newMuscle, setNewMuscle] = useState<string>("");
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setCart(new Map());
+      setQuery("");
+      setMuscleFilter("All");
+      setEquipmentFilter("All");
+      setCreating(false);
+      setNewName("");
+      setNewMuscle("");
+      setTimeout(() => searchRef.current?.focus(), 80);
+    }
+  }, [open]);
+
+  const createMut = useMutation({
+    mutationFn: createLibraryItem,
+    onSuccess: (_res, submitted) => {
+      onLibraryRefresh();
+      setCart(prev => new Map(prev).set(submitted.ExerciseName, submitted));
+      setCreating(false);
+      setNewName("");
+      setNewMuscle("");
+      toast.success("Added to library");
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to add"),
+  });
+
+  if (!open) return null;
+
+  const byMuscle = muscleFilter === "All" ? library : library.filter(l => l.MuscleGroup === muscleFilter);
+
+  const equipmentCounts = new Map<string, number>();
+  byMuscle.forEach(l => { if (l.Equipment) equipmentCounts.set(l.Equipment, (equipmentCounts.get(l.Equipment) ?? 0) + 1); });
+  const equipmentOptions = Array.from(equipmentCounts.entries()).sort((a, b) => b[1] - a[1]).map(([eq]) => eq);
+
+  const q = query.trim().toLowerCase();
+  const filtered = byMuscle.filter(l => {
+    const matchSearch = !q || l.ExerciseName.toLowerCase().includes(q);
+    const matchEq = equipmentFilter === "All" || l.Equipment === equipmentFilter;
+    return matchSearch && matchEq;
+  });
+  const results = filtered.filter(l => !cart.has(l.ExerciseName));
+
+  const toggle = (item: IExerciseLibraryItem) => {
+    setCart(prev => {
+      const next = new Map(prev);
+      if (next.has(item.ExerciseName)) next.delete(item.ExerciseName);
+      else next.set(item.ExerciseName, item);
+      return next;
+    });
+  };
+
+  const handleCreate = () => {
+    if (!newName.trim()) { toast.error("Exercise name required"); return; }
+    createMut.mutate({ ExerciseName: newName.trim(), DefaultSets: 3, DefaultReps: 10, MuscleGroup: newMuscle || undefined });
+  };
+
+  const handleConfirm = () => {
+    onConfirm(Array.from(cart.values()).map((item, i) => libraryItemToExercise(item, baseSortOrder + i)));
+    onClose();
+  };
+
+  const renderRow = (item: IExerciseLibraryItem, inCart: boolean) => (
+    <button
+      key={item.IdLibraryItem ?? item.ExerciseName}
+      onClick={() => toggle(item)}
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors ${
+        inCart
+          ? "border-blue-300 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800"
+          : "border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-200 dark:hover:border-gray-600"
+      }`}
+    >
+      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+        <Dumbbell className="h-4 w-4 text-gray-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{item.ExerciseName}</p>
+        <p className="text-[11px] text-gray-400">
+          {[item.MuscleGroup, item.Equipment].filter(Boolean).join(" · ")}
+        </p>
+      </div>
+      <span className={`flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
+        inCart ? "bg-blue-600 text-white" : "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+      }`}>
+        {inCart ? "Added" : "+ Plan"}
+      </span>
+    </button>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 gap-0">
+        <div className="px-5 pt-5 pb-3 flex-shrink-0">
+          <DialogHeader className="p-0">
+            <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">Exercises</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-gray-400 mt-0.5">{library.length} exercises in your library</p>
+          <div className="relative mt-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input ref={searchRef} placeholder="Search…" value={query} onChange={e => setQuery(e.target.value)}
+              className="pl-9 bg-white dark:bg-gray-800" />
+          </div>
+          <div className="flex gap-1.5 mt-3 overflow-x-auto pb-1">
+            {["All", ...MUSCLE_GROUPS].map(m => (
+              <button key={m} onClick={() => setMuscleFilter(m)}
+                className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
+                  muscleFilter === m
+                    ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                }`}>
+                {m}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1.5 mt-1.5 overflow-x-auto pb-1">
+            <button onClick={() => setEquipmentFilter("All")}
+              className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
+                equipmentFilter === "All"
+                  ? "bg-emerald-600 text-white"
+                  : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400"
+              }`}>
+              Any equipment
+            </button>
+            {equipmentOptions.map(eq => (
+              <button key={eq} onClick={() => setEquipmentFilter(eq)}
+                className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
+                  equipmentFilter === eq
+                    ? "bg-emerald-600 text-white"
+                    : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400"
+                }`}>
+                {eq}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="overflow-y-auto px-5 pb-4 space-y-2 flex-1">
+          {/* Create your own exercise */}
+          {creating ? (
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+              <Input autoFocus placeholder="Exercise name" value={newName} onChange={e => setNewName(e.target.value)} className="h-8 text-sm" />
+              <select value={newMuscle} onChange={e => setNewMuscle(e.target.value)}
+                className="w-full h-8 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-2 text-gray-800 dark:text-gray-200">
+                <option value="">— Body part (optional) —</option>
+                {MUSCLE_GROUPS.map(m => <option key={m}>{m}</option>)}
+              </select>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setCreating(false)}>Cancel</Button>
+                <Button size="sm" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white border-0" disabled={createMut.isPending} onClick={handleCreate}>
+                  {createMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Add"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setCreating(true)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 text-left hover:border-blue-300 transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                <Plus className="h-4 w-4 text-gray-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Create your own exercise</p>
+                <p className="text-[11px] text-gray-400">name + body part, no animation</p>
+              </div>
+            </button>
+          )}
+
+          {Array.from(cart.values()).map(item => renderRow(item, true))}
+          {results.map(item => renderRow(item, false))}
+          {filtered.length === 0 && (
+            <p className="text-center text-sm text-gray-400 py-8">No exercises match your filters</p>
+          )}
+        </div>
+
+        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-700 flex-shrink-0">
+          <Button onClick={handleConfirm} disabled={cart.size === 0}
+            className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm">
+            Add {cart.size > 0 ? cart.size : ""} exercise{cart.size === 1 ? "" : "s"} to workout
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Workout Editor Drawer ─────────────────────────────────────────
 
-function WorkoutEditorDrawer({ open, initial, saving, library, onClose, onSave }: {
+function WorkoutEditorDrawer({ open, initial, saving, library, onLibraryRefresh, onClose, onSave }: {
   open: boolean; initial: IWorkout | null; saving: boolean;
-  library: IExerciseLibraryItem[];
+  library: IExerciseLibraryItem[]; onLibraryRefresh: () => void;
   onClose: () => void; onSave: (w: IWorkout) => void;
 }) {
   const [workout, setWorkout] = useState<IWorkout | null>(null);
+  const [browserOpen, setBrowserOpen] = useState(false);
 
   useEffect(() => { if (open && initial) setWorkout(JSON.parse(JSON.stringify(initial))); }, [open, initial]);
   if (!workout) return null;
@@ -297,6 +522,8 @@ function WorkoutEditorDrawer({ open, initial, saving, library, onClose, onSave }
   const removeEx = (i: number) => setWorkout(w => w ? { ...w, Exercises: w.Exercises.filter((_,idx) => idx !== i) } : w);
   const changeEx = (i: number, f: keyof IExercise, v: string|number) =>
     setWorkout(w => { if (!w) return w; const exs = [...w.Exercises]; exs[i] = {...exs[i],[f]:v}; return {...w, Exercises: exs}; });
+  const addFromBrowser = (items: Omit<IExercise, "IdExercise" | "IdWorkout">[]) =>
+    setWorkout(w => w ? { ...w, Exercises: [...w.Exercises, ...items] } : w);
 
   const handleSave = () => {
     if (!workout.WorkoutName.trim()) { toast.error("Workout name required"); return; }
@@ -339,10 +566,16 @@ function WorkoutEditorDrawer({ open, initial, saving, library, onClose, onSave }
               <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
                 Exercises <span className="text-gray-400">({workout.Exercises.length})</span>
               </label>
-              <button onClick={addEx}
-                className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full transition-colors">
-                <Plus className="h-3 w-3" /> Add
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => setBrowserOpen(true)}
+                  className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 rounded-full transition-colors">
+                  <BookOpen className="h-3 w-3" /> Browse Library
+                </button>
+                <button onClick={addEx}
+                  className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full transition-colors">
+                  <Plus className="h-3 w-3" /> Add
+                </button>
+              </div>
             </div>
             {library.length > 0 && (
               <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-1">
@@ -371,6 +604,14 @@ function WorkoutEditorDrawer({ open, initial, saving, library, onClose, onSave }
           </button>
         </div>
       </DrawerContent>
+      <ExerciseBrowserDialog
+        open={browserOpen}
+        library={library}
+        baseSortOrder={workout.Exercises.length}
+        onClose={() => setBrowserOpen(false)}
+        onConfirm={addFromBrowser}
+        onLibraryRefresh={onLibraryRefresh}
+      />
     </Drawer>
   );
 }
@@ -380,7 +621,7 @@ function WorkoutEditorDrawer({ open, initial, saving, library, onClose, onSave }
 const CATEGORIES = ["Chest", "Back", "Shoulders", "Arms", "Legs", "Core", "Cardio", "Full Body", "Other"];
 
 function blankLibraryItem(): IExerciseLibraryItem {
-  return { ExerciseName: "", Category: "", DefaultSets: 3, DefaultReps: 10 };
+  return { ExerciseName: "", Category: "", Equipment: "", DefaultSets: 3, DefaultReps: 10 };
 }
 
 function LibraryManager({ library, onRefresh }: {
@@ -471,6 +712,7 @@ function LibraryManager({ library, onRefresh }: {
                         {item.DefaultWeight ? ` · ${item.DefaultWeight}${item.WeightUnit ?? "kg"}` : ""}
                         {item.RestSeconds ? ` · ${item.RestSeconds}s rest` : ""}
                         {item.MuscleGroup ? ` · ${item.MuscleGroup}` : ""}
+                        {item.Equipment ? ` · ${item.Equipment}` : ""}
                       </p>
                     </div>
                     <button onClick={() => { setEditItem({ ...item }); setEditOpen(true); }}
@@ -522,6 +764,11 @@ function LibraryManager({ library, onRefresh }: {
                   <option value="">— Select muscle group —</option>
                   {MUSCLE_GROUPS.map(m => <option key={m}>{m}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Equipment</label>
+                <Input placeholder="e.g. Barbell, Dumbbell, Body Weight" value={editItem.Equipment ?? ""}
+                  onChange={e => setEditItem({ ...editItem, Equipment: e.target.value || undefined })} />
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div>
@@ -1689,7 +1936,7 @@ export default function AdminWorkoutPlanPage() {
   const { data: libraryRes, refetch: refetchLibrary } = useQuery({
     queryKey: ["exercise-library"],
     queryFn: () => getExerciseLibrary(),
-    staleTime: 300_000,
+    staleTime: Infinity,
   });
   const library: IExerciseLibraryItem[] = libraryRes?.data?.data ?? [];
 
@@ -2016,7 +2263,7 @@ export default function AdminWorkoutPlanPage() {
         onRemove={id => deleteMut.mutate({ IdWorkout: id })}
       />
       <WorkoutEditorDrawer open={editorOpen} initial={editingWorkout} saving={saving}
-        library={library}
+        library={library} onLibraryRefresh={() => refetchLibrary()}
         onClose={() => setEditorOpen(false)} onSave={handleSave} />
       <RescheduleDialog open={rescheduleOpen} workout={reschedulingWorkout} saving={rescheduleMut.isPending}
         onClose={() => setRescheduleOpen(false)}
