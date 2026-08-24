@@ -49,6 +49,17 @@ function fmtDate(d: string) {
   return moment(d, "DD-MM-YYYY").format("ddd, MMM D");
 }
 
+// Scales per-100g macro values by planned quantity and formats them for display.
+function macroSummary(qty: number | undefined, cal?: number, protein?: number, carbs?: number, fat?: number): string | null {
+  const q = qty ?? 0;
+  const parts: string[] = [];
+  if (cal != null) parts.push(`${Math.round(cal * q / 100)} kcal`);
+  if (protein != null) parts.push(`P ${Math.round(protein * q / 100)}g`);
+  if (carbs != null) parts.push(`C ${Math.round(carbs * q / 100)}g`);
+  if (fat != null) parts.push(`F ${Math.round(fat * q / 100)}g`);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 // ── AdherenceBadge ────────────────────────────────────────────────
 
 function AdherenceBadge({ pct }: { pct: number }) {
@@ -114,6 +125,12 @@ function FoodItemRow({ item, isSaving, readOnly, foodNote, onToggle, onQtyChange
         <p className="text-[10px] text-gray-400 dark:text-gray-500">
           Planned: {item.PlannedQty} {item.Unit}
         </p>
+        {(() => {
+          const macros = macroSummary(item.PlannedQty, item.CaloriesPer100g, item.ProteinPer100g, item.CarbsPer100g, item.FatPer100g);
+          return macros ? (
+            <p className="text-[10px] text-gray-400 dark:text-gray-500">{macros}</p>
+          ) : null;
+        })()}
         {(foodNote || item.Notes) && (
           <p className="text-[10px] text-gray-400 dark:text-gray-500 italic mt-0.5">{foodNote || item.Notes}</p>
         )}
@@ -186,9 +203,10 @@ function FoodItemRow({ item, isSaving, readOnly, foodNote, onToggle, onQtyChange
                 <p className="text-xs font-medium text-blue-800 dark:text-blue-200">{alt.FoodName}</p>
                 <p className="text-[10px] text-blue-500 dark:text-blue-400">
                   {alt.PlannedQty} {alt.Unit}
-                  {alt.CaloriesPer100g != null && (
-                    <> · {Math.round(alt.CaloriesPer100g * (alt.PlannedQty ?? 0) / 100)} kcal</>
-                  )}
+                  {(() => {
+                    const macros = macroSummary(alt.PlannedQty, alt.CaloriesPer100g, alt.ProteinPer100g, alt.CarbsPer100g, alt.FatPer100g);
+                    return macros ? <> · {macros}</> : null;
+                  })()}
                 </p>
               </div>
             ))}

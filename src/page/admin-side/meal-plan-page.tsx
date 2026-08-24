@@ -614,6 +614,17 @@ const FoodItemForm = forwardRef<FoodItemFormHandle, FoodItemFormProps>(
 // Macro helper
 // ─────────────────────────────────────────────────────────────────
 
+// Scales per-100g macro values by planned quantity and formats them for display.
+function macroSummary(qty: number | undefined, cal?: number, protein?: number, carbs?: number, fat?: number): string | null {
+  const q = qty ?? 0;
+  const parts: string[] = [];
+  if (cal != null) parts.push(`${Math.round(cal * q / 100)} kcal`);
+  if (protein != null) parts.push(`P ${Math.round(protein * q / 100)}g`);
+  if (carbs != null) parts.push(`C ${Math.round(carbs * q / 100)}g`);
+  if (fat != null) parts.push(`F ${Math.round(fat * q / 100)}g`);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 function computeMacros(items: IMealFoodItem[]) {
   let kcal = 0, protein = 0, carbs = 0, fat = 0;
   items.forEach(f => {
@@ -695,7 +706,7 @@ function MealCard({ mealType, foodItems, logs, viewMode, foodDb, onBrowse, onAdd
             <p className="text-[11px] text-gray-500 leading-none mt-0.5">
               {foodItems.length === 0
                 ? "No foods added"
-                : `${foodItems.length} food${foodItems.length !== 1 ? "s" : ""}${macros.kcal > 0 ? `  ·  ${macros.kcal} kcal` : ""}`}
+                : `${foodItems.length} food${foodItems.length !== 1 ? "s" : ""}${macros.kcal > 0 ? `  ·  ${macros.kcal} kcal · P${macros.protein}g · C${macros.carbs}g · F${macros.fat}g` : ""}`}
             </p>
           </div>
         </div>
@@ -726,7 +737,7 @@ function MealCard({ mealType, foodItems, logs, viewMode, foodDb, onBrowse, onAdd
           {foodItems.map(item => {
             const log  = item.IdFoodItem != null ? logMap.get(item.IdFoodItem) : undefined;
             const eaten = log?.IsConsumed === 1;
-            const kcal  = item.CaloriesPer100g ? Math.round(item.CaloriesPer100g * item.PlannedQty / 100) : null;
+            const macros = macroSummary(item.PlannedQty, item.CaloriesPer100g, item.ProteinPer100g, item.CarbsPer100g, item.FatPer100g);
             const foodNote = foodNoteMap.get(item.FoodName) || item.Notes;
 
             if (editingSO === item.SortOrder) {
@@ -755,9 +766,11 @@ function MealCard({ mealType, foodItems, logs, viewMode, foodDb, onBrowse, onAdd
                     <p className="text-sm font-medium text-gray-800 truncate">{item.FoodName}</p>
                     <p className="text-[10px] text-gray-400 leading-none">
                       {item.PlannedQty} {item.Unit}
-                      {kcal ? `  ·  ${kcal} kcal` : ""}
                       {item.Category && <span className="ml-1.5 opacity-60">{item.Category}</span>}
                     </p>
+                    {macros && (
+                      <p className="text-[10px] text-gray-400 leading-none mt-0.5">{macros}</p>
+                    )}
                     {foodNote && (
                       <p className="text-[10px] text-gray-400 italic mt-0.5">{foodNote}</p>
                     )}
