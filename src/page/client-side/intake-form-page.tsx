@@ -72,47 +72,54 @@ export interface UserProfile {
   motivation?: string;
 }
 
-// Define the form validation schema using Zod
+// Required-string helper — every text/select field must be non-empty
+const req = (label: string) => z.string({ required_error: `${label} is required` }).min(1, `${label} is required`);
+// Required-number helper — every measurement field must be a positive number
+const reqNum = (label: string) => z.number({ required_error: `${label} is required` }).min(1, `${label} is required`);
+
+// Define the form validation schema using Zod.
+// Every field is mandatory except uploadFileNames, which is a hidden,
+// system-populated field (file upload itself stays optional).
 const intakeFormSchema = z.object({
-  age: z.number().min(1).max(120).optional(),
-  gender: z.string().optional(),
-  profession: z.string().optional(),
-  location: z.string().optional(),
-  height: z.number().min(1).optional(),
-  weight: z.number().min(1).optional(),
-  waist: z.number().min(1).optional(),
-  hip: z.number().min(1).optional(),
-  chest: z.number().min(1).optional(),
-  neck: z.number().min(1).optional(),
-  biceps: z.number().min(1).optional(),
-  quadriceps: z.number().min(1).optional(),
-  dietType: z.string().optional(),
-  morningMeal: z.string().optional(),
-  breakfast: z.string().optional(),
-  lunch: z.string().optional(),
-  eveningSnack: z.string().optional(),
-  dinner: z.string().optional(),
-  skipMeals: z.string().optional(),
-  dietaryRestrictions: z.string().optional(),
-  dislikedFoods: z.string().optional(),
-  smokingDrinking: z.string().optional(),
-  sleepHours: z.string().optional(),
-  stressLevel: z.string().optional(),
-  activityLevel: z.string().optional(),
-  currentExercise: z.string().optional(),
-  workoutPreference: z.string().optional(),
-  workoutAvailability: z.string().optional(),
-  medicalConditions: z.string().optional(),
-  medications: z.string().optional(),
-  supplementWillingness: z.string().optional(),
-  recentBloodTest: z.boolean().optional(),
+  age: reqNum("Age").max(120),
+  gender: req("Gender"),
+  profession: req("Profession"),
+  location: req("Location"),
+  height: reqNum("Height"),
+  weight: reqNum("Weight"),
+  waist: reqNum("Waist"),
+  hip: reqNum("Hip"),
+  chest: reqNum("Chest"),
+  neck: reqNum("Neck"),
+  biceps: reqNum("Biceps"),
+  quadriceps: reqNum("Quadriceps"),
+  dietType: req("Diet type"),
+  morningMeal: req("After waking up"),
+  breakfast: req("Breakfast"),
+  lunch: req("Lunch"),
+  eveningSnack: req("Evening snack"),
+  dinner: req("Dinner"),
+  skipMeals: req("Skipped meals"),
+  dietaryRestrictions: req("Dietary restrictions"),
+  dislikedFoods: req("Disliked foods"),
+  smokingDrinking: req("Smoking & drinking habits"),
+  sleepHours: req("Sleep pattern"),
+  stressLevel: req("Stress & schedule"),
+  activityLevel: req("Activity level"),
+  currentExercise: req("Current exercise routine"),
+  workoutPreference: req("Workout preference"),
+  workoutAvailability: req("Workout availability"),
+  medicalConditions: req("Medical conditions"),
+  medications: req("Medications"),
+  supplementWillingness: req("Supplement willingness"),
+  recentBloodTest: z.boolean({ required_error: "Recent blood test answer is required" }),
   uploadFileNames: z.string().optional(),
-  fitnessGoals: z.string().optional(),
-  biggestChallenge: z.string().optional(),
-  challengingHabits: z.string().optional(),
-  pastDietExperience: z.string().optional(),
-  pastCoachExperience: z.string().optional(),
-  motivation: z.string().optional()
+  fitnessGoals: req("Fitness goals"),
+  biggestChallenge: req("Biggest challenge"),
+  challengingHabits: req("Challenging habits"),
+  pastDietExperience: req("Past diet experience"),
+  pastCoachExperience: req("Past coaching experience"),
+  motivation: req("Motivation")
 });
 
 type IntakeFormValues = z.infer<typeof intakeFormSchema>;
@@ -179,7 +186,7 @@ export default function IntakeFormPage() {
       medicalConditions: undefined,
       medications: undefined,
       supplementWillingness: undefined,
-      recentBloodTest: undefined,
+      recentBloodTest: false,
       uploadFileNames: undefined,
       fitnessGoals: undefined,
       biggestChallenge: undefined,
@@ -269,6 +276,51 @@ export default function IntakeFormPage() {
   // Form submission handler
   function onSubmit(data: IntakeFormValues) {
     updateProfileMutation.mutate(data);
+  }
+
+  // Which tab each field lives on, so a failed submit can jump straight to it
+  const fieldTab: Record<string, string> = {
+    age: "basic-info", gender: "basic-info", profession: "basic-info", location: "basic-info",
+    height: "measurements", weight: "measurements", waist: "measurements", hip: "measurements",
+    chest: "measurements", neck: "measurements", biceps: "measurements", quadriceps: "measurements",
+    dietType: "diet", morningMeal: "diet", breakfast: "diet", lunch: "diet", eveningSnack: "diet",
+    dinner: "diet", skipMeals: "diet", dietaryRestrictions: "diet", dislikedFoods: "diet",
+    smokingDrinking: "lifestyle", sleepHours: "lifestyle", stressLevel: "lifestyle",
+    activityLevel: "lifestyle", currentExercise: "lifestyle", workoutPreference: "lifestyle",
+    workoutAvailability: "lifestyle",
+    medicalConditions: "medical", medications: "medical", supplementWillingness: "medical",
+    recentBloodTest: "medical",
+    fitnessGoals: "goals", biggestChallenge: "goals", challengingHabits: "goals",
+    pastDietExperience: "goals", pastCoachExperience: "goals", motivation: "goals",
+  };
+
+  // If validation fails, jump to the tab with the first missing/invalid field
+  // and focus it, instead of leaving the user stuck on "goals" with no clue why.
+  function onInvalid(errors: Record<string, unknown>) {
+    const firstField = Object.keys(errors)[0];
+    if (!firstField) return;
+    const targetTab = fieldTab[firstField];
+    const message = (errors[firstField] as { message?: string } | undefined)?.message;
+    toast({
+      title: "Please complete required fields",
+      description: message || `"${firstField}" is required.`,
+      variant: "destructive",
+    });
+    if (targetTab && targetTab !== activeTab) {
+      setActiveTab(targetTab);
+    }
+    // form.setFocus doesn't reliably reach custom controls (e.g. the Radix
+    // Select trigger for gender/dietType/etc), so fall back to focusing
+    // whatever the resolver actually marked invalid in the DOM.
+    setTimeout(() => {
+      const invalidEl = document.querySelector<HTMLElement>('[aria-invalid="true"]');
+      if (invalidEl) {
+        invalidEl.focus();
+        invalidEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else {
+        form.setFocus(firstField as keyof IntakeFormValues);
+      }
+    }, 100);
   }
 
   // Tab navigation
@@ -406,7 +458,7 @@ export default function IntakeFormPage() {
       <main className="flex-1 overflow-y-auto pb-20 bg-gray-50 dark:bg-gray-950">
         <div className="max-w-3xl mx-auto p-4 sm:p-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-6">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid grid-cols-3 sm:grid-cols-6 mb-4 min-h-[80px]">
                   {tabs.map(tab => (
