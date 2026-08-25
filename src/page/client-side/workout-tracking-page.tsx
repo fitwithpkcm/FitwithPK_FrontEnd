@@ -426,6 +426,11 @@ function ExerciseRow({ exercise, setLogs, workout, selectedDate, onLogSet, onDel
       {/* inline set rows */}
       {expanded && (
         <div className="px-4 pb-3 space-y-1.5">
+          {exercise.MuscleGroup && (
+            <div className="pb-1">
+              <ExerciseMuscleDiagram primary={exercise.MuscleGroup} secondaryCsv={exercise.SecondaryMuscles} />
+            </div>
+          )}
           {Array.from({ length: totalSets }, (_, i) => {
             const setNum = i + 1;
             const setLog = loggedSets.find(l => l.SetNumber === setNum) ?? null;
