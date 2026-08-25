@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Droplet, Sun, Moon, Trophy, Dumbbell, Flame, X, CreditCard, Pill, Check, Clock, Pencil, Bell, MessageCircle, Send, Loader2, RefreshCw, ChevronLeft, UtensilsCrossed, Scale } from "lucide-react";
+import { Droplet, Sun, Moon, Trophy, Dumbbell, Flame, X, CreditCard, Pill, Check, Clock, Pencil, Bell, MessageCircle, Send, Loader2, RefreshCw, ChevronLeft, UtensilsCrossed, Scale, Play } from "lucide-react";
 import { AreaChart, Area, YAxis, ResponsiveContainer } from "recharts";
 import { formatDate, calculatePercentage, isEmpty } from "../../lib/utils";
 import { Link, useLocation } from "wouter";
@@ -36,6 +36,8 @@ import { ISupplement, ISupplementLog, SUPPLEMENT_TIMINGS, TIMING_ICONS } from "@
 import { IMealQuery, getMyMealQueries, askMealQuery, notifyCoachQuery } from "../../services/MealQueryService";
 import { getMyMealPlans, getMyMealLogs } from "../../services/MealPlanService";
 import { IMealPlan, IMealLog, mergePlanWithLogs } from "../../interface/IMealPlan";
+import { getMyWorkouts, getSetLogsForDate } from "../../services/WorkoutService";
+import { IWorkout, ISetLog } from "../../interface/IWorkout";
 
 import toast from 'react-hot-toast';
 
@@ -103,6 +105,40 @@ export default function HomePage() {
 
 
   const todayStr = moment().format("DD-MM-YYYY");
+
+  // ── Today's workout — powers the "Resume Workout" card ────────────
+  const { data: todayWorkoutsRes } = useQuery({
+    queryKey: ["home-today-workouts", todayStr],
+    queryFn: () => getMyWorkouts({ ScheduledDate: todayStr }),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+  const todayWorkouts: IWorkout[] = Array.isArray(todayWorkoutsRes?.data?.data) ? todayWorkoutsRes.data.data : [];
+
+  const { data: todaySetLogsRes } = useQuery({
+    queryKey: ["home-today-set-logs", todayStr],
+    queryFn: () => getSetLogsForDate({ LogDate: todayStr }),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+  const todaySetLogs: ISetLog[] = Array.isArray(todaySetLogsRes?.data?.data) ? todaySetLogsRes.data.data : [];
+
+  // First workout today that isn't fully logged yet — hidden once complete
+  // so the card doesn't linger after there's nothing left to resume.
+  const resumeWorkout = todayWorkouts.find(w => {
+    const totalSets = w.Exercises.reduce((s, ex) => s + ex.Sets, 0);
+    const loggedSets = todaySetLogs.filter(l => w.Exercises.some(ex => ex.IdExercise === l.IdExercise)).length;
+    return totalSets > 0 && loggedSets < totalSets;
+  });
+  const resumeTotalSets = resumeWorkout ? resumeWorkout.Exercises.reduce((s, ex) => s + ex.Sets, 0) : 0;
+  const resumeLoggedSets = resumeWorkout
+    ? todaySetLogs.filter(l => resumeWorkout.Exercises.some(ex => ex.IdExercise === l.IdExercise)).length
+    : 0;
+  const resumeDoneExercises = resumeWorkout
+    ? resumeWorkout.Exercises.filter(ex => todaySetLogs.filter(l => l.IdExercise === ex.IdExercise).length >= ex.Sets).length
+    : 0;
+  const resumeStarted = resumeLoggedSets > 0;
+  const resumePct = resumeTotalSets > 0 ? Math.min(100, Math.round((resumeLoggedSets / resumeTotalSets) * 100)) : 0;
 
   const { data: suppRes } = useQuery({
     queryKey: ["my-supplements"],
@@ -720,6 +756,34 @@ export default function HomePage() {
               <X className="h-4 w-4" />
             </button>
           </div>
+        )}
+
+        {/* ── Resume/Start today's workout — hidden once fully logged ── */}
+        {resumeWorkout && (
+          <Link href={`${RENDER_URL.STUDENT_WORKOUT}?resume=${resumeWorkout.IdWorkout}`}>
+            <Card className="mb-4 cursor-pointer border border-blue-100 dark:border-blue-900/50 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/60 dark:to-gray-900 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-wide text-blue-600 dark:text-sky-400 uppercase">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-sky-400" />
+                    Today
+                  </span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-sky-400/10 dark:text-sky-300">
+                    {resumeStarted ? "In Progress" : "Not Started"}
+                  </span>
+                </div>
+                <p className="text-lg font-bold text-gray-900 dark:text-white mb-0.5">{resumeWorkout.WorkoutName}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  {resumeDoneExercises} of {resumeWorkout.Exercises.length} exercises done · {resumeLoggedSets} sets logged
+                </p>
+                {resumeStarted && <Progress value={resumePct} className="h-1 mb-3" />}
+                <div className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white dark:bg-sky-400 dark:hover:bg-sky-300 dark:text-blue-950 transition-colors">
+                  <Play className="h-3.5 w-3.5 fill-current" />
+                  {resumeStarted ? "Resume Workout" : "Start Workout"}
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         )}
 
         {/* ── Today's habits — renders nothing if the coach hasn't assigned any ── */}

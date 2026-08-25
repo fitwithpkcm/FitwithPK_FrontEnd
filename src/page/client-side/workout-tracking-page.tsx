@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import moment from "moment";
 import toast from "react-hot-toast";
+import { useSearch } from "wouter";
 
 import { Drawer, DrawerContent } from "../../components/ui/drawer";
 import { Button } from "../../components/ui/button";
@@ -1270,6 +1271,23 @@ export default function WorkoutTrackingPage() {
     staleTime: 30_000,
   });
   const workouts: IWorkout[] = Array.isArray(workoutsRes?.data?.data) ? workoutsRes.data.data : [];
+
+  // Deep link from the home page's "Resume Workout" card (?resume=<IdWorkout>)
+  // — selectedDate defaults to today, so `workouts` already covers the right
+  // day. Consumed once via the ref so it doesn't re-fire on every re-render
+  // (workouts is a fresh array each time the query data is read).
+  const resumeSearch = useSearch();
+  const resumeConsumedRef = useRef(false);
+  useEffect(() => {
+    if (resumeConsumedRef.current || workouts.length === 0) return;
+    const resumeId = new URLSearchParams(resumeSearch).get("resume");
+    if (!resumeId) return;
+    const match = workouts.find(w => w.IdWorkout === Number(resumeId));
+    if (match) {
+      setGuidedWorkout(match);
+      resumeConsumedRef.current = true;
+    }
+  }, [resumeSearch, workouts]);
 
   const todayMuscleGroups = useMemo(
     () => Array.from(new Set(
