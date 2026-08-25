@@ -305,11 +305,11 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
               <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
             ) : (
               <>
-                <div className="flex items-start justify-center gap-6 mb-2">
-                  <div className="w-36 sm:w-48">
+                <div className="flex items-start justify-center gap-3 -mx-4 mb-2">
+                  <div className="flex-1 max-w-[200px] sm:max-w-[240px]">
                     <BodySvg paths={FRONT_PATHS} viewBox={FRONT_VIEWBOX} colorFor={colorFor(frontPctMap)} styleFor={styleFor(frontPctMap)} onSlugClick={handleSlugClick} />
                   </div>
-                  <div className="w-36 sm:w-48">
+                  <div className="flex-1 max-w-[200px] sm:max-w-[240px]">
                     <BodySvg paths={BACK_PATHS} viewBox={BACK_VIEWBOX} colorFor={colorFor(backPctMap)} styleFor={styleFor(backPctMap)} onSlugClick={handleSlugClick} />
                   </div>
                 </div>
