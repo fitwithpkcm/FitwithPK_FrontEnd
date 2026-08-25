@@ -49,11 +49,11 @@ export default function MuscleStrengthTab({ idUser, rangeDays, rangeLabel }: {
           <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
         ) : (
           <>
-            <div className="flex items-start justify-center gap-4 mb-4">
-              <div className="w-24 sm:w-32">
+            <div className="flex items-start justify-center gap-6 mb-4">
+              <div className="w-36 sm:w-48">
                 <BodySvg paths={FRONT_PATHS} viewBox={FRONT_VIEWBOX} colorFor={colorFor(frontPctMap)} styleFor={styleFor(frontPctMap)} />
               </div>
-              <div className="w-24 sm:w-32">
+              <div className="w-36 sm:w-48">
                 <BodySvg paths={BACK_PATHS} viewBox={BACK_VIEWBOX} colorFor={colorFor(backPctMap)} styleFor={styleFor(backPctMap)} />
               </div>
             </div>

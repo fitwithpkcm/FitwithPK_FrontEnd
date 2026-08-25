@@ -248,47 +248,6 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
         </Card>
       </div>
 
-      {/* ── workout volume line chart ────────────────────────────── */}
-      <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
-        <CardHeader className="px-4 pt-4 pb-2">
-          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">How much you're lifting</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Total weight moved per session, over {periodLabel}</p>
-        </CardHeader>
-        <CardContent className="px-2 pb-4">
-          {volLoading ? (
-            <div className="h-48 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
-          ) : volumeChartData.length === 0 ? (
-            <div className="h-48 flex flex-col items-center justify-center text-center gap-2 px-6">
-              <Dumbbell className="h-8 w-8 text-gray-200 dark:text-gray-700" />
-              <p className="text-sm font-medium text-gray-400 dark:text-gray-500">No workouts logged yet</p>
-              <p className="text-xs text-gray-400 dark:text-gray-600">Log a workout and your progress will show up here.</p>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={volumeChartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={v => formatVolume(v)} />
-                <Tooltip content={<VolumeTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                {workoutNames.map((name, i) => (
-                  <Line
-                    key={name}
-                    type="monotone"
-                    dataKey={name}
-                    name={name}
-                    stroke={LINE_COLORS[i % LINE_COLORS.length]}
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                    connectNulls
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
-
       {/* ── muscle balance / fatigue / strength sub-tabs ─────────── */}
       <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
         {([
@@ -324,11 +283,11 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
               <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
             ) : (
               <>
-                <div className="flex items-start justify-center gap-4 mb-4">
-                  <div className="w-24 sm:w-32">
+                <div className="flex items-start justify-center gap-6 mb-4">
+                  <div className="w-36 sm:w-48">
                     <BodySvg paths={FRONT_PATHS} viewBox={FRONT_VIEWBOX} colorFor={colorFor(frontPctMap)} styleFor={styleFor(frontPctMap)} />
                   </div>
-                  <div className="w-24 sm:w-32">
+                  <div className="w-36 sm:w-48">
                     <BodySvg paths={BACK_PATHS} viewBox={BACK_VIEWBOX} colorFor={colorFor(backPctMap)} styleFor={styleFor(backPctMap)} />
                   </div>
                 </div>
@@ -390,6 +349,47 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
 
       {subTab === "fatigue" && <MuscleFatigueTab idUser={idUser} />}
       {subTab === "strength" && <MuscleStrengthTab idUser={idUser} rangeDays={rangeDays} rangeLabel={RANGE_LABEL[range]} />}
+
+      {/* ── workout volume line chart ────────────────────────────── */}
+      <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
+        <CardHeader className="px-4 pt-4 pb-2">
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">How much you're lifting</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Total weight moved per session, over {periodLabel}</p>
+        </CardHeader>
+        <CardContent className="px-2 pb-4">
+          {volLoading ? (
+            <div className="h-48 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
+          ) : volumeChartData.length === 0 ? (
+            <div className="h-48 flex flex-col items-center justify-center text-center gap-2 px-6">
+              <Dumbbell className="h-8 w-8 text-gray-200 dark:text-gray-700" />
+              <p className="text-sm font-medium text-gray-400 dark:text-gray-500">No workouts logged yet</p>
+              <p className="text-xs text-gray-400 dark:text-gray-600">Log a workout and your progress will show up here.</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={volumeChartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={v => formatVolume(v)} />
+                <Tooltip content={<VolumeTooltip />} />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                {workoutNames.map((name, i) => (
+                  <Line
+                    key={name}
+                    type="monotone"
+                    dataKey={name}
+                    name={name}
+                    stroke={LINE_COLORS[i % LINE_COLORS.length]}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    connectNulls
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
