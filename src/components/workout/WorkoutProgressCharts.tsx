@@ -16,20 +16,29 @@ import {
 import {
   IVolumeDataPoint, IMuscleVolumePoint, IMuscleTarget, MUSCLE_GROUPS,
 } from "../../interface/IWorkout";
+import {
+  FRONT_PATHS, BACK_PATHS, FRONT_VIEWBOX, BACK_VIEWBOX, muscleGroupPctBySlug,
+} from "../../lib/muscle-diagram/paths";
+import { targetColor } from "../../lib/muscle-diagram/colorScale";
+import BodySvg from "./BodySvg";
+import MuscleFatigueTab from "./MuscleFatigueTab";
+import MuscleStrengthTab from "./MuscleStrengthTab";
+
+// ── time range shared across all three sub-tabs ────────────────────
+const RANGES = ["week", "30d", "90d", "all"] as const;
+type Range = typeof RANGES[number];
+const RANGE_LABEL: Record<Range, string> = { week: "Week", "30d": "30d", "90d": "90d", all: "All" };
+const RANGE_PERIOD_TEXT: Record<Range, string> = { week: "this week", "30d": "the last 30 days", "90d": "the last 90 days", all: "all time" };
+const RANGE_TO_DAYS: Record<Range, number | null> = { week: 7, "30d": 30, "90d": 90, all: null };
+// getVolumeHistory's backend still takes `weeks`, not `days` — this redesign
+// didn't touch that endpoint, so approximate the new ranges in weeks instead.
+const RANGE_TO_VOLUME_WEEKS: Record<Range, number> = { week: 1, "30d": 5, "90d": 13, all: 104 };
 
 // ── colour palette for workout lines ────────────────────────────────
 const LINE_COLORS = [
   "#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6",
   "#ec4899","#14b8a6","#f97316","#84cc16","#06b6d4",
 ];
-
-// ── muscle group progress bar colour by how close to target ──────────
-const muscleColor = (sets: number, target: number) => {
-  const pct = sets / target;
-  if (pct >= 1)   return { bar: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400", chip: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" };
-  if (pct >= 0.5) return { bar: "bg-amber-500", text: "text-amber-600 dark:text-amber-400", chip: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" };
-  return { bar: "bg-red-400", text: "text-red-500 dark:text-red-400", chip: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" };
-};
 
 function formatVolume(v: number) {
   if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
@@ -88,12 +97,15 @@ interface Props {
 }
 
 export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
-  const [weeks, setWeeks] = useState(8);
+  const [range, setRange] = useState<Range>("week");
+  const [subTab, setSubTab] = useState<"balance" | "fatigue" | "strength">("balance");
+  const rangeDays = RANGE_TO_DAYS[range];
+  const periodLabel = RANGE_PERIOD_TEXT[range];
 
   // ── volume history ──────────────────────────────────────────────
   const { data: volRes, isLoading: volLoading } = useQuery({
-    queryKey: ["volume-history", idUser, weeks],
-    queryFn: () => getVolumeHistory({ IdUser: idUser, weeks }),
+    queryKey: ["volume-history", idUser, range],
+    queryFn: () => getVolumeHistory({ IdUser: idUser, weeks: RANGE_TO_VOLUME_WEEKS[range] }),
     staleTime: 60_000,
   });
   const volumeRawData = (volRes as any)?.data?.data;
@@ -113,13 +125,16 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
     return row;
   });
 
-  const totalVolume = volumeRaw.reduce((sum, d) => sum + (d.Volume ?? 0), 0);
+  // d.Volume is a SUM(...) result — mysql2 returns it as a string (same
+  // DECIMAL-as-string gotcha as WeightUsed/TargetWeight elsewhere), so this
+  // must be coerced or "sum + string" silently string-concatenates into NaN.
+  const totalVolume = volumeRaw.reduce((sum, d) => sum + Number(d.Volume ?? 0), 0);
   const sessionsLogged = allDates.length;
 
   // ── muscle group volume ─────────────────────────────────────────
   const { data: muscleRes, isLoading: muscleLoading } = useQuery({
-    queryKey: ["muscle-volume", idUser, weeks],
-    queryFn: () => getMuscleGroupVolume({ IdUser: idUser, weeks }),
+    queryKey: ["muscle-volume", idUser, range],
+    queryFn: () => getMuscleGroupVolume({ IdUser: idUser, days: rangeDays }),
     staleTime: 60_000,
   });
   const muscleRawData = (muscleRes as any)?.data?.data;
@@ -144,22 +159,42 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
     onError: () => toast.error("Failed to update target"),
   });
 
-  // build muscle progress data — all muscle groups, fill 0 if not trained,
-  // sorted so the ones needing the most attention surface first
-  const muscleChartData = MUSCLE_GROUPS.map(mg => {
+  // Weekly target scaled to the selected window (12/week -> ~51 over 30d) so
+  // the color-coding stays meaningful at every range. "All" has no sensible
+  // scaled target, so it falls back to plain relative-volume ranking below.
+  const balanceData = MUSCLE_GROUPS.map(mg => {
     const found = muscleRaw.find(m => m.MuscleGroup === mg);
     const targetRow = targets.find(t => t.MuscleGroup === mg);
-    const target = targetRow?.WeeklySetTarget ?? 12;
+    const weeklyTarget = targetRow?.WeeklySetTarget ?? 12;
+    const scaledTarget = rangeDays ? Math.max(1, Math.round(weeklyTarget * (rangeDays / 7))) : null;
     return {
       MuscleGroup: mg,
-      WeeklySets: found?.WeeklySets ?? 0,
-      WeeklyVolume: found?.WeeklyVolume ?? 0,
-      target,
+      Sets: found?.WeeklySets ?? 0,
+      weeklyTarget,
+      scaledTarget,
+      IdTarget: targetRow?.IdTarget,
     };
-  }).sort((a, b) => (a.WeeklySets / a.target) - (b.WeeklySets / b.target));
+  });
+  const maxSets = Math.max(1, ...balanceData.map(m => m.Sets));
+  const balanceWithPct = balanceData.map(m => ({
+    ...m,
+    pct: m.scaledTarget != null
+      ? Math.min(100, Math.round((m.Sets / m.scaledTarget) * 100))
+      : Math.round((m.Sets / maxSets) * 100),
+  }));
+  const trainedMuscles = balanceWithPct.filter(m => m.Sets > 0);
+  const untrainedMuscles = balanceWithPct.filter(m => m.Sets === 0);
+  const sortedTrained = [...trainedMuscles].sort((a, b) =>
+    rangeDays != null ? a.pct - b.pct : b.Sets - a.Sets
+  );
+  const onTargetCount = rangeDays != null
+    ? balanceWithPct.filter(m => m.scaledTarget != null && m.Sets >= m.scaledTarget).length
+    : trainedMuscles.length;
 
-  const onTargetCount = muscleChartData.filter(m => m.WeeklySets >= m.target).length;
-  const weeksLabel = weeks === 1 ? "this week" : `the last ${weeks} weeks`;
+  const frontPctMap = muscleGroupPctBySlug(balanceWithPct.map(m => ({ MuscleGroup: m.MuscleGroup, pct: m.pct })), "front");
+  const backPctMap = muscleGroupPctBySlug(balanceWithPct.map(m => ({ MuscleGroup: m.MuscleGroup, pct: m.pct })), "back");
+  const colorFor = (map: Map<string, number>) => (slug: string) => map.has(slug) ? "" : "fill-gray-300 dark:fill-gray-700";
+  const styleFor = (map: Map<string, number>) => (slug: string) => map.has(slug) ? { fill: targetColor(map.get(slug)!) } : {};
 
   return (
     <div className="space-y-5 px-4 py-4 pb-6">
@@ -167,17 +202,17 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
       {/* ── time range selector ──────────────────────────────────── */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-gray-500 dark:text-gray-400">Show:</span>
-        {[1, 4, 8, 12].map(w => (
+        {RANGES.map(r => (
           <button
-            key={w}
-            onClick={() => setWeeks(w)}
+            key={r}
+            onClick={() => setRange(r)}
             className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-              weeks === w
+              range === r
                 ? "bg-blue-600 text-white border-blue-600"
                 : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-blue-400"
             }`}
           >
-            {w === 1 ? "1 wk" : `${w} wks`}
+            {RANGE_LABEL[r]}
           </button>
         ))}
       </div>
@@ -207,8 +242,8 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
             <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center">
               <TargetIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <p className="text-lg font-extrabold text-gray-900 dark:text-white leading-none">{onTargetCount}<span className="text-xs font-normal text-gray-400">/{muscleChartData.length}</span></p>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">Muscles on target</p>
+            <p className="text-lg font-extrabold text-gray-900 dark:text-white leading-none">{onTargetCount}<span className="text-xs font-normal text-gray-400">/{balanceWithPct.length}</span></p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">{rangeDays != null ? "Muscles on target" : "Muscles trained"}</p>
           </CardContent>
         </Card>
       </div>
@@ -217,7 +252,7 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
       <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
         <CardHeader className="px-4 pt-4 pb-2">
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">How much you're lifting</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Total weight moved per session, over {weeksLabel}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Total weight moved per session, over {periodLabel}</p>
         </CardHeader>
         <CardContent className="px-2 pb-4">
           {volLoading ? (
@@ -254,57 +289,107 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
         </CardContent>
       </Card>
 
-      {/* ── muscle group progress list ───────────────────────────── */}
-      <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
-        <CardHeader className="px-4 pt-4 pb-2">
-          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Muscle group balance</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-            Sets per muscle group vs. your weekly target — {weeksLabel}
-            {isAdmin && <span> · tap ✏ to adjust a target</span>}
-          </p>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
-          {muscleLoading ? (
-            <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
-          ) : (
-            <div className="space-y-3">
-              {muscleChartData.map(m => {
-                const pct = Math.min(100, Math.round((m.WeeklySets / m.target) * 100));
-                const colors = muscleColor(m.WeeklySets, m.target);
-                return (
-                  <div key={m.MuscleGroup}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{m.MuscleGroup}</span>
-                      <span className="flex items-center gap-1.5">
-                        <span className={`text-[10px] font-semibold ${colors.text}`}>{m.WeeklySets}/{m.target} sets</span>
-                        {isAdmin && idUser && (
-                          <TargetEditor
-                            target={{ IdCoach: 0, IdUser: idUser, MuscleGroup: m.MuscleGroup, WeeklySetTarget: m.target, IdTarget: targets.find(t => t.MuscleGroup === m.MuscleGroup)?.IdTarget }}
-                            onSave={t => targetMut.mutate(t)}
-                          />
-                        )}
-                      </span>
+      {/* ── muscle balance / fatigue / strength sub-tabs ─────────── */}
+      <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+        {([
+          ["balance", "Muscle balance"],
+          ["fatigue", "Fatigue"],
+          ["strength", "Strength"],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setSubTab(key)}
+            className={`flex-1 text-xs font-semibold py-1.5 rounded-lg transition-colors ${
+              subTab === key
+                ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 dark:text-gray-400"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {subTab === "balance" && (
+        <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
+          <CardHeader className="px-4 pt-4 pb-2">
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Muscle balance · by sets worked</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              {rangeDays != null ? `Progress toward your weekly target, over ${periodLabel}` : `Relative volume, ${periodLabel}`}
+              {isAdmin && <span> · tap ✏ to adjust a target</span>}
+            </p>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {muscleLoading ? (
+              <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
+            ) : (
+              <>
+                <div className="flex items-start justify-center gap-4 mb-4">
+                  <div className="w-24 sm:w-32">
+                    <BodySvg paths={FRONT_PATHS} viewBox={FRONT_VIEWBOX} colorFor={colorFor(frontPctMap)} styleFor={styleFor(frontPctMap)} />
+                  </div>
+                  <div className="w-24 sm:w-32">
+                    <BodySvg paths={BACK_PATHS} viewBox={BACK_VIEWBOX} colorFor={colorFor(backPctMap)} styleFor={styleFor(backPctMap)} />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {sortedTrained.map(m => (
+                    <div key={m.MuscleGroup}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{m.MuscleGroup}</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-semibold" style={{ color: targetColor(m.pct) }}>
+                            {m.scaledTarget != null ? `${m.Sets}/${m.scaledTarget} sets` : `${m.Sets} sets`}
+                          </span>
+                          {isAdmin && idUser && (
+                            <TargetEditor
+                              target={{ IdCoach: 0, IdUser: idUser, MuscleGroup: m.MuscleGroup, WeeklySetTarget: m.weeklyTarget, IdTarget: m.IdTarget }}
+                              onSave={t => targetMut.mutate(t)}
+                            />
+                          )}
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${m.pct}%`, backgroundColor: targetColor(m.pct) }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${colors.bar}`}
-                        style={{ width: `${pct}%` }}
-                      />
+                  ))}
+                  {trainedMuscles.length === 0 && (
+                    <p className="text-xs text-gray-400 text-center py-4">Nothing logged {periodLabel} yet.</p>
+                  )}
+                </div>
+
+                {untrainedMuscles.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-gray-50 dark:border-gray-800">
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-2">Not trained in this period</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {untrainedMuscles.map(m => (
+                        <span key={m.MuscleGroup} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                          {m.MuscleGroup}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                )}
 
-          {/* legend */}
-          <div className="mt-4 flex items-center gap-3 text-[10px] text-gray-400 dark:text-gray-500 border-t border-gray-50 dark:border-gray-800 pt-3">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"/>Needs work</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block"/>Halfway there</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>On target</span>
-          </div>
-        </CardContent>
-      </Card>
+                {/* gradient legend */}
+                <div className="mt-4 flex items-center gap-2 text-[10px] text-gray-400 dark:text-gray-500 border-t border-gray-50 dark:border-gray-800 pt-3">
+                  <span>Less</span>
+                  <span className="flex-1 h-1.5 rounded-full" style={{ background: `linear-gradient(to right, ${targetColor(0)}, ${targetColor(50)}, ${targetColor(100)})` }} />
+                  <span>More</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {subTab === "fatigue" && <MuscleFatigueTab idUser={idUser} />}
+      {subTab === "strength" && <MuscleStrengthTab idUser={idUser} rangeDays={rangeDays} rangeLabel={RANGE_LABEL[range]} />}
     </div>
   );
 }

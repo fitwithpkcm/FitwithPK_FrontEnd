@@ -186,6 +186,7 @@ export const API_URL = {
     GET_CLIENT_SET_LOGS: '/workout/getClientSetLogs',
     GET_VOLUME_HISTORY: '/workout/volumeHistory',
     GET_MUSCLE_GROUP_VOLUME: '/workout/muscleGroupVolume',
+    GET_MUSCLE_GROUP_SET_HISTORY: '/workout/muscleGroupSetHistory',
     GET_MUSCLE_TARGETS: '/workout/getMuscleTargets',
     UPSERT_MUSCLE_TARGET: '/workout/upsertMuscleTarget',
 

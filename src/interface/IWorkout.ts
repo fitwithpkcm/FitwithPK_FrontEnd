@@ -208,6 +208,14 @@ export interface IMuscleTarget {
   WeeklySetTarget: number;
 }
 
+export interface IMuscleSetHistoryRow {
+  MuscleGroup: string;
+  LogDate: string;       // DD-MM-YYYY
+  WeightUsed?: number;
+  RepsCompleted: number;
+  WeightUnit?: string;
+}
+
 export function createBlankWorkout(userId: number, date: string): IWorkout {
   return {
     WorkoutName: '',

@@ -36,8 +36,11 @@ export const getClientSetLogs = (params: { IdUser: number; LogDate: string }) =>
 export const getVolumeHistory = (params: { IdUser?: number; weeks?: number }) =>
   httpCall({ method: "post", url: API_URL.GET_VOLUME_HISTORY, data: params });
 
-export const getMuscleGroupVolume = (params: { IdUser?: number; weeks?: number }) =>
+export const getMuscleGroupVolume = (params: { IdUser?: number; days?: number | null }) =>
   httpCall({ method: "post", url: API_URL.GET_MUSCLE_GROUP_VOLUME, data: params });
+
+export const getMuscleGroupSetHistory = (params: { IdUser?: number; days?: number | null }) =>
+  httpCall({ method: "post", url: API_URL.GET_MUSCLE_GROUP_SET_HISTORY, data: params });
 
 export const getMuscleTargets = (params: { IdUser: number }) =>
   httpCall({ method: "post", url: API_URL.GET_MUSCLE_TARGETS, data: params });

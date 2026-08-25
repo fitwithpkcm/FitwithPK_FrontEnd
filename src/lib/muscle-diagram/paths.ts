@@ -94,3 +94,16 @@ export function musclesToSlugs(muscleGroups: string[], view: "front" | "back"): 
 export function parseSecondaryMuscles(csv?: string): string[] {
   return (csv ?? "").split(",").map(s => s.trim()).filter(Boolean);
 }
+
+// Maps a per-MuscleGroup value (0-100, e.g. target progress / fatigue / relative
+// strength) onto every artwork slug that MuscleGroup lights up, for one view.
+// Used by the gradient-colored diagrams (Muscle Balance / Fatigue / Strength).
+export function muscleGroupPctBySlug(values: { MuscleGroup: string; pct: number }[], view: "front" | "back"): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const v of values) {
+    const entry = MUSCLE_GROUP_TO_SLUGS[v.MuscleGroup];
+    const list = view === "front" ? entry?.front : entry?.back;
+    list?.forEach(s => map.set(s, v.pct));
+  }
+  return map;
+}
