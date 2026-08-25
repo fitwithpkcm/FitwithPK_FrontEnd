@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from "../ui/card";
 import { getMuscleGroupSetHistory } from "../../services/WorkoutService";
 import { IMuscleSetHistoryRow } from "../../interface/IWorkout";
 import { computeExerciseStrength, ExerciseStrengthResult } from "../../lib/workout/muscleAnalytics";
+import Sparkline from "./Sparkline";
 
 function daysAgoLabel(days: number): string {
   if (days === 0) return "today";
@@ -66,13 +67,14 @@ export default function MuscleStrengthTab({ idUser, rangeDays, rangeLabel }: {
                 <div className="space-y-2.5">
                   {section.exercises.map(ex => (
                     <div key={ex.ExerciseName} className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{ex.ExerciseName}</p>
                         <p className="text-[10px] text-gray-400 dark:text-gray-500">Last trained {daysAgoLabel(ex.LastTrainedDaysAgo)}</p>
                       </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <Sparkline values={ex.History} />
+                      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                         <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                          {ex.Best1RM != null ? `Est. 1RM: ${Math.round(ex.Best1RM)}kg` : "Bodyweight"}
+                          {ex.Best1RM != null ? `${Math.round(ex.Best1RM)}kg` : "Bodyweight"}
                         </span>
                         {ex.DeltaPct != null && (
                           <span className={`flex items-center gap-0.5 text-[10px] font-semibold ${ex.DeltaPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>

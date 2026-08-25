@@ -50,6 +50,7 @@ export interface ExerciseStrengthResult {
   PriorBest1RM: number | null;
   DeltaPct: number | null;
   LastTrainedDaysAgo: number;
+  History: number[];           // chronological (oldest first) best-1RM per session, current period only
 }
 
 // Epley formula. WeightUsed may arrive as a string (MySQL DECIMAL via
@@ -98,6 +99,19 @@ export function computeExerciseStrength(rows: IMuscleSetHistoryRow[], rangeDays:
       ? Math.round(((Best1RM - PriorBest1RM) / PriorBest1RM) * 100)
       : null;
 
+    // One point per session (LogDate), best estimate that day, oldest first —
+    // the sparkline shown alongside this row, so the shape itself tells the
+    // story without needing a cross-exercise comparison.
+    const bySessionDate = new Map<string, number>();
+    for (const row of current) {
+      const est = estimated1RM(row);
+      if (est == null) continue;
+      bySessionDate.set(row.LogDate, Math.max(est, bySessionDate.get(row.LogDate) ?? -Infinity));
+    }
+    const History = [...bySessionDate.entries()]
+      .sort((a, b) => daysAgo(b[0]) - daysAgo(a[0]))
+      .map(([, est1RM]) => est1RM);
+
     results.push({
       ExerciseName: exerciseName,
       MuscleGroup: current[0].MuscleGroup,
@@ -105,6 +119,7 @@ export function computeExerciseStrength(rows: IMuscleSetHistoryRow[], rangeDays:
       PriorBest1RM,
       DeltaPct,
       LastTrainedDaysAgo: Math.min(...current.map(r => daysAgo(r.LogDate))),
+      History,
     });
   }
   return results;
