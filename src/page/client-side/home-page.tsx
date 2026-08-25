@@ -785,6 +785,19 @@ export default function HomePage() {
             </Card>
           </Link>
         )}
+        {!resumeWorkout && todayWorkouts.length === 0 && (
+          <Card className="mb-4 border border-gray-100 dark:border-gray-800 dark:bg-gray-900 shadow-sm">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+                <Dumbbell className="h-4 w-4 text-gray-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">No workout assigned for today</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Check back once your coach schedules one.</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* ── Today's habits — renders nothing if the coach hasn't assigned any ── */}
         <HabitTodayCard />
