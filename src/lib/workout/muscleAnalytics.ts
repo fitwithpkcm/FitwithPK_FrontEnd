@@ -43,12 +43,13 @@ export function computeFatigue(rows: IMuscleSetHistoryRow[]): FatigueResult[] {
   });
 }
 
-export interface StrengthResult {
+export interface ExerciseStrengthResult {
+  ExerciseName: string;
   MuscleGroup: string;
-  Best1RM: number | null;
+  Best1RM: number | null;      // null = bodyweight/zero-weight only
   PriorBest1RM: number | null;
   DeltaPct: number | null;
-  HasSets: boolean;
+  LastTrainedDaysAgo: number;
 }
 
 // Epley formula. WeightUsed may arrive as a string (MySQL DECIMAL via
@@ -63,15 +64,30 @@ function estimated1RM(row: IMuscleSetHistoryRow): number | null {
   return weight * (1 + row.RepsCompleted / 30);
 }
 
-export function computeStrength(rows: IMuscleSetHistoryRow[], rangeDays: number | null): StrengthResult[] {
-  return MUSCLE_GROUPS.map(mg => {
-    const muscleRows = rows.filter(r => r.MuscleGroup === mg);
+// Per-exercise, not per-muscle-group: ranking different exercises' raw
+// weight against each other has the same apples-to-oranges problem as
+// ranking muscle groups (a bench press will always dwarf a lateral raise),
+// so what matters here is each exercise's trend against itself over time,
+// not a comparison to other exercises. No fixed enum to iterate — only
+// exercises actually logged in the current window appear at all.
+export function computeExerciseStrength(rows: IMuscleSetHistoryRow[], rangeDays: number | null): ExerciseStrengthResult[] {
+  const byExercise = new Map<string, IMuscleSetHistoryRow[]>();
+  for (const row of rows) {
+    const list = byExercise.get(row.ExerciseName) ?? [];
+    list.push(row);
+    byExercise.set(row.ExerciseName, list);
+  }
+
+  const results: ExerciseStrengthResult[] = [];
+  for (const [exerciseName, exRows] of byExercise) {
     const current = rangeDays == null
-      ? muscleRows
-      : muscleRows.filter(r => daysAgo(r.LogDate) < rangeDays);
+      ? exRows
+      : exRows.filter(r => daysAgo(r.LogDate) < rangeDays);
+    if (current.length === 0) continue;
+
     const prior = rangeDays == null
       ? []
-      : muscleRows.filter(r => { const d = daysAgo(r.LogDate); return d >= rangeDays && d < rangeDays * 2; });
+      : exRows.filter(r => { const d = daysAgo(r.LogDate); return d >= rangeDays && d < rangeDays * 2; });
 
     const currentEstimates = current.map(estimated1RM).filter((v): v is number => v != null);
     const priorEstimates = prior.map(estimated1RM).filter((v): v is number => v != null);
@@ -82,6 +98,14 @@ export function computeStrength(rows: IMuscleSetHistoryRow[], rangeDays: number 
       ? Math.round(((Best1RM - PriorBest1RM) / PriorBest1RM) * 100)
       : null;
 
-    return { MuscleGroup: mg, Best1RM, PriorBest1RM, DeltaPct, HasSets: current.length > 0 };
-  });
+    results.push({
+      ExerciseName: exerciseName,
+      MuscleGroup: current[0].MuscleGroup,
+      Best1RM,
+      PriorBest1RM,
+      DeltaPct,
+      LastTrainedDaysAgo: Math.min(...current.map(r => daysAgo(r.LogDate))),
+    });
+  }
+  return results;
 }

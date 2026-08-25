@@ -210,6 +210,7 @@ export interface IMuscleTarget {
 
 export interface IMuscleSetHistoryRow {
   MuscleGroup: string;
+  ExerciseName: string;
   LogDate: string;       // DD-MM-YYYY
   WeightUsed?: number;
   RepsCompleted: number;

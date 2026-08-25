@@ -46,7 +46,3 @@ export const targetDiagramColor = (pct: number) => lerpColor(pct, TARGET_DIAGRAM
 // green -> amber -> red (inverted target scale). Used where high = needs attention.
 const FATIGUE_STOPS: RGB[] = [[16, 185, 129], [245, 158, 11], [239, 68, 68]];
 export const fatigueColor = (pct: number) => lerpColor(pct, FATIGUE_STOPS);
-
-// pale -> deep blue. Purely descriptive ranking, no good/bad judgment implied.
-const STRENGTH_STOPS: RGB[] = [[219, 234, 254], [37, 99, 235]];
-export const strengthColor = (pct: number) => lerpColor(pct, STRENGTH_STOPS);
