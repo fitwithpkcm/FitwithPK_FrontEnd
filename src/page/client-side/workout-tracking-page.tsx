@@ -29,6 +29,7 @@ import {
 } from "../../services/WorkoutService";
 import WorkoutProgressCharts from "../../components/workout/WorkoutProgressCharts";
 import MuscleTargetDiagram from "../../components/workout/MuscleTargetDiagram";
+import ExerciseMuscleDiagram from "../../components/workout/ExerciseMuscleDiagram";
 import VideoSheet from "../../components/workout/VideoSheet";
 import GuidedWorkoutSession from "../../components/workout/GuidedWorkoutSession";
 import { getYoutubeThumbnail } from "../../lib/workout/video";
@@ -694,6 +695,12 @@ function ExerciseDetailView({ exercise, setLogs, historySetLogs, workout, select
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-28 bg-gray-50 dark:bg-gray-950">
         {tab === "sets" && (
           <>
+            {exercise.MuscleGroup && (
+              <Card className="bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 px-4 py-3">
+                <ExerciseMuscleDiagram primary={exercise.MuscleGroup} secondaryCsv={exercise.SecondaryMuscles} />
+              </Card>
+            )}
+
             {/* today's set rows */}
             <Card className="bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 overflow-hidden">
               <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">

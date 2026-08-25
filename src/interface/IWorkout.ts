@@ -41,6 +41,7 @@ export interface IExerciseLibraryItem {
   ExerciseName:   string;
   Category?:      string;
   MuscleGroup?:   string;
+  SecondaryMuscles?: string;
   Equipment?:     string;
   DefaultSets:    number;
   DefaultReps:    number;
@@ -56,6 +57,7 @@ export interface IExercise {
   IdWorkout?: number;
   ExerciseName: string;
   MuscleGroup?: string;
+  SecondaryMuscles?: string;
   VideoUrl?: string;
   Sets: number;
   TargetReps: number;
@@ -102,6 +104,7 @@ export interface ITemplateExercise {
   IdTemplate?:         number;
   ExerciseName:        string;
   MuscleGroup?:        string;
+  SecondaryMuscles?:   string;
   VideoUrl?:           string;
   Sets:                number;
   TargetReps:          number;

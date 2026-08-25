@@ -115,6 +115,7 @@ function libraryItemToExercise(item: IExerciseLibraryItem, sortOrder: number): O
     Sets: item.DefaultSets,
     TargetReps: item.DefaultReps,
     MuscleGroup: item.MuscleGroup,
+    SecondaryMuscles: item.SecondaryMuscles,
     TargetWeight: item.DefaultWeight,
     WeightUnit: item.WeightUnit,
     RestSeconds: item.RestSeconds,
@@ -220,6 +221,7 @@ function ExerciseEditorRow({ ex, index, library, onChange, onRemove }: {
     onChange(index, "Sets", mapped.Sets);
     onChange(index, "TargetReps", mapped.TargetReps);
     if (mapped.MuscleGroup) onChange(index, "MuscleGroup", mapped.MuscleGroup);
+    if (mapped.SecondaryMuscles) onChange(index, "SecondaryMuscles", mapped.SecondaryMuscles);
     if (mapped.TargetWeight) onChange(index, "TargetWeight", mapped.TargetWeight);
     if (mapped.WeightUnit) onChange(index, "WeightUnit", mapped.WeightUnit);
     if (mapped.RestSeconds) onChange(index, "RestSeconds", mapped.RestSeconds);
@@ -1298,6 +1300,7 @@ function TemplateEditorDrawer({ open, initial, saving, library, onClose, onSave 
     IdExercise: ex.IdTemplateExercise,
     ExerciseName: ex.ExerciseName,
     MuscleGroup: ex.MuscleGroup,
+    SecondaryMuscles: ex.SecondaryMuscles,
     VideoUrl: ex.VideoUrl,
     Sets: ex.Sets,
     TargetReps: ex.TargetReps,

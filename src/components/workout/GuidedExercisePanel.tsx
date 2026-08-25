@@ -6,6 +6,7 @@ import { IExercise, ISetLog } from "../../interface/IWorkout";
 import { getSetLogsForExercise } from "../../services/WorkoutService";
 import { groupSetsBySession, suggestNextLoad } from "../../lib/workout/progression";
 import { getYoutubeThumbnail } from "../../lib/workout/video";
+import ExerciseMuscleDiagram from "./ExerciseMuscleDiagram";
 
 interface GuidedExercisePanelProps {
   exercise: IExercise;
@@ -93,12 +94,9 @@ export default function GuidedExercisePanel({
 
       <div>
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">{exercise.ExerciseName}</h2>
-        {exercise.MuscleGroup && (
-          <span className="inline-block mt-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
-            {exercise.MuscleGroup}
-          </span>
-        )}
       </div>
+
+      <ExerciseMuscleDiagram primary={exercise.MuscleGroup} secondaryCsv={exercise.SecondaryMuscles} />
 
       {lastSession && (
         <p className="text-xs text-gray-500 dark:text-gray-400">

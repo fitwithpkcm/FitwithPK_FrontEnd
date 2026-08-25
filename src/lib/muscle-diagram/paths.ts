@@ -64,3 +64,33 @@ export const BACK_PATHS: BodyPartPaths[] = [
   { slug: 'head', common: ["M1028.14 166.45c1.03 5.06 1.36 9.61 6.41 11.53 13.06 4.95 16.74 15.51 23.52 27.48 1.387 2.447 3.863 3.623 7.43 3.53a910.025 910.025 0 0136.94-.25c6.23.09 9.27-7.55 11.48-12.3 4.31-9.27 10.37-15.83 20.28-18.94.333-.1.603-.287.81-.56 1.92-2.58 3.043-5.43 3.37-8.55l2.31-1.51a.977.977 0 01.99-.08c11.92 5.42-3.35 35.31-8.21 42.45-.761 1.11-2.423 1.028-3.06-.15l-1.26-2.32c-.133-.253-.32-.297-.56-.13-.34.24-.48.61-.42 1.11.86 7.64.75 16.87-2.96 23.31-.173.3.839.041-3.7 4.71-3.34 3.436-74.18 3.78-75.48-1.38a1.465 1.465 0 00-.55-.82c-4.15-2.97-6.07-7.95-6.16-12.39-.03-1.68.18-14.28-.53-14.63-.207-.1-.33-.037-.37.19-.3 1.553-1.183 2.597-2.65 3.13a.951.951 0 01-1.07-.32c-7.29-9.56-12.32-22.18-12.97-33.54-.34-6.04 1.797-9.23 6.41-9.57zm29.95 61.71c.173 14.187 18.967 14.703 19.1-1.37.03-4.05-.38-6.54-4.68-7.3-4.2-.75-11.87-1.47-13.85 2.91-.413.92-.603 2.84-.57 5.76zm31.71-3.35c.36 19.647 18.59 14.82 18.87 5.94.13-3.9 1.32-9.43-2.88-10.79-4.25-1.38-16.12-2.54-15.99 4.85z"] },
   { slug: 'hair', common: ["M1138.38 168.39q-.49 4.68-3.37 8.55-.31.41-.81.56c-9.91 3.11-15.97 9.67-20.28 18.94-2.21 4.75-5.25 12.39-11.48 12.3q-18.46-.25-36.94.25-5.35.14-7.43-3.53c-6.78-11.97-10.46-22.53-23.52-27.48-5.05-1.92-5.38-6.47-6.41-11.53q-6.64-26.16 4.43-48.88c8.13-16.7 34.61-21.41 51.58-21.04 4.89.11 9.69-.11 14.42.85 18.79 3.8 33.17 8.5 39.34 28.66q6.38 20.88.47 42.35z"] }
 ];
+
+// Which artwork slugs light up for each of FitwithPK's MuscleGroup values.
+// Cardio has no matching body region — represented only in the text caption below.
+export const MUSCLE_GROUP_TO_SLUGS: Record<string, { front?: string[]; back?: string[] }> = {
+  Chest:      { front: ["chest", "upperChest", "lowerChest"] },
+  Shoulders:  { front: ["deltoids", "frontDeltoid"], back: ["deltoids"] },
+  Biceps:     { front: ["biceps"] },
+  Triceps:    { front: ["triceps"], back: ["triceps"] },
+  Back:       { back: ["upperBack", "lowerBack", "trapezius"] },
+  Quads:      { front: ["quadriceps", "innerQuad", "outerQuad"] },
+  Hamstrings: { back: ["hamstring"] },
+  Glutes:     { back: ["gluteal"] },
+  Calves:     { front: ["calves"], back: ["calves"] },
+  Core:       { front: ["abs", "upperAbs", "lowerAbs", "obliques", "serratus"] },
+};
+
+export function musclesToSlugs(muscleGroups: string[], view: "front" | "back"): Set<string> {
+  const slugs = new Set<string>();
+  for (const mg of muscleGroups) {
+    const entry = MUSCLE_GROUP_TO_SLUGS[mg];
+    const list = view === "front" ? entry?.front : entry?.back;
+    list?.forEach(s => slugs.add(s));
+  }
+  return slugs;
+}
+
+// "Triceps,Shoulders" -> ["Triceps", "Shoulders"]
+export function parseSecondaryMuscles(csv?: string): string[] {
+  return (csv ?? "").split(",").map(s => s.trim()).filter(Boolean);
+}
