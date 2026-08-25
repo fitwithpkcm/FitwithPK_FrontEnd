@@ -26,8 +26,10 @@ export default function MuscleFatigueTab({ idUser }: { idUser?: number }) {
   const trained = results.filter(r => r.DaysSinceLastTrained != null).sort((a, b) => b.FatiguePct - a.FatiguePct);
   const untrained = results.filter(r => r.DaysSinceLastTrained == null);
 
-  const frontPctMap = muscleGroupPctBySlug(results.map(r => ({ MuscleGroup: r.MuscleGroup, pct: r.FatiguePct })), "front");
-  const backPctMap = muscleGroupPctBySlug(results.map(r => ({ MuscleGroup: r.MuscleGroup, pct: r.FatiguePct })), "back");
+  // Only muscles trained recently enough to have a fatigue reading get a
+  // color — "never trained recently" is "no data," not "0% fatigued."
+  const frontPctMap = muscleGroupPctBySlug(trained.map(r => ({ MuscleGroup: r.MuscleGroup, pct: r.FatiguePct })), "front");
+  const backPctMap = muscleGroupPctBySlug(trained.map(r => ({ MuscleGroup: r.MuscleGroup, pct: r.FatiguePct })), "back");
   const colorFor = (map: Map<string, number>) => (slug: string) => map.has(slug) ? "" : "fill-gray-300 dark:fill-gray-700";
   const styleFor = (map: Map<string, number>) => (slug: string) => map.has(slug) ? { fill: fatigueColor(map.get(slug)!) } : {};
 

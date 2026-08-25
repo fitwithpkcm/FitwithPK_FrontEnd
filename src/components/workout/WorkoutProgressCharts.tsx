@@ -19,7 +19,7 @@ import {
 import {
   FRONT_PATHS, BACK_PATHS, FRONT_VIEWBOX, BACK_VIEWBOX, muscleGroupPctBySlug,
 } from "../../lib/muscle-diagram/paths";
-import { targetColor } from "../../lib/muscle-diagram/colorScale";
+import { targetColor, targetDiagramColor } from "../../lib/muscle-diagram/colorScale";
 import BodySvg from "./BodySvg";
 import MuscleFatigueTab from "./MuscleFatigueTab";
 import MuscleStrengthTab from "./MuscleStrengthTab";
@@ -191,10 +191,13 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
     ? balanceWithPct.filter(m => m.scaledTarget != null && m.Sets >= m.scaledTarget).length
     : trainedMuscles.length;
 
-  const frontPctMap = muscleGroupPctBySlug(balanceWithPct.map(m => ({ MuscleGroup: m.MuscleGroup, pct: m.pct })), "front");
-  const backPctMap = muscleGroupPctBySlug(balanceWithPct.map(m => ({ MuscleGroup: m.MuscleGroup, pct: m.pct })), "back");
+  // Only muscles actually trained this period get a color — an untrained
+  // muscle (0 sets) is "no data," not "0% progress," so it stays the plain
+  // gray fallback on the diagram, matching its "Not trained" chip below.
+  const frontPctMap = muscleGroupPctBySlug(trainedMuscles.map(m => ({ MuscleGroup: m.MuscleGroup, pct: m.pct })), "front");
+  const backPctMap = muscleGroupPctBySlug(trainedMuscles.map(m => ({ MuscleGroup: m.MuscleGroup, pct: m.pct })), "back");
   const colorFor = (map: Map<string, number>) => (slug: string) => map.has(slug) ? "" : "fill-gray-300 dark:fill-gray-700";
-  const styleFor = (map: Map<string, number>) => (slug: string) => map.has(slug) ? { fill: targetColor(map.get(slug)!) } : {};
+  const styleFor = (map: Map<string, number>) => (slug: string) => map.has(slug) ? { fill: targetDiagramColor(map.get(slug)!) } : {};
 
   return (
     <div className="space-y-5 px-4 py-4 pb-6">
@@ -338,7 +341,7 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
                 {/* gradient legend */}
                 <div className="mt-4 flex items-center gap-2 text-[10px] text-gray-400 dark:text-gray-500 border-t border-gray-50 dark:border-gray-800 pt-3">
                   <span>Less</span>
-                  <span className="flex-1 h-1.5 rounded-full" style={{ background: `linear-gradient(to right, ${targetColor(0)}, ${targetColor(50)}, ${targetColor(100)})` }} />
+                  <span className="flex-1 h-1.5 rounded-full" style={{ background: `linear-gradient(to right, ${targetDiagramColor(0)}, ${targetDiagramColor(50)}, ${targetDiagramColor(100)})` }} />
                   <span>More</span>
                 </div>
               </>
