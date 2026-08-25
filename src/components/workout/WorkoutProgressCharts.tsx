@@ -305,29 +305,34 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
               <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
             ) : (
               <>
-                <div className="flex items-start justify-center gap-3 -mx-4 mb-2">
-                  <div className="flex-1 max-w-[200px] sm:max-w-[240px]">
-                    <BodySvg paths={FRONT_PATHS} viewBox={FRONT_VIEWBOX} colorFor={colorFor(frontPctMap)} styleFor={styleFor(frontPctMap)} onSlugClick={handleSlugClick} />
-                  </div>
-                  <div className="flex-1 max-w-[200px] sm:max-w-[240px]">
-                    <BodySvg paths={BACK_PATHS} viewBox={BACK_VIEWBOX} colorFor={colorFor(backPctMap)} styleFor={styleFor(backPctMap)} onSlugClick={handleSlugClick} />
-                  </div>
-                </div>
-
-                <div className="h-5 flex items-center justify-center gap-2 mb-2">
-                  {focusedMuscle && focusedData ? (
+                {(() => {
+                  const isFocusedSlug = focusedMuscle ? (slug: string) => slugToMuscleGroup(slug) === focusedMuscle : undefined;
+                  const focusedLabel = focusedMuscle && focusedData ? (
                     <>
-                      <span className="text-xs font-bold text-gray-800 dark:text-white">{focusedMuscle}</span>
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                      <span className="text-[11px] font-bold text-gray-800 dark:text-white truncate w-full">{focusedMuscle}</span>
+                      <span className="text-[9px] text-gray-500 dark:text-gray-400 truncate w-full">
                         {focusedData.Sets > 0
                           ? (focusedData.scaledTarget != null ? `${focusedData.Sets}/${focusedData.scaledTarget} sets` : `${focusedData.Sets} sets`)
                           : "Not trained in this period"}
                       </span>
                     </>
-                  ) : (
-                    <span className="text-[10px] text-gray-300 dark:text-gray-600">Tap a muscle for details</span>
-                  )}
-                </div>
+                  ) : undefined;
+
+                  return (
+                    <div className="flex items-start justify-center gap-3 -mx-4 mb-4">
+                      <div className="flex-1 max-w-[200px] sm:max-w-[240px]">
+                        <BodySvg paths={FRONT_PATHS} viewBox={FRONT_VIEWBOX} colorFor={colorFor(frontPctMap)} styleFor={styleFor(frontPctMap)} onSlugClick={handleSlugClick} isFocusedSlug={isFocusedSlug} focusedLabel={focusedLabel} />
+                      </div>
+                      <div className="flex-1 max-w-[200px] sm:max-w-[240px]">
+                        <BodySvg paths={BACK_PATHS} viewBox={BACK_VIEWBOX} colorFor={colorFor(backPctMap)} styleFor={styleFor(backPctMap)} onSlugClick={handleSlugClick} isFocusedSlug={isFocusedSlug} focusedLabel={focusedLabel} />
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {!focusedMuscle && (
+                  <p className="text-[10px] text-gray-300 dark:text-gray-600 text-center mb-2">Tap a muscle for details</p>
+                )}
 
                 <div className="space-y-3">
                   {sortedTrained.map(m => (
