@@ -80,6 +80,17 @@ export const MUSCLE_GROUP_TO_SLUGS: Record<string, { front?: string[]; back?: st
   Core:       { front: ["abs", "upperAbs", "lowerAbs", "obliques", "serratus"] },
 };
 
+// Reverse of MUSCLE_GROUP_TO_SLUGS: given a tapped artwork slug, which
+// MuscleGroup does it belong to (if any — hands/feet/neck/etc. aren't part
+// of any bucket and correctly resolve to undefined).
+const SLUG_TO_MUSCLE_GROUP: Record<string, string> = {};
+for (const [muscleGroup, entry] of Object.entries(MUSCLE_GROUP_TO_SLUGS)) {
+  [...(entry.front ?? []), ...(entry.back ?? [])].forEach(slug => { SLUG_TO_MUSCLE_GROUP[slug] = muscleGroup; });
+}
+export function slugToMuscleGroup(slug: string): string | undefined {
+  return SLUG_TO_MUSCLE_GROUP[slug];
+}
+
 export function musclesToSlugs(muscleGroups: string[], view: "front" | "back"): Set<string> {
   const slugs = new Set<string>();
   for (const mg of muscleGroups) {

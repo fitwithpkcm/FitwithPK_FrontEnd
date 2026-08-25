@@ -17,7 +17,7 @@ import {
   IVolumeDataPoint, IMuscleVolumePoint, IMuscleTarget, MUSCLE_GROUPS,
 } from "../../interface/IWorkout";
 import {
-  FRONT_PATHS, BACK_PATHS, FRONT_VIEWBOX, BACK_VIEWBOX, muscleGroupPctBySlug,
+  FRONT_PATHS, BACK_PATHS, FRONT_VIEWBOX, BACK_VIEWBOX, muscleGroupPctBySlug, slugToMuscleGroup,
 } from "../../lib/muscle-diagram/paths";
 import { targetColor, targetDiagramColor } from "../../lib/muscle-diagram/colorScale";
 import BodySvg from "./BodySvg";
@@ -99,6 +99,7 @@ interface Props {
 export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
   const [range, setRange] = useState<Range>("week");
   const [subTab, setSubTab] = useState<"balance" | "fatigue" | "strength">("balance");
+  const [focusedMuscle, setFocusedMuscle] = useState<string | null>(null);
   const rangeDays = RANGE_TO_DAYS[range];
   const periodLabel = RANGE_PERIOD_TEXT[range];
 
@@ -197,7 +198,25 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
   const frontPctMap = muscleGroupPctBySlug(trainedMuscles.map(m => ({ MuscleGroup: m.MuscleGroup, pct: m.pct })), "front");
   const backPctMap = muscleGroupPctBySlug(trainedMuscles.map(m => ({ MuscleGroup: m.MuscleGroup, pct: m.pct })), "back");
   const colorFor = (map: Map<string, number>) => (slug: string) => map.has(slug) ? "" : "fill-gray-300 dark:fill-gray-700";
-  const styleFor = (map: Map<string, number>) => (slug: string) => map.has(slug) ? { fill: targetDiagramColor(map.get(slug)!) } : {};
+  const styleFor = (map: Map<string, number>) => (slug: string): React.CSSProperties => {
+    const base: React.CSSProperties = map.has(slug) ? { fill: targetDiagramColor(map.get(slug)!) } : {};
+    if (!focusedMuscle) return base;
+    const isFocused = slugToMuscleGroup(slug) === focusedMuscle;
+    return {
+      ...base,
+      opacity: isFocused ? 1 : 0.3,
+      transform: isFocused ? "scale(1.08)" : undefined,
+      transformOrigin: "center",
+      transformBox: "fill-box",
+      transition: "opacity 0.2s ease, transform 0.2s ease",
+    };
+  };
+  const handleSlugClick = (slug: string) => {
+    const mg = slugToMuscleGroup(slug);
+    if (!mg) return;
+    setFocusedMuscle(prev => prev === mg ? null : mg);
+  };
+  const focusedData = focusedMuscle ? balanceWithPct.find(m => m.MuscleGroup === focusedMuscle) : null;
 
   return (
     <div className="space-y-5 px-4 py-4 pb-6">
@@ -286,13 +305,28 @@ export default function WorkoutProgressCharts({ idUser, isAdmin }: Props) {
               <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
             ) : (
               <>
-                <div className="flex items-start justify-center gap-6 mb-4">
+                <div className="flex items-start justify-center gap-6 mb-2">
                   <div className="w-36 sm:w-48">
-                    <BodySvg paths={FRONT_PATHS} viewBox={FRONT_VIEWBOX} colorFor={colorFor(frontPctMap)} styleFor={styleFor(frontPctMap)} />
+                    <BodySvg paths={FRONT_PATHS} viewBox={FRONT_VIEWBOX} colorFor={colorFor(frontPctMap)} styleFor={styleFor(frontPctMap)} onSlugClick={handleSlugClick} />
                   </div>
                   <div className="w-36 sm:w-48">
-                    <BodySvg paths={BACK_PATHS} viewBox={BACK_VIEWBOX} colorFor={colorFor(backPctMap)} styleFor={styleFor(backPctMap)} />
+                    <BodySvg paths={BACK_PATHS} viewBox={BACK_VIEWBOX} colorFor={colorFor(backPctMap)} styleFor={styleFor(backPctMap)} onSlugClick={handleSlugClick} />
                   </div>
+                </div>
+
+                <div className="h-5 flex items-center justify-center gap-2 mb-2">
+                  {focusedMuscle && focusedData ? (
+                    <>
+                      <span className="text-xs font-bold text-gray-800 dark:text-white">{focusedMuscle}</span>
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                        {focusedData.Sets > 0
+                          ? (focusedData.scaledTarget != null ? `${focusedData.Sets}/${focusedData.scaledTarget} sets` : `${focusedData.Sets} sets`)
+                          : "Not trained in this period"}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[10px] text-gray-300 dark:text-gray-600">Tap a muscle for details</span>
+                  )}
                 </div>
 
                 <div className="space-y-3">

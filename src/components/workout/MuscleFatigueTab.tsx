@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "../ui/card";
 import { getMuscleGroupSetHistory } from "../../services/WorkoutService";
 import { IMuscleSetHistoryRow } from "../../interface/IWorkout";
-import { FRONT_PATHS, BACK_PATHS, FRONT_VIEWBOX, BACK_VIEWBOX, muscleGroupPctBySlug } from "../../lib/muscle-diagram/paths";
+import { FRONT_PATHS, BACK_PATHS, FRONT_VIEWBOX, BACK_VIEWBOX, muscleGroupPctBySlug, slugToMuscleGroup } from "../../lib/muscle-diagram/paths";
 import { fatigueColor } from "../../lib/muscle-diagram/colorScale";
 import { computeFatigue } from "../../lib/workout/muscleAnalytics";
 import BodySvg from "./BodySvg";
@@ -14,6 +14,7 @@ import BodySvg from "./BodySvg";
 const LOOKBACK_DAYS = 30;
 
 export default function MuscleFatigueTab({ idUser }: { idUser?: number }) {
+  const [focusedMuscle, setFocusedMuscle] = useState<string | null>(null);
   const { data: res, isLoading } = useQuery({
     queryKey: ["muscle-set-history", "fatigue", idUser],
     queryFn: () => getMuscleGroupSetHistory({ IdUser: idUser, days: LOOKBACK_DAYS }),
@@ -31,7 +32,25 @@ export default function MuscleFatigueTab({ idUser }: { idUser?: number }) {
   const frontPctMap = muscleGroupPctBySlug(trained.map(r => ({ MuscleGroup: r.MuscleGroup, pct: r.FatiguePct })), "front");
   const backPctMap = muscleGroupPctBySlug(trained.map(r => ({ MuscleGroup: r.MuscleGroup, pct: r.FatiguePct })), "back");
   const colorFor = (map: Map<string, number>) => (slug: string) => map.has(slug) ? "" : "fill-gray-300 dark:fill-gray-700";
-  const styleFor = (map: Map<string, number>) => (slug: string) => map.has(slug) ? { fill: fatigueColor(map.get(slug)!) } : {};
+  const styleFor = (map: Map<string, number>) => (slug: string): React.CSSProperties => {
+    const base: React.CSSProperties = map.has(slug) ? { fill: fatigueColor(map.get(slug)!) } : {};
+    if (!focusedMuscle) return base;
+    const isFocused = slugToMuscleGroup(slug) === focusedMuscle;
+    return {
+      ...base,
+      opacity: isFocused ? 1 : 0.3,
+      transform: isFocused ? "scale(1.08)" : undefined,
+      transformOrigin: "center",
+      transformBox: "fill-box",
+      transition: "opacity 0.2s ease, transform 0.2s ease",
+    };
+  };
+  const handleSlugClick = (slug: string) => {
+    const mg = slugToMuscleGroup(slug);
+    if (!mg) return;
+    setFocusedMuscle(prev => prev === mg ? null : mg);
+  };
+  const focusedResult = focusedMuscle ? results.find(r => r.MuscleGroup === focusedMuscle) : null;
 
   return (
     <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
@@ -46,13 +65,28 @@ export default function MuscleFatigueTab({ idUser }: { idUser?: number }) {
           <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
         ) : (
           <>
-            <div className="flex items-start justify-center gap-6 mb-4">
+            <div className="flex items-start justify-center gap-6 mb-2">
               <div className="w-36 sm:w-48">
-                <BodySvg paths={FRONT_PATHS} viewBox={FRONT_VIEWBOX} colorFor={colorFor(frontPctMap)} styleFor={styleFor(frontPctMap)} />
+                <BodySvg paths={FRONT_PATHS} viewBox={FRONT_VIEWBOX} colorFor={colorFor(frontPctMap)} styleFor={styleFor(frontPctMap)} onSlugClick={handleSlugClick} />
               </div>
               <div className="w-36 sm:w-48">
-                <BodySvg paths={BACK_PATHS} viewBox={BACK_VIEWBOX} colorFor={colorFor(backPctMap)} styleFor={styleFor(backPctMap)} />
+                <BodySvg paths={BACK_PATHS} viewBox={BACK_VIEWBOX} colorFor={colorFor(backPctMap)} styleFor={styleFor(backPctMap)} onSlugClick={handleSlugClick} />
               </div>
+            </div>
+
+            <div className="h-5 flex items-center justify-center gap-2 mb-2">
+              {focusedMuscle && focusedResult ? (
+                <>
+                  <span className="text-xs font-bold text-gray-800 dark:text-white">{focusedMuscle}</span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                    {focusedResult.DaysSinceLastTrained != null
+                      ? `Est. Fatigue: ${focusedResult.FatiguePct}% · ${focusedResult.DaysSinceLastTrained === 0 ? "today" : `${focusedResult.DaysSinceLastTrained}d ago`}`
+                      : "Not trained recently"}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[10px] text-gray-300 dark:text-gray-600">Tap a muscle for details</span>
+              )}
             </div>
 
             <div className="space-y-3">
