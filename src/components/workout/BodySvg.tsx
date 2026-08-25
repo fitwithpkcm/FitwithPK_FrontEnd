@@ -11,9 +11,15 @@ import { BodyPartPaths } from "../../lib/muscle-diagram/paths";
 // `onSlugClick` is optional — when passed, each region becomes tappable and
 // reports its raw slug back to the caller (e.g. to focus/highlight it).
 // `isFocusedSlug`/`focusedLabel` are optional — when the caller has a slug
-// currently focused, this draws a leader line + label directly on the region
-// (measured from the rendered path geometry) instead of the caller having to
-// show the name somewhere else on the page.
+// currently focused, this draws a leader line straight out to the nearer
+// side margin (clear of the silhouette) ending in a label badge, instead of
+// the caller having to show the name somewhere else on the page. The line
+// is drawn in the SVG's own coordinate space (so it scales with the artwork
+// correctly), but the label itself is a plain HTML element positioned by
+// percentage over the SVG — real text needs real CSS pixels, and the
+// viewBox here is ~727x1280 user units, not pixels, so a foreignObject sized
+// in those units would render at a small fraction of the size it looks like
+// in the JSX.
 export default function BodySvg({
   paths, viewBox, colorFor, styleFor, onSlugClick, isFocusedSlug, focusedLabel,
 }: {
@@ -25,11 +31,12 @@ export default function BodySvg({
   isFocusedSlug?: (slug: string) => boolean;
   focusedLabel?: React.ReactNode;
 }) {
-  const groupRefs = useRef(new Map<string, SVGGElement>());
+  const svgRef = useRef<SVGSVGElement>(null);
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
 
   useLayoutEffect(() => {
-    if (!isFocusedSlug) {
+    const svg = svgRef.current;
+    if (!svg || !isFocusedSlug) {
       setAnchor(null);
       return;
     }
@@ -37,7 +44,7 @@ export default function BodySvg({
     let found = false;
     for (const part of paths) {
       if (!isFocusedSlug(part.slug)) continue;
-      const el = groupRefs.current.get(part.slug);
+      const el = svg.querySelector(`[data-slug="${part.slug}"]`) as SVGGraphicsElement | null;
       if (!el) continue;
       try {
         const bbox = el.getBBox();
@@ -54,52 +61,68 @@ export default function BodySvg({
     setAnchor(found ? { x: (minX + maxX) / 2, y: (minY + maxY) / 2 } : null);
   }, [paths, isFocusedSlug]);
 
-  const [vbX, vbY, vbW] = viewBox.split(" ").map(Number);
-  const badgeW = 168;
-  const badgeH = 44;
-  const lineLift = 116;
-  const labelY = anchor ? Math.max(vbY + 8, anchor.y - lineLift) : 0;
-  const boxX = anchor ? Math.min(Math.max(anchor.x - badgeW / 2, vbX + 8), vbX + vbW - badgeW - 8) : 0;
+  const [vbX, vbY, vbW, vbH] = viewBox.split(" ").map(Number);
+
+  // Push the line straight out to whichever side margin is nearer — most
+  // muscle groups sit well inside the figure's horizontal center, leaving
+  // open space at the left/right edges of the viewBox for the line to land in.
+  const side = anchor && anchor.x < vbX + vbW / 2 ? "left" : "right";
+  const edgeX = side === "left" ? vbX + vbW * 0.04 : vbX + vbW * 0.96;
+  const lineEndY = anchor
+    ? Math.min(Math.max(anchor.y, vbY + vbH * 0.08), vbY + vbH * 0.92)
+    : 0;
+  const labelLeftPct = anchor ? ((edgeX - vbX) / vbW) * 100 : 0;
+  const labelTopPct = anchor ? ((lineEndY - vbY) / vbH) * 100 : 0;
 
   return (
-    <svg viewBox={viewBox} className="w-full h-auto overflow-visible">
-      {paths.map(part => {
-        const allD = [...(part.common ?? []), ...(part.left ?? []), ...(part.right ?? [])];
-        return (
-          <g
-            key={part.slug}
-            ref={el => {
-              if (el) groupRefs.current.set(part.slug, el);
-              else groupRefs.current.delete(part.slug);
-            }}
-            className={colorFor(part.slug)}
-            style={{ ...styleFor?.(part.slug), cursor: onSlugClick ? "pointer" : undefined }}
-            onClick={onSlugClick ? () => onSlugClick(part.slug) : undefined}
-          >
-            {allD.map((d, i) => <path key={i} d={d} />)}
-          </g>
-        );
-      })}
+    <div className="relative w-full">
+      <svg ref={svgRef} viewBox={viewBox} className="w-full h-auto overflow-visible">
+        {paths.map(part => {
+          const allD = [...(part.common ?? []), ...(part.left ?? []), ...(part.right ?? [])];
+          return (
+            <g
+              key={part.slug}
+              data-slug={part.slug}
+              className={colorFor(part.slug)}
+              style={{ ...styleFor?.(part.slug), cursor: onSlugClick ? "pointer" : undefined }}
+              onClick={onSlugClick ? () => onSlugClick(part.slug) : undefined}
+            >
+              {allD.map((d, i) => <path key={i} d={d} />)}
+            </g>
+          );
+        })}
+
+        {anchor && focusedLabel && (
+          <>
+            <line
+              x1={anchor.x} y1={anchor.y} x2={edgeX} y2={lineEndY}
+              stroke="currentColor"
+              className="text-primary"
+              strokeWidth={vbW * 0.012}
+              strokeLinecap="round"
+            />
+            <circle cx={anchor.x} cy={anchor.y} r={vbW * 0.02} className="fill-primary" />
+            <circle cx={edgeX} cy={lineEndY} r={vbW * 0.012} className="fill-primary" />
+          </>
+        )}
+      </svg>
 
       {anchor && focusedLabel && (
-        <>
-          <line
-            x1={anchor.x} y1={anchor.y} x2={anchor.x} y2={labelY + badgeH}
-            className="stroke-gray-500 dark:stroke-gray-300"
-            strokeWidth={3}
-            strokeDasharray="2 6"
-            strokeLinecap="round"
-          />
-          <circle cx={anchor.x} cy={anchor.y} r={9} className="fill-gray-700 dark:fill-gray-100" />
-          <foreignObject x={boxX} y={labelY} width={badgeW} height={badgeH}>
-            <div
-              className="h-full flex flex-col items-center justify-center text-center rounded-lg border border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 shadow-md px-2 leading-tight"
-            >
-              {focusedLabel}
-            </div>
-          </foreignObject>
-        </>
+        <div
+          className="absolute z-10 flex flex-col items-stretch text-center gap-0.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md px-2 py-1 pointer-events-none"
+          style={{
+            left: `${labelLeftPct}%`,
+            top: `${labelTopPct}%`,
+            minWidth: 90,
+            maxWidth: 140,
+            transform: side === "left"
+              ? "translate(calc(-100% - 4px), -50%)"
+              : "translate(4px, -50%)",
+          }}
+        >
+          {focusedLabel}
+        </div>
       )}
-    </svg>
+    </div>
   );
 }
