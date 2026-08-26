@@ -971,8 +971,8 @@ function LogViewerDialog({ open, workout, logs, setLogs, onClose }: {
 
 // ── Workout Card ──────────────────────────────────────────────────
 
-function WorkoutCard({ workout, logs, onEdit, onDelete, onReschedule, onViewLog }: {
-  workout: IWorkout; logs: IExerciseLog[];
+function WorkoutCard({ workout, logs, hasLoggedSets, onEdit, onDelete, onReschedule, onViewLog }: {
+  workout: IWorkout; logs: IExerciseLog[]; hasLoggedSets: boolean;
   onEdit: (w: IWorkout) => void; onDelete: (w: IWorkout) => void;
   onReschedule: (w: IWorkout) => void; onViewLog: (w: IWorkout) => void;
 }) {
@@ -1055,9 +1055,10 @@ function WorkoutCard({ workout, logs, onEdit, onDelete, onReschedule, onViewLog 
         </div>
       )}
 
-      <button onClick={() => onDelete(workout)}
-        className="w-full flex items-center justify-center gap-1.5 py-2.5 text-[11px] text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 border-t border-gray-100 dark:border-gray-700 transition-colors">
-        <Trash2 className="h-3 w-3" /> Delete workout
+      <button onClick={() => onDelete(workout)} disabled={hasLoggedSets}
+        title={hasLoggedSets ? "Can't delete — sets are already logged against this workout" : undefined}
+        className="w-full flex items-center justify-center gap-1.5 py-2.5 text-[11px] text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 border-t border-gray-100 dark:border-gray-700 transition-colors disabled:opacity-40 disabled:hover:text-gray-400 disabled:hover:bg-transparent">
+        <Trash2 className="h-3 w-3" /> {hasLoggedSets ? "Logged — can't delete" : "Delete workout"}
       </button>
     </Card>
   );
@@ -1841,7 +1842,7 @@ function WeeklyPlannerTab({ selectedClient, library }: {
   const deleteMut = useMutation({
     mutationFn: deleteWorkout,
     onSuccess: () => invalidateWeek(),
-    onError: () => toast.error('Failed to remove'),
+    onError: (error: Error) => toast.error(error.message || 'Failed to remove'),
   });
 
   const handleAddFromTemplate = (tpl: IWorkoutTemplate) => {
@@ -2108,7 +2109,7 @@ export default function AdminWorkoutPlanPage() {
 
   const createMut     = useMutation({ mutationFn: createWorkout,     onSuccess: () => { toast.success("Workout created!"); invalidate(); setEditorOpen(false); }, onError: () => toast.error("Failed to create") });
   const updateMut     = useMutation({ mutationFn: updateWorkout,     onSuccess: () => { toast.success("Updated!");          invalidate(); setEditorOpen(false); }, onError: () => toast.error("Failed to update") });
-  const deleteMut     = useMutation({ mutationFn: deleteWorkout,     onSuccess: () => { toast.success("Deleted — find it in Recently Deleted if that was a mistake"); invalidate(); }, onError: () => toast.error("Failed to delete") });
+  const deleteMut     = useMutation({ mutationFn: deleteWorkout,     onSuccess: () => { toast.success("Deleted — find it in Recently Deleted if that was a mistake"); invalidate(); }, onError: (error: Error) => toast.error(error.message || "Failed to delete") });
   const restoreMut    = useMutation({
     mutationFn: restoreWorkout,
     onMutate: (vars) => setRestoringId(vars.IdWorkout),
@@ -2141,12 +2142,12 @@ export default function AdminWorkoutPlanPage() {
     });
   };
   const handleDelete  = (w: IWorkout) => {
-    const hasLogs = allSetLogs.some(l => l.IdWorkout === w.IdWorkout)
-      || allLogs.some(l => l.IdWorkout === w.IdWorkout && l.IsCompleted === 1);
-    const message = hasLogs
-      ? `"${w.WorkoutName}" already has logged sets for today. Delete it anyway? (You can restore it from Recently Deleted.)`
-      : `Delete "${w.WorkoutName}"? (You can restore it from Recently Deleted.)`;
-    if (!confirm(message)) return;
+    const hasLogs = allSetLogs.some(l => l.IdWorkout === w.IdWorkout);
+    if (hasLogs) {
+      toast.error(`"${w.WorkoutName}" already has logged sets — it can't be deleted. Only workouts with nothing logged can be removed.`);
+      return;
+    }
+    if (!confirm(`Delete "${w.WorkoutName}"? (You can restore it from Recently Deleted.)`)) return;
     deleteMut.mutate({ IdWorkout: w.IdWorkout! });
   };
   const handleRestore = (w: IWorkout) => restoreMut.mutate({ IdWorkout: w.IdWorkout! });
@@ -2392,6 +2393,7 @@ export default function AdminWorkoutPlanPage() {
             {!workoutsLoading && workouts.map(w => (
               <WorkoutCard key={w.IdWorkout ?? w.WorkoutName} workout={w}
                 logs={allLogs.filter(l => l.IdWorkout === w.IdWorkout)}
+                hasLoggedSets={allSetLogs.some(l => l.IdWorkout === w.IdWorkout)}
                 onEdit={w => { setEditingWorkout(w); setEditorOpen(true); }}
                 onDelete={handleDelete}
                 onReschedule={w => { setReschedulingWorkout(w); setRescheduleOpen(true); }}

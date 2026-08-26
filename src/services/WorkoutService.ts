@@ -14,7 +14,10 @@ export const updateWorkout = (params: IWorkout) =>
   httpCall({ method: "post", url: API_URL.UPDATE_WORKOUT, data: params });
 
 export const deleteWorkout = (params: { IdWorkout: number }) =>
-  httpCall({ method: "post", url: API_URL.DELETE_WORKOUT, data: params });
+  httpCall({ method: "post", url: API_URL.DELETE_WORKOUT, data: params }).then((response) => {
+    if (!response.data?.success) throw new Error(response.data?.message || "Failed to delete workout");
+    return response;
+  });
 
 export const restoreWorkout = (params: { IdWorkout: number }) =>
   httpCall({ method: "post", url: API_URL.RESTORE_WORKOUT, data: params });
