@@ -1144,11 +1144,17 @@ function WorkoutCard({ workout, setLogs, onExerciseClick, onLogSet, onDeleteSet,
           <Progress value={completePct} className="h-1.5" />
         </div>
         {onStartWorkout && (
-          <button
-            onClick={e => { e.stopPropagation(); onStartWorkout(workout); }}
-            className="mt-2.5 w-full h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors">
-            <Play className="h-3.5 w-3.5" fill="currentColor" /> Start Workout
-          </button>
+          completePct === 100 ? (
+            <div className="mt-2.5 w-full h-9 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-bold flex items-center justify-center gap-1.5">
+              <Check className="h-3.5 w-3.5" strokeWidth={3} /> Workout Completed
+            </div>
+          ) : (
+            <button
+              onClick={e => { e.stopPropagation(); onStartWorkout(workout); }}
+              className="mt-2.5 w-full h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors">
+              <Play className="h-3.5 w-3.5" fill="currentColor" /> {loggedSets > 0 ? "Resume Workout" : "Start Workout"}
+            </button>
+          )
         )}
       </div>
 

@@ -123,13 +123,18 @@ export default function HomePage() {
   });
   const todaySetLogs: ISetLog[] = Array.isArray(todaySetLogsRes?.data?.data) ? todaySetLogsRes.data.data : [];
 
-  // First workout today that isn't fully logged yet — hidden once complete
-  // so the card doesn't linger after there's nothing left to resume.
+  // First workout today that isn't fully logged yet — once complete, the
+  // card switches to a "completed" state instead of disappearing.
   const resumeWorkout = todayWorkouts.find(w => {
     const totalSets = w.Exercises.reduce((s, ex) => s + ex.Sets, 0);
     const loggedSets = todaySetLogs.filter(l => w.Exercises.some(ex => ex.IdExercise === l.IdExercise)).length;
     return totalSets > 0 && loggedSets < totalSets;
   });
+  const completedWorkout = !resumeWorkout ? todayWorkouts.find(w => {
+    const totalSets = w.Exercises.reduce((s, ex) => s + ex.Sets, 0);
+    const loggedSets = todaySetLogs.filter(l => w.Exercises.some(ex => ex.IdExercise === l.IdExercise)).length;
+    return totalSets > 0 && loggedSets >= totalSets;
+  }) : undefined;
   const resumeTotalSets = resumeWorkout ? resumeWorkout.Exercises.reduce((s, ex) => s + ex.Sets, 0) : 0;
   const resumeLoggedSets = resumeWorkout
     ? todaySetLogs.filter(l => resumeWorkout.Exercises.some(ex => ex.IdExercise === l.IdExercise)).length
@@ -785,7 +790,30 @@ export default function HomePage() {
             </Card>
           </Link>
         )}
-        {!resumeWorkout && todayWorkouts.length === 0 && (
+        {completedWorkout && (
+          <Card className="mb-4 border border-green-100 dark:border-green-900/50 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/40 dark:to-gray-900 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-wide text-green-600 dark:text-green-400 uppercase">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-600 dark:bg-green-400" />
+                  Today
+                </span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-400/10 dark:text-green-300">
+                  Completed
+                </span>
+              </div>
+              <p className="text-lg font-bold text-gray-900 dark:text-white mb-0.5">{completedWorkout.WorkoutName}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                {completedWorkout.Exercises.length} of {completedWorkout.Exercises.length} exercises done
+              </p>
+              <div className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                Workout Completed
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {!resumeWorkout && !completedWorkout && todayWorkouts.length === 0 && (
           <Card className="mb-4 border border-gray-100 dark:border-gray-800 dark:bg-gray-900 shadow-sm">
             <CardContent className="p-4 flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
