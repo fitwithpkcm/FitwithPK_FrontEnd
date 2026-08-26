@@ -57,6 +57,17 @@ export default function GuidedExercisePanel({
   const targetWeight = exercise.TargetWeight != null ? Number(exercise.TargetWeight) : 0;
   const getPending = (setNumber: number) => {
     if (pending[setNumber]) return pending[setNumber];
+    // Once earlier sets are logged, base +/- steppers off the last logged
+    // set instead of resetting to the suggestion/target every row.
+    const priorLogged = todaySetLogs
+      .filter(s => s.SetNumber < setNumber)
+      .sort((a, b) => b.SetNumber - a.SetNumber)[0];
+    if (priorLogged) {
+      return {
+        reps: Number(priorLogged.RepsCompleted),
+        weight: priorLogged.WeightUsed != null ? Number(priorLogged.WeightUsed) : targetWeight,
+      };
+    }
     if (setNumber === 1 && suggestion) {
       return { reps: suggestion.RepsCompleted, weight: suggestion.WeightUsed ?? targetWeight };
     }
@@ -81,7 +92,7 @@ export default function GuidedExercisePanel({
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-3">
-      {thumb && (
+      {thumb ? (
         <button onClick={onOpenVideo} className="relative w-full rounded-xl overflow-hidden aspect-video bg-black">
           <img src={thumb} alt={exercise.ExerciseName} className="w-full h-full object-cover opacity-80" />
           <div className="absolute inset-0 flex items-center justify-center">
@@ -90,6 +101,8 @@ export default function GuidedExercisePanel({
             </div>
           </div>
         </button>
+      ) : (
+        <div className="relative w-full rounded-xl overflow-hidden aspect-video bg-black" />
       )}
 
       <div>
@@ -131,7 +144,21 @@ export default function GuidedExercisePanel({
                     className="w-6 h-6 rounded-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-600 text-gray-500 flex items-center justify-center disabled:opacity-30">
                     <Minus className="h-3 w-3" />
                   </button>
-                  <span className="w-10 text-center text-sm font-semibold text-gray-800 dark:text-gray-100 tabular-nums">{vals.weight}</span>
+                  <input
+                    key={`weight-${setNumber}-${vals.weight}`}
+                    type="number"
+                    inputMode="decimal"
+                    step="2.5"
+                    disabled={done}
+                    defaultValue={vals.weight}
+                    onFocus={e => e.target.select()}
+                    onBlur={e => {
+                      const n = parseFloat(e.target.value);
+                      setPendingField(setNumber, "weight", Number.isNaN(n) ? vals.weight : n);
+                    }}
+                    onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                    className="w-12 text-center text-sm font-semibold text-gray-800 dark:text-gray-100 tabular-nums bg-transparent border-b border-transparent focus:border-gray-400 outline-none disabled:opacity-60 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
                   <button disabled={done} onClick={() => setPendingField(setNumber, "weight", vals.weight + 2.5)}
                     className="w-6 h-6 rounded-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-600 text-gray-500 flex items-center justify-center disabled:opacity-30">
                     <Plus className="h-3 w-3" />
@@ -143,7 +170,21 @@ export default function GuidedExercisePanel({
                   className="w-6 h-6 rounded-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-600 text-gray-500 flex items-center justify-center disabled:opacity-30">
                   <Minus className="h-3 w-3" />
                 </button>
-                <span className="w-8 text-center text-sm font-semibold text-gray-800 dark:text-gray-100 tabular-nums">{vals.reps}</span>
+                <input
+                  key={`reps-${setNumber}-${vals.reps}`}
+                  type="number"
+                  inputMode="numeric"
+                  step="1"
+                  disabled={done}
+                  defaultValue={vals.reps}
+                  onFocus={e => e.target.select()}
+                  onBlur={e => {
+                    const n = parseFloat(e.target.value);
+                    setPendingField(setNumber, "reps", Number.isNaN(n) ? vals.reps : n);
+                  }}
+                  onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                  className="w-10 text-center text-sm font-semibold text-gray-800 dark:text-gray-100 tabular-nums bg-transparent border-b border-transparent focus:border-gray-400 outline-none disabled:opacity-60 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
                 <button disabled={done} onClick={() => setPendingField(setNumber, "reps", vals.reps + 1)}
                   className="w-6 h-6 rounded-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-600 text-gray-500 flex items-center justify-center disabled:opacity-30">
                   <Plus className="h-3 w-3" />
