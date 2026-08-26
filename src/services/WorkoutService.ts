@@ -16,6 +16,12 @@ export const updateWorkout = (params: IWorkout) =>
 export const deleteWorkout = (params: { IdWorkout: number }) =>
   httpCall({ method: "post", url: API_URL.DELETE_WORKOUT, data: params });
 
+export const restoreWorkout = (params: { IdWorkout: number }) =>
+  httpCall({ method: "post", url: API_URL.RESTORE_WORKOUT, data: params });
+
+export const getDeletedWorkouts = (params: { IdUser: number }) =>
+  httpCall({ method: "post", url: API_URL.GET_DELETED_WORKOUTS, data: params });
+
 export const rescheduleWorkout = (params: { IdWorkout: number; NewDate: string }) =>
   httpCall({ method: "post", url: API_URL.RESCHEDULE_WORKOUT, data: params }).then((response) => {
     if (!response.data?.success) throw new Error(response.data?.message || "Failed to reschedule workout");

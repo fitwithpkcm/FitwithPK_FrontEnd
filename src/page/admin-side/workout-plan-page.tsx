@@ -7,7 +7,7 @@ import {
   ChevronLeft, ChevronRight, ArrowRightLeft, Eye,
   AlertCircle, ChevronDown, ChevronUp, Loader2, User, X,
   MessageSquare, BookOpen, Search, CalendarDays, Copy, LayoutGrid, BarChart2,
-  Download,
+  Download, RotateCcw,
 } from "lucide-react";
 import WorkoutProgressCharts from "../../components/workout/WorkoutProgressCharts";
 import moment from "moment";
@@ -27,7 +27,7 @@ import { setBaseUrl } from "../../services/HttpService";
 import { getUserListForACoach } from "../../services/AdminServices";
 import {
   getWorkoutsForClient, createWorkout, updateWorkout,
-  deleteWorkout, rescheduleWorkout, getWorkoutLogsForClient, getClientSetLogs,
+  deleteWorkout, restoreWorkout, getDeletedWorkouts, rescheduleWorkout, getWorkoutLogsForClient, getClientSetLogs,
   getExerciseLibrary, createLibraryItem, updateLibraryItem, deleteLibraryItem,
   bulkCreateWorkouts,
   getWorkoutTemplates, createWorkoutTemplate, updateWorkoutTemplate, deleteWorkoutTemplate,
@@ -1978,6 +1978,52 @@ function WeeklyPlannerTab({ selectedClient, library }: {
   );
 }
 
+// ── Recently Deleted Drawer ────────────────────────────────────────
+// Deleting a workout is a soft-delete (see deleteWorkout in the backend) —
+// this is where an accidental delete gets undone.
+
+function RecentlyDeletedDrawer({ open, workouts, restoringId, onClose, onRestore }: {
+  open: boolean; workouts: IWorkout[]; restoringId: number | null;
+  onClose: () => void; onRestore: (w: IWorkout) => void;
+}) {
+  return (
+    <Drawer open={open} onOpenChange={v => { if (!v) onClose(); }}>
+      <DrawerContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 max-h-[80vh]">
+        <div className="flex items-center justify-between px-5 pb-3">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">Recently Deleted</h2>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="overflow-y-auto px-5 pb-8 space-y-2">
+          {workouts.length === 0 ? (
+            <div className="flex flex-col items-center py-12 text-center">
+              <Trash2 className="h-8 w-8 text-gray-300 dark:text-gray-600 mb-2" />
+              <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">Nothing deleted</p>
+              <p className="text-xs text-gray-400 mt-1">Deleted workouts for this client show up here and can be restored.</p>
+            </div>
+          ) : workouts.map(w => (
+            <div key={w.IdWorkout}
+              className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 border border-gray-100 dark:border-gray-700">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{w.WorkoutName}</p>
+                <p className="text-[11px] text-gray-400">
+                  {moment(w.ScheduledDate, "DD-MM-YYYY").format("ddd, D MMM YYYY")} · {w.Exercises.length} exercise{w.Exercises.length !== 1 ? "s" : ""}
+                  {w.DeletedAt && ` · deleted ${moment(w.DeletedAt).format("D MMM, h:mm A")}`}
+                </p>
+              </div>
+              <button onClick={() => onRestore(w)} disabled={restoringId === w.IdWorkout}
+                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors disabled:opacity-40 flex-shrink-0">
+                {restoringId === w.IdWorkout ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />} Restore
+              </button>
+            </div>
+          ))}
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────
 
 export default function AdminWorkoutPlanPage() {
@@ -1994,6 +2040,8 @@ export default function AdminWorkoutPlanPage() {
   const [viewingWorkout, setViewingWorkout] = useState<IWorkout|null>(null);
   const [logsForViewer, setLogsForViewer]   = useState<IExerciseLog[]>([]);
   const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false);
+  const [deletedOpen, setDeletedOpen]       = useState(false);
+  const [restoringId, setRestoringId]       = useState<number | null>(null);
 
   // ── Queries ────────────────────────────────────────────────────
 
@@ -2042,6 +2090,14 @@ export default function AdminWorkoutPlanPage() {
   });
   const allSetLogs: ISetLog[] = setLogsRes?.data?.data ?? [];
 
+  const { data: deletedRes, refetch: refetchDeleted } = useQuery({
+    queryKey: ["deleted-workouts", selectedClient],
+    queryFn: () => getDeletedWorkouts({ IdUser: selectedClient! }),
+    enabled: !!selectedClient && deletedOpen,
+    staleTime: 0,
+  });
+  const deletedWorkouts: IWorkout[] = Array.isArray(deletedRes?.data?.data) ? deletedRes.data.data : [];
+
   // ── Mutations ──────────────────────────────────────────────────
 
   const invalidate = () => {
@@ -2052,7 +2108,14 @@ export default function AdminWorkoutPlanPage() {
 
   const createMut     = useMutation({ mutationFn: createWorkout,     onSuccess: () => { toast.success("Workout created!"); invalidate(); setEditorOpen(false); }, onError: () => toast.error("Failed to create") });
   const updateMut     = useMutation({ mutationFn: updateWorkout,     onSuccess: () => { toast.success("Updated!");          invalidate(); setEditorOpen(false); }, onError: () => toast.error("Failed to update") });
-  const deleteMut     = useMutation({ mutationFn: deleteWorkout,     onSuccess: () => { toast.success("Deleted");           invalidate(); },                      onError: () => toast.error("Failed to delete") });
+  const deleteMut     = useMutation({ mutationFn: deleteWorkout,     onSuccess: () => { toast.success("Deleted — find it in Recently Deleted if that was a mistake"); invalidate(); }, onError: () => toast.error("Failed to delete") });
+  const restoreMut    = useMutation({
+    mutationFn: restoreWorkout,
+    onMutate: (vars) => setRestoringId(vars.IdWorkout),
+    onSuccess: () => { toast.success("Workout restored"); invalidate(); refetchDeleted(); },
+    onError: () => toast.error("Failed to restore"),
+    onSettled: () => setRestoringId(null),
+  });
   const rescheduleMut = useMutation({ mutationFn: rescheduleWorkout, onSuccess: () => { toast.success("Rescheduled!");      invalidate(); setRescheduleOpen(false); }, onError: (error: Error) => toast.error(error.message || "Failed to reschedule") });
 
   const handleSave    = (w: IWorkout) => w.IdWorkout ? updateMut.mutate(w) : createMut.mutate(w);
@@ -2077,7 +2140,16 @@ export default function AdminWorkoutPlanPage() {
       })),
     });
   };
-  const handleDelete  = (w: IWorkout) => { if (!confirm(`Delete "${w.WorkoutName}"?`)) return; deleteMut.mutate({ IdWorkout: w.IdWorkout! }); };
+  const handleDelete  = (w: IWorkout) => {
+    const hasLogs = allSetLogs.some(l => l.IdWorkout === w.IdWorkout)
+      || allLogs.some(l => l.IdWorkout === w.IdWorkout && l.IsCompleted === 1);
+    const message = hasLogs
+      ? `"${w.WorkoutName}" already has logged sets for today. Delete it anyway? (You can restore it from Recently Deleted.)`
+      : `Delete "${w.WorkoutName}"? (You can restore it from Recently Deleted.)`;
+    if (!confirm(message)) return;
+    deleteMut.mutate({ IdWorkout: w.IdWorkout! });
+  };
+  const handleRestore = (w: IWorkout) => restoreMut.mutate({ IdWorkout: w.IdWorkout! });
   const handleViewLog = (w: IWorkout) => {
     setLogsForViewer(allLogs.filter(l => l.IdWorkout === w.IdWorkout));
     setViewingWorkout(w);
@@ -2100,6 +2172,15 @@ export default function AdminWorkoutPlanPage() {
           </div>
           {pageTab === "workouts" && (
             <div className="flex items-center gap-1.5">
+              <button
+                title="Recently Deleted"
+                onClick={() => {
+                  if (!selectedClient) { toast.error("Select a client first"); return; }
+                  setDeletedOpen(true);
+                }}
+                className="flex items-center justify-center w-8 h-8 bg-white/20 hover:bg-white/30 text-white rounded-full transition-colors">
+                <RotateCcw className="h-4 w-4" />
+              </button>
               <button
                 onClick={() => {
                   if (!selectedClient) { toast.error("Select a client first"); return; }
@@ -2344,6 +2425,13 @@ export default function AdminWorkoutPlanPage() {
       <LogViewerDialog open={logViewerOpen} workout={viewingWorkout} logs={logsForViewer}
         setLogs={viewingWorkout ? allSetLogs.filter(s => s.IdWorkout === viewingWorkout.IdWorkout) : []}
         onClose={() => setLogViewerOpen(false)} />
+      <RecentlyDeletedDrawer
+        open={deletedOpen}
+        workouts={deletedWorkouts}
+        restoringId={restoringId}
+        onClose={() => setDeletedOpen(false)}
+        onRestore={handleRestore}
+      />
     </div>
   );
 }

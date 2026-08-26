@@ -79,6 +79,7 @@ export interface IWorkout {
   Status?: WorkoutStatus;
   CreatedAt?: string;
   UpdatedAt?: string;
+  DeletedAt?: string;
   Exercises: IExercise[];
 }
 

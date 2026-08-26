@@ -181,6 +181,8 @@ export const API_URL = {
     CREATE_WORKOUT: '/workout/create',
     UPDATE_WORKOUT: '/workout/update',
     DELETE_WORKOUT: '/workout/delete',
+    RESTORE_WORKOUT: '/workout/restore',
+    GET_DELETED_WORKOUTS: '/workout/getDeleted',
     RESCHEDULE_WORKOUT: '/workout/reschedule',
     GET_WORKOUT_LOGS_FOR_CLIENT: '/workout/getClientLogs',
     GET_CLIENT_SET_LOGS: '/workout/getClientSetLogs',
