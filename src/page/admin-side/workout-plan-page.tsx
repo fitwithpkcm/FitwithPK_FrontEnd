@@ -1443,16 +1443,33 @@ function TemplateManager({ templates, library, onRefresh, onLibraryRefresh }: {
 
 // ── Day Assign Drawer ─────────────────────────────────────────────
 
-function DayAssignDrawer({ open, date, existingWorkouts, saving, templates, onClose, onAddFromTemplate, onRemove }: {
+function DayAssignDrawer({ open, date, existingWorkouts, saving, templates, selectedClient, onClose, onAddFromTemplate, onRemove, onBulkAssigned }: {
   open: boolean; date: string; existingWorkouts: IWorkout[];
-  saving: boolean; templates: IWorkoutTemplate[]; onClose: () => void;
+  saving: boolean; templates: IWorkoutTemplate[]; selectedClient: number; onClose: () => void;
   onAddFromTemplate: (template: IWorkoutTemplate) => void;
   onRemove: (id: number) => void;
+  onBulkAssigned: () => void;
 }) {
   // Tick several workouts and add them all at once, rather than reopening
   // this drawer once per workout.
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  useEffect(() => { if (open) setSelectedIds(new Set()); }, [open, date]);
+  // "Date range" mode assigns the selected workouts across every matching
+  // weekday between two dates in one action, instead of one day at a time.
+  const [rangeMode, setRangeMode] = useState(false);
+  const [rangeStart, setRangeStart] = useState(date);
+  const [rangeEnd, setRangeEnd] = useState(date);
+  const [rangeDays, setRangeDays] = useState<Set<number>>(new Set());
+  const [rangeSaving, setRangeSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setSelectedIds(new Set());
+      setRangeMode(false);
+      setRangeStart(date);
+      setRangeEnd(ddmmyyyy(moment(date, "DD-MM-YYYY").add(27, "days")));
+      setRangeDays(new Set([moment(date, "DD-MM-YYYY").isoWeekday() - 1]));
+    }
+  }, [open, date]);
 
   const toggle = (id: number) => setSelectedIds(s => {
     const next = new Set(s);
@@ -1460,11 +1477,73 @@ function DayAssignDrawer({ open, date, existingWorkouts, saving, templates, onCl
     return next;
   });
 
+  const toggleRangeDay = (i: number) => setRangeDays(s => {
+    const next = new Set(s);
+    if (next.has(i)) next.delete(i); else next.add(i);
+    return next;
+  });
+
+  const computeRangeDates = (): string[] => {
+    const start = moment(rangeStart, "DD-MM-YYYY");
+    const end = moment(rangeEnd, "DD-MM-YYYY");
+    const dates: string[] = [];
+    if (!start.isValid() || !end.isValid() || end.isBefore(start)) return dates;
+    const cursor = start.clone();
+    while (cursor.isSameOrBefore(end, "day")) {
+      if (rangeDays.has(cursor.isoWeekday() - 1)) dates.push(ddmmyyyy(cursor));
+      cursor.add(1, "day");
+    }
+    return dates;
+  };
+  const previewDates = rangeMode ? computeRangeDates() : [];
+
   const handleAddSelected = () => {
     templates
       .filter(tpl => tpl.IdTemplate != null && selectedIds.has(tpl.IdTemplate))
       .forEach(tpl => onAddFromTemplate(tpl));
     onClose();
+  };
+
+  const handleAssignRange = async () => {
+    const dates = computeRangeDates();
+    const chosenTemplates = templates.filter(tpl => tpl.IdTemplate != null && selectedIds.has(tpl.IdTemplate));
+    if (dates.length === 0) { toast.error("No matching dates in that range"); return; }
+    if (chosenTemplates.length === 0) { toast.error("Select at least one workout"); return; }
+
+    setRangeSaving(true);
+    try {
+      const toCreate: IWorkout[] = [];
+      dates.forEach(d => {
+        chosenTemplates.forEach(tpl => {
+          toCreate.push({
+            WorkoutName: tpl.TemplateName,
+            IdUser: selectedClient,
+            ScheduledDate: d,
+            Status: "Planned",
+            Exercises: tpl.Exercises.map((ex, i) => ({
+              ExerciseName: ex.ExerciseName,
+              VideoUrl: ex.VideoUrl,
+              Sets: ex.Sets,
+              TargetReps: ex.TargetReps,
+              TargetWeight: ex.TargetWeight,
+              WeightUnit: ex.WeightUnit,
+              RestSeconds: ex.RestSeconds,
+              Notes: ex.Notes,
+              MuscleGroup: ex.MuscleGroup,
+              SortOrder: i,
+            })),
+          });
+        });
+      });
+      await bulkCreateWorkouts({ Workouts: toCreate });
+      toast.success(`Assigned ${chosenTemplates.length} workout${chosenTemplates.length > 1 ? "s" : ""} across ${dates.length} day${dates.length > 1 ? "s" : ""}`);
+      onBulkAssigned();
+      onClose();
+    } catch {
+      toast.error("Failed to assign workouts");
+    } finally {
+      setRangeSaving(false);
+    }
   };
 
   return (
@@ -1485,8 +1564,59 @@ function DayAssignDrawer({ open, date, existingWorkouts, saving, templates, onCl
         </div>
 
         <div className="overflow-y-auto px-5 pb-8 space-y-4">
+          {/* Single day vs date range */}
+          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+            <button onClick={() => setRangeMode(false)}
+              className={`flex-1 h-8 rounded-lg text-xs font-semibold transition-colors ${
+                !rangeMode ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400"
+              }`}>
+              Single day
+            </button>
+            <button onClick={() => setRangeMode(true)}
+              className={`flex-1 h-8 rounded-lg text-xs font-semibold transition-colors ${
+                rangeMode ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400"
+              }`}>
+              Date range
+            </button>
+          </div>
+
+          {rangeMode && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">Start date</label>
+                  <Input type="date" value={fmtToDateInput(rangeStart)} disabled={rangeSaving}
+                    onChange={e => setRangeStart(dateInputToFmt(e.target.value))} className="h-9 text-sm" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">End date</label>
+                  <Input type="date" value={fmtToDateInput(rangeEnd)} disabled={rangeSaving}
+                    onChange={e => setRangeEnd(dateInputToFmt(e.target.value))} className="h-9 text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1.5">Repeat on</label>
+                <div className="flex gap-1.5">
+                  {DAY_LABELS_PLANNER.map((lbl, i) => (
+                    <button key={lbl} onClick={() => toggleRangeDay(i)} disabled={rangeSaving}
+                      className={`flex-1 h-8 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-40 ${
+                        rangeDays.has(i) ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                      }`}>
+                      {lbl[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                {previewDates.length > 0
+                  ? `${previewDates.length} matching day${previewDates.length > 1 ? "s" : ""} in this range`
+                  : "No matching days in this range yet"}
+              </p>
+            </div>
+          )}
+
           {/* Assigned workouts */}
-          {existingWorkouts.length > 0 && (
+          {!rangeMode && existingWorkouts.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Assigned — tap Remove to change</p>
               {existingWorkouts.map(w => (
@@ -1510,18 +1640,18 @@ function DayAssignDrawer({ open, date, existingWorkouts, saving, templates, onCl
           {templates.length > 0 ? (
             <div>
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
-                {existingWorkouts.length > 0 ? 'Add more workouts' : 'Select workouts'}
+                {rangeMode ? "Select workouts" : existingWorkouts.length > 0 ? "Add more workouts" : "Select workouts"}
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {templates.map(tpl => {
                   const isSelected = tpl.IdTemplate != null && selectedIds.has(tpl.IdTemplate);
                   return (
-                    <button key={tpl.IdTemplate} disabled={saving || tpl.IdTemplate == null}
+                    <button key={tpl.IdTemplate} disabled={saving || rangeSaving || tpl.IdTemplate == null}
                       onClick={() => toggle(tpl.IdTemplate!)}
                       className={`relative py-2.5 px-2 rounded-xl text-xs font-bold text-center transition-all active:scale-95 hover:opacity-90 ${
                         TYPE_COLORS[tpl.Category ?? ''] ?? TYPE_COLORS[tpl.TemplateName] ?? 'bg-blue-500 text-white'
                       } ${isSelected ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900' : ''} ${
-                        existingWorkouts.some(w => w.WorkoutName === tpl.TemplateName) ? 'opacity-40' : ''
+                        !rangeMode && existingWorkouts.some(w => w.WorkoutName === tpl.TemplateName) ? 'opacity-40' : ''
                       }`}>
                       {isSelected && (
                         <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-white">
@@ -1545,13 +1675,25 @@ function DayAssignDrawer({ open, date, existingWorkouts, saving, templates, onCl
 
         {templates.length > 0 && (
           <div className="px-5 pt-2 pb-5 border-t border-gray-100 dark:border-gray-800">
-            <button
-              onClick={handleAddSelected}
-              disabled={saving || selectedIds.size === 0}
-              className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              {selectedIds.size > 0 ? `Add ${selectedIds.size} workout${selectedIds.size > 1 ? 's' : ''}` : 'Select workouts to add'}
-            </button>
+            {rangeMode ? (
+              <button
+                onClick={handleAssignRange}
+                disabled={rangeSaving || selectedIds.size === 0 || previewDates.length === 0}
+                className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors">
+                {rangeSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarDays className="h-4 w-4" />}
+                {selectedIds.size > 0 && previewDates.length > 0
+                  ? `Assign ${selectedIds.size} workout${selectedIds.size > 1 ? 's' : ''} × ${previewDates.length} day${previewDates.length > 1 ? 's' : ''}`
+                  : 'Select workouts and a range'}
+              </button>
+            ) : (
+              <button
+                onClick={handleAddSelected}
+                disabled={saving || selectedIds.size === 0}
+                className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                {selectedIds.size > 0 ? `Add ${selectedIds.size} workout${selectedIds.size > 1 ? 's' : ''}` : 'Select workouts to add'}
+              </button>
+            )}
           </div>
         )}
       </DrawerContent>
@@ -1816,9 +1958,11 @@ function WeeklyPlannerTab({ selectedClient, library }: {
         existingWorkouts={assignDayWorkouts}
         saving={createMut.isPending}
         templates={templates}
+        selectedClient={selectedClient!}
         onClose={() => setAssignOpen(false)}
         onAddFromTemplate={handleAddFromTemplate}
         onRemove={id => deleteMut.mutate({ IdWorkout: id })}
+        onBulkAssigned={invalidateWeek}
       />
       {copyOpen && (
         <CopyWeekDialog
@@ -2185,9 +2329,11 @@ export default function AdminWorkoutPlanPage() {
         existingWorkouts={workouts}
         saving={createMut.isPending}
         templates={templates}
+        selectedClient={selectedClient!}
         onClose={() => setTemplateDrawerOpen(false)}
         onAddFromTemplate={handleAddFromTemplate}
         onRemove={id => deleteMut.mutate({ IdWorkout: id })}
+        onBulkAssigned={invalidate}
       />
       <WorkoutEditorDrawer open={editorOpen} initial={editingWorkout} saving={saving}
         library={library} onLibraryRefresh={() => refetchLibrary()}
