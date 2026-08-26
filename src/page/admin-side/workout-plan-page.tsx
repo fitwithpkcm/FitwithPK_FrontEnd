@@ -7,6 +7,7 @@ import {
   ChevronLeft, ChevronRight, ArrowRightLeft, Eye,
   AlertCircle, ChevronDown, ChevronUp, Loader2, User, X,
   MessageSquare, BookOpen, Search, CalendarDays, Copy, LayoutGrid, BarChart2,
+  Download,
 } from "lucide-react";
 import WorkoutProgressCharts from "../../components/workout/WorkoutProgressCharts";
 import moment from "moment";
@@ -838,12 +839,58 @@ function LibraryManager({ library, onRefresh }: {
 
 // ── Log Viewer Dialog ─────────────────────────────────────────────
 
+function buildWorkoutLogText(workout: IWorkout, merged: ReturnType<typeof mergeWorkoutWithLogs>, setLogs: ISetLog[]): string {
+  const lines: string[] = [
+    `${workout.WorkoutName} — ${moment(workout.ScheduledDate, "DD-MM-YYYY").format("ddd, D MMM YYYY")}`,
+    `Completion: ${merged.completionPercent}% (${merged.completedCount}/${merged.totalCount} exercises)`,
+    "",
+  ];
+  merged.exercisesWithLogs.forEach((ex, i) => {
+    const exSetLogs = setLogs.filter(s => s.IdExercise === ex.IdExercise);
+    lines.push(`${i + 1}. ${ex.ExerciseName} — Target: ${ex.Sets}×${ex.TargetReps}${ex.TargetWeight ? ` @ ${ex.TargetWeight}${ex.WeightUnit ?? "kg"}` : ""}`);
+    if (exSetLogs.length > 0) {
+      exSetLogs.forEach(s => {
+        lines.push(`   Set ${s.SetNumber}: ${s.RepsCompleted} reps${s.WeightUsed ? ` @ ${s.WeightUsed}${s.WeightUnit ?? "kg"}` : ""}${s.Notes ? ` — ${s.Notes}` : ""}`);
+      });
+    } else {
+      lines.push(`   Not logged`);
+    }
+    if (ex.logNotes) lines.push(`   Note: ${ex.logNotes}`);
+    lines.push("");
+  });
+  return lines.join("\n").trimEnd();
+}
+
 function LogViewerDialog({ open, workout, logs, setLogs, onClose }: {
   open: boolean; workout: IWorkout|null; logs: IExerciseLog[]; setLogs: ISetLog[]; onClose: ()=>void;
 }) {
   if (!workout) return null;
   const merged = mergeWorkoutWithLogs(workout, logs);
   const hasAnyLog = setLogs.length > 0 || logs.some(l => l.IsCompleted === 1);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(buildWorkoutLogText(workout, merged, setLogs));
+      toast.success("Log copied to clipboard");
+    } catch {
+      toast.error("Failed to copy log");
+    }
+  };
+
+  const handleExport = () => {
+    const text = buildWorkoutLogText(workout, merged, setLogs);
+    const safeName = workout.WorkoutName.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "");
+    const safeDate = moment(workout.ScheduledDate, "DD-MM-YYYY").format("YYYY-MM-DD");
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${safeName}_${safeDate}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -908,8 +955,14 @@ function LogViewerDialog({ open, workout, logs, setLogs, onClose }: {
           })}
           {merged.totalCount === 0 && <p className="text-center text-sm text-gray-400 py-6">No exercises in this workout.</p>}
         </div>
-        <DialogFooter className="px-5 pb-5">
-          <Button onClick={onClose} variant="outline" className="w-full">Close</Button>
+        <DialogFooter className="px-5 pb-5 flex-row gap-2">
+          <Button onClick={handleCopy} variant="outline" className="flex-1" disabled={!hasAnyLog}>
+            <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy
+          </Button>
+          <Button onClick={handleExport} variant="outline" className="flex-1" disabled={!hasAnyLog}>
+            <Download className="h-3.5 w-3.5 mr-1.5" /> Export
+          </Button>
+          <Button onClick={onClose} className="flex-1">Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
