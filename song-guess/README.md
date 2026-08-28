@@ -15,17 +15,23 @@ Open http://localhost:5180
 
 ## What works in M0
 
-- Difficulty pills (`Easy 3s -> Impossible 10ms`) - each sets how much audio you hear
+- **Progressive reveal ladder** (Heardle-style): each difficulty is a sequence of
+  snippet lengths ending at the full 30s preview, so every round is winnable.
+  A skip or a wrong guess drops you one rung. Default is Medium
+  (`1s -> 2.5s -> 5s -> 9s -> 15s -> 30s`); Hard starts at `0.1s`.
+  Ladder config lives in `src/game/difficulty.ts`.
 - **Web Audio** snippet player: decodes the preview once, plays a sample-accurate
-  slice with a click-free gain fade. Falls back to a plain `<audio>` element
-  (min ~250ms) if the preview CDN blocks CORS.
-- Waveform bar with play-progress fill
-- Song search with iTunes autocomplete; button flips **Skip -> Guess**
+  slice with a click-free gain fade and a wall-clock stop-safety timer. Falls back
+  to a plain `<audio>` element (min ~250ms) if the preview CDN blocks CORS.
+  Auto-plays the newly unlocked snippet after a skip / wrong guess.
+- Waveform bar with play-progress fill; `try N / M` counter
+- Song search with iTunes autocomplete; button is **Skip +Xs** / **Give up** /
+  **Guess** depending on state
 - Fuzzy answer matching (`src/lib/match.ts`) - exact trackId, substring, or
-  Levenshtein >= 0.85
-- Correct guess -> green confetti + reveal card ("GUESSED IN 0.1S!") + Reroll all /
-  Play again
-- In-memory session tally (solved / skipped). Nothing is persisted yet.
+  Levenshtein >= 0.85 (strips `(feat...)`, `- Remaster`, etc.)
+- Correct guess -> green confetti + reveal card ("GUESSED IN 5S!" = the rung you
+  solved on) + Reroll all / Play again. Give up -> "GAVE UP" card.
+- In-memory session tally (solved / gave up). Nothing is persisted yet.
 
 ## Audio & catalog source
 

@@ -1,17 +1,37 @@
+import { useEffect, useRef } from "react";
 import { useSnippetPlayer } from "@/hooks/useSnippetPlayer";
-import { formatAudioLength, OFFSET_SEC, type DifficultyDef } from "@/game/difficulty";
+import { formatAudioLength, OFFSET_SEC } from "@/game/difficulty";
 import { WaveformBar } from "@/components/WaveformBar";
 
 interface Props {
   previewUrl: string | null;
-  difficulty: DifficultyDef;
+  snippetMs: number;
+  accent: string;
+  tryIndex: number;
+  triesTotal: number;
   onPlay: () => void;
 }
 
-export function SnippetPlayer({ previewUrl, difficulty, onPlay }: Props) {
-  const player = useSnippetPlayer(previewUrl, difficulty.ms, OFFSET_SEC);
+export function SnippetPlayer({
+  previewUrl,
+  snippetMs,
+  accent,
+  tryIndex,
+  triesTotal,
+  onPlay,
+}: Props) {
+  const player = useSnippetPlayer(previewUrl, snippetMs, OFFSET_SEC);
   const isPlaying = player.status === "playing";
   const busy = player.status === "loading" || player.status === "idle";
+
+  // Auto-play the newly unlocked, longer snippet after a skip / wrong guess
+  // (the user already gestured, so playback is allowed).
+  const prevTry = useRef(tryIndex);
+  useEffect(() => {
+    const prev = prevTry.current;
+    prevTry.current = tryIndex;
+    if (tryIndex > prev && player.play()) onPlay();
+  }, [tryIndex, player, onPlay]);
 
   const handleClick = () => {
     if (isPlaying) {
@@ -23,12 +43,12 @@ export function SnippetPlayer({ previewUrl, difficulty, onPlay }: Props) {
 
   return (
     <div className="player">
-      <WaveformBar peaks={player.waveform} progress={player.progress} accent={difficulty.accent} />
+      <WaveformBar peaks={player.waveform} progress={player.progress} accent={accent} />
 
       <div className="player-row">
         <button
           className="play-btn"
-          style={{ "--accent": difficulty.accent } as React.CSSProperties}
+          style={{ "--accent": accent } as React.CSSProperties}
           onClick={handleClick}
           disabled={busy || player.status === "error"}
           aria-label={isPlaying ? "Stop" : "Play snippet"}
@@ -44,9 +64,14 @@ export function SnippetPlayer({ previewUrl, difficulty, onPlay }: Props) {
             </svg>
           )}
         </button>
-        <span className="len-label" style={{ color: difficulty.accent }}>
-          {player.status === "error" ? "audio unavailable" : formatAudioLength(difficulty.ms)}
-        </span>
+        <div className="player-meta">
+          <span className="len-label" style={{ color: accent }}>
+            {player.status === "error" ? "audio unavailable" : formatAudioLength(snippetMs)}
+          </span>
+          <span className="try-label">
+            try {Math.min(tryIndex + 1, triesTotal)} / {triesTotal}
+          </span>
+        </div>
       </div>
 
       {player.usingFallback && (

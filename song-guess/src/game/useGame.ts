@@ -1,7 +1,7 @@
 import { useCallback, useReducer } from "react";
 import { SEED_SONGS } from "@/data/songs";
 import { resolveSeed, type Track } from "@/lib/itunes";
-import { DEFAULT_DIFFICULTY, type Difficulty } from "@/game/difficulty";
+import { DEFAULT_DIFFICULTY, getDifficulty, lastTryIndex, type Difficulty } from "@/game/difficulty";
 
 export type Phase = "loading" | "ready" | "revealed" | "error";
 
@@ -10,13 +10,15 @@ export interface GameState {
   difficulty: Difficulty;
   track: Track | null;
   error: string | null;
+  /** which rung of the reveal ladder we're on (0 = opening snippet) */
+  tryIndex: number;
   replays: number;
   firstPlayAt: number | null;
   solved: boolean;
-  skipped: boolean;
+  gaveUp: boolean;
   elapsedMs: number | null;
   solvedCount: number;
-  skippedCount: number;
+  gaveUpCount: number;
 }
 
 type Action =
@@ -25,8 +27,9 @@ type Action =
   | { type: "loadOk"; track: Track }
   | { type: "loadErr"; message: string }
   | { type: "registerPlay" }
+  | { type: "revealMore" }
   | { type: "solve" }
-  | { type: "skip" }
+  | { type: "giveUp" }
   | { type: "replaySame" };
 
 const initialState: GameState = {
@@ -34,22 +37,24 @@ const initialState: GameState = {
   difficulty: DEFAULT_DIFFICULTY,
   track: null,
   error: null,
+  tryIndex: 0,
   replays: 0,
   firstPlayAt: null,
   solved: false,
-  skipped: false,
+  gaveUp: false,
   elapsedMs: null,
   solvedCount: 0,
-  skippedCount: 0,
+  gaveUpCount: 0,
 };
 
 function resetRound(s: GameState): GameState {
   return {
     ...s,
+    tryIndex: 0,
     replays: 0,
     firstPlayAt: null,
     solved: false,
-    skipped: false,
+    gaveUp: false,
     elapsedMs: null,
     error: null,
   };
@@ -58,7 +63,8 @@ function resetRound(s: GameState): GameState {
 function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "setDifficulty":
-      return { ...state, difficulty: action.value };
+      // new curve, fresh ladder
+      return { ...state, difficulty: action.value, tryIndex: 0 };
     case "loadStart":
       return { ...resetRound(state), phase: "loading", track: null };
     case "loadOk":
@@ -71,6 +77,11 @@ function reducer(state: GameState, action: Action): GameState {
         replays: state.replays + 1,
         firstPlayAt: state.firstPlayAt ?? Date.now(),
       };
+    case "revealMore":
+      return {
+        ...state,
+        tryIndex: Math.min(state.tryIndex + 1, lastTryIndex(getDifficulty(state.difficulty))),
+      };
     case "solve":
       return {
         ...state,
@@ -79,12 +90,12 @@ function reducer(state: GameState, action: Action): GameState {
         elapsedMs: state.firstPlayAt ? Date.now() - state.firstPlayAt : 0,
         solvedCount: state.solvedCount + 1,
       };
-    case "skip":
+    case "giveUp":
       return {
         ...state,
         phase: "revealed",
-        skipped: true,
-        skippedCount: state.skippedCount + 1,
+        gaveUp: true,
+        gaveUpCount: state.gaveUpCount + 1,
       };
     case "replaySame":
       return { ...resetRound(state), phase: "ready" };
@@ -120,9 +131,10 @@ export function useGame() {
     dispatch({ type: "setDifficulty", value });
   }, []);
   const registerPlay = useCallback(() => dispatch({ type: "registerPlay" }), []);
+  const revealMore = useCallback(() => dispatch({ type: "revealMore" }), []);
   const solve = useCallback(() => dispatch({ type: "solve" }), []);
-  const skip = useCallback(() => dispatch({ type: "skip" }), []);
+  const giveUp = useCallback(() => dispatch({ type: "giveUp" }), []);
   const replaySame = useCallback(() => dispatch({ type: "replaySame" }), []);
 
-  return { state, loadNewTrack, setDifficulty, registerPlay, solve, skip, replaySame };
+  return { state, loadNewTrack, setDifficulty, registerPlay, revealMore, solve, giveUp, replaySame };
 }

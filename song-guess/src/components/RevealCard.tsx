@@ -44,7 +44,7 @@ export function RevealCard({ track, solved, audioMs, onRerollAll, onPlayAgain }:
       {solved ? (
         <div className="reveal-badge">GUESSED IN {formatAudioLength(audioMs).toUpperCase()}!</div>
       ) : (
-        <div className="reveal-badge missed">SKIPPED</div>
+        <div className="reveal-badge missed">GAVE UP</div>
       )}
     </div>
   );
