@@ -49,12 +49,29 @@ export default function GuidedExercisePanel({
   const lastSession = sessions[0];
   const suggestion = suggestNextLoad(exercise, priorHistory);
 
-  const rowCount = Math.max(exercise.Sets, todaySetLogs.length) + extraRows;
-  const thumb = exercise.VideoUrl ? getYoutubeThumbnail(exercise.VideoUrl) : null;
-
   // exercise.TargetWeight may come back as a string (MySQL DECIMAL via
   // mysql2) — coerce so later +/- steppers stay real arithmetic.
   const targetWeight = exercise.TargetWeight != null ? Number(exercise.TargetWeight) : 0;
+
+  // Last session's set N, so an exercise the client has done before opens with
+  // the weight/reps they actually lifted last time (WeightUsed/RepsCompleted
+  // arrive as strings from the MySQL DECIMAL columns — coerce to Number). When
+  // last time had fewer sets than today, extra rows inherit its final set.
+  const lastSessionBySet = new Map<number, ISetLog>();
+  lastSession?.sets.forEach(s => lastSessionBySet.set(s.SetNumber, s));
+  const lastSessionTopSet = lastSession ? Math.max(...lastSession.sets.map(s => s.SetNumber)) : 0;
+  const fromLastSession = (setNumber: number): { reps: number; weight: number } | null => {
+    const match = lastSessionBySet.get(setNumber) ?? lastSessionBySet.get(lastSessionTopSet);
+    if (!match) return null;
+    return {
+      reps: Number(match.RepsCompleted),
+      weight: match.WeightUsed != null ? Number(match.WeightUsed) : targetWeight,
+    };
+  };
+
+  const rowCount = Math.max(exercise.Sets, todaySetLogs.length) + extraRows;
+  const thumb = exercise.VideoUrl ? getYoutubeThumbnail(exercise.VideoUrl) : null;
+
   const getPending = (setNumber: number) => {
     if (pending[setNumber]) return pending[setNumber];
     // Once earlier sets are logged, base +/- steppers off the last logged
@@ -68,9 +85,15 @@ export default function GuidedExercisePanel({
         weight: priorLogged.WeightUsed != null ? Number(priorLogged.WeightUsed) : targetWeight,
       };
     }
+    // Set 1 gets the progression suggestion when a policy is active (it already
+    // factors in last session + the progression step).
     if (setNumber === 1 && suggestion) {
       return { reps: suggestion.RepsCompleted, weight: suggestion.WeightUsed ?? targetWeight };
     }
+    // Otherwise open each row with what the client lifted for that set last
+    // time, so they can edit or bump it up from a real starting point.
+    const last = fromLastSession(setNumber);
+    if (last) return last;
     return { reps: exercise.TargetReps, weight: targetWeight };
   };
   const setPendingField = (setNumber: number, field: "reps" | "weight", value: number) => {
