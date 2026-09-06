@@ -24,6 +24,8 @@ import { AdminPageHeader } from "../../components/layout/page-header";
 import GraphDataChart from "./AdminProgressWeeklyChart";
 import { IBodyMeasurement } from "../../interface/IBodyMeasurement";
 import { getProgressGallery, getWeeklyUpdate } from "../../services/UpdateServices";
+import { getLoggedUserDetails } from "../../services/ProfileService";
+import { IUser } from "../../interface/models/User";
 
 // Interface for progress photos
 export interface ProgressPhoto {
@@ -50,6 +52,26 @@ const COPY_FIELDS: { key: keyof IBodyMeasurement; label: string; unit: string }[
   { key: "UpperArm", label: "Upper Arm", unit: "cm" },
   { key: "Quadriceps", label: "Quadriceps", unit: "cm" },
 ];
+
+// DOB is stored as a free-form string (yyyy-MM-dd from the API, dd-MM-yyyy from
+// older intake data, or an ISO timestamp). Parse leniently; null when unusable.
+function parseDob(raw?: string): Date | null {
+  if (!raw || !raw.trim()) return null;
+  for (const fmt of ["yyyy-MM-dd", "dd-MM-yyyy", "dd/MM/yyyy", "MM/dd/yyyy"]) {
+    const d = parse(raw.trim(), fmt, new Date());
+    if (!isNaN(d.getTime())) return d;
+  }
+  const iso = new Date(raw);
+  return isNaN(iso.getTime()) ? null : iso;
+}
+
+function ageFromDob(dob: Date): number {
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const m = now.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
+  return age;
+}
 
 // Writes text to the clipboard, falling back to a hidden textarea + execCommand
 // for browsers/contexts where navigator.clipboard isn't available.
@@ -131,6 +153,13 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
     }),
   });
 
+  // Client profile — DOB / age / height, used by "Copy measurements".
+  const { data: clientProfile } = useQuery<Partial<IUser> | undefined>({
+    queryKey: [`client-profile_${userId}`],
+    queryFn: () => getLoggedUserDetails({ IdUser: userId }).then(res => res.data.data?.[0]),
+    enabled: !!userId,
+  });
+
 
   // Format date for display
   const formatDisplayDate = (dateString: string) => {
@@ -162,18 +191,34 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
   const latestMeasurement = weekly_updates_measurement_history?.[weekly_updates_measurement_history.length - 1];
 
   // Copy the client's most recent weekly measurements as plain text so the coach
-  // can paste them into a check-in message, plan doc, or notes.
+  // can paste them into a check-in message, plan doc, or notes. Leads with the
+  // client's DOB / age / height so the numbers have context on their own.
   const handleCopyMeasurements = async () => {
     if (!latestMeasurement) return;
     const dateLabel = latestMeasurement.DateRange
       ? format(parse(latestMeasurement.DateRange, "dd-MM-yyyy", new Date()), "d MMM yyyy")
       : "";
+
+    const dob = parseDob(clientProfile?.DateOfBirth);
+    const onboardAge = clientProfile?.OnBoardUserAttributes?.age;
+    const age = dob ? ageFromDob(dob) : (onboardAge ?? null);
+    const height = latestMeasurement.Height ?? clientProfile?.OnBoardUserAttributes?.height ?? null;
+
+    const bio = [
+      `DOB: ${dob ? format(dob, "d MMM yyyy") : "Not set"}`,
+      `Age: ${age != null ? `${age} yrs` : "Not set"}`,
+      `Height: ${height != null ? `${height} cm` : "Not set"}`,
+    ];
+
     const rows = COPY_FIELDS
       .filter(f => latestMeasurement[f.key] != null)
       .map(f => `${f.label}: ${latestMeasurement[f.key]} ${f.unit}`);
     if (!rows.length) return;
+
     const text = [
       `${user ? `${user.FirstName} ${user.LastName} — ` : ""}Weekly measurements${dateLabel ? ` (${dateLabel})` : ""}`,
+      ...bio,
+      "",
       ...rows,
     ].join("\n");
     const ok = await copyText(text);
