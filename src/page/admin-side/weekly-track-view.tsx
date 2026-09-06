@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
-import { ArrowLeft, ChevronDown, ChevronUp, Plus, X, Calculator, Activity, FileText, Upload, Eye, Download, Utensils, Dumbbell } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Plus, X, Calculator, Activity, FileText, Upload, Eye, Download, Utensils, Dumbbell, Copy, Check } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -38,6 +38,46 @@ interface WeeklyTrackingViewProps {
   onBack: () => void;
 }
 
+// Fields copied by "Copy measurements" — only the numbers the client actually
+// submits each week, in the same order the measurement history table shows them.
+const COPY_FIELDS: { key: keyof IBodyMeasurement; label: string; unit: string }[] = [
+  { key: "Weight", label: "Weight", unit: "kg" },
+  { key: "BodyFat", label: "Body Fat", unit: "%" },
+  { key: "Waist", label: "Waist", unit: "cm" },
+  { key: "BodyHip", label: "Hips", unit: "cm" },
+  { key: "Neck", label: "Neck", unit: "cm" },
+  { key: "Chest", label: "Chest", unit: "cm" },
+  { key: "UpperArm", label: "Upper Arm", unit: "cm" },
+  { key: "Quadriceps", label: "Quadriceps", unit: "cm" },
+];
+
+// Writes text to the clipboard, falling back to a hidden textarea + execCommand
+// for browsers/contexts where navigator.clipboard isn't available.
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through to legacy path */
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingViewProps) {
   const [user, setUser] = useState<IWeeklyUpdatesForUser>();
   const [progressPhotos, setProgressPhotos] = useState<ProgressPhoto[]>([]);
@@ -51,6 +91,7 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
   const [selectedActivityLevel, setSelectedActivityLevel] = useState("sedentary");
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [selectedPDF, setSelectedPDF] = useState<{ name: string, url: string } | null>(null);
+  const [copiedMeasurements, setCopiedMeasurements] = useState(false);
   const [dietPlans, setDietPlans] = useState([
     { id: 1, name: "Weight Loss Diet Plan", uploadDate: "2024-01-10", url: "" },
     { id: 2, name: "Maintenance Diet Plan", uploadDate: "2024-01-20", url: "" }
@@ -119,6 +160,28 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
   // server-side (getWeeklyStatus) from the client's actual onboarding profile and
   // that entry's own weight, so this view never falls back to placeholder data.
   const latestMeasurement = weekly_updates_measurement_history?.[weekly_updates_measurement_history.length - 1];
+
+  // Copy the client's most recent weekly measurements as plain text so the coach
+  // can paste them into a check-in message, plan doc, or notes.
+  const handleCopyMeasurements = async () => {
+    if (!latestMeasurement) return;
+    const dateLabel = latestMeasurement.DateRange
+      ? format(parse(latestMeasurement.DateRange, "dd-MM-yyyy", new Date()), "d MMM yyyy")
+      : "";
+    const rows = COPY_FIELDS
+      .filter(f => latestMeasurement[f.key] != null)
+      .map(f => `${f.label}: ${latestMeasurement[f.key]} ${f.unit}`);
+    if (!rows.length) return;
+    const text = [
+      `${user ? `${user.FirstName} ${user.LastName} — ` : ""}Weekly measurements${dateLabel ? ` (${dateLabel})` : ""}`,
+      ...rows,
+    ].join("\n");
+    const ok = await copyText(text);
+    if (ok) {
+      setCopiedMeasurements(true);
+      setTimeout(() => setCopiedMeasurements(false), 2000);
+    }
+  };
 
   // Activity level multipliers — same keys collected on the client's intake form.
   const activityLevels = {
@@ -215,6 +278,21 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
 
 
       {/* Current Stats Display */}
+      <div className="flex items-center justify-between mb-2 px-2">
+        <div className="text-sm font-medium text-gray-600">
+          Latest measurements
+          {latestMeasurement?.DateRange ? ` · ${formatDisplayDate(latestMeasurement.DateRange)}` : ""}
+        </div>
+        <button
+          type="button"
+          onClick={handleCopyMeasurements}
+          disabled={!latestMeasurement}
+          className="flex items-center gap-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-md px-2.5 py-1.5 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {copiedMeasurements ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          {copiedMeasurements ? "Copied" : "Copy measurements"}
+        </button>
+      </div>
       <div className="grid grid-cols-2 gap-3 mb-4 px-2">
         <div className="bg-white p-4 rounded-lg border">
           <div className="text-sm text-gray-500 mb-1">Weight</div>
