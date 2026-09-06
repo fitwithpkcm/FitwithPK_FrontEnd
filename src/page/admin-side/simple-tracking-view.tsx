@@ -178,11 +178,20 @@ export default function SimpleTrackingView() {
   const weeklyUpdatedCount = UserListWithWeeklyUpdates?.filter(isWeeklyComplete).length ?? 0;
   const weeklyMissedCount = (UserListWithWeeklyUpdates?.length ?? 0) - weeklyUpdatedCount;
 
+  // Parses "DD-MM-YYYY" into a timestamp; clients who've never updated (no DateRange) sort last
+  const dateRangeTimestamp = (user: IWeeklyUpdatesForUser): number => {
+    if (isEmpty(user.DateRange)) return -Infinity;
+    const [day, month, year] = user.DateRange!.split('-').map(Number);
+    return new Date(year, month - 1, day).getTime();
+  };
+
+  // Filter users based on active tab, then sort by most recent update date,
+  // pushing clients with no update at all to the bottom
   const filteredWeeklyUsers = UserListWithWeeklyUpdates?.filter(user => {
     if (activeWeeklyTab === "updated") return isWeeklyComplete(user);
     if (activeWeeklyTab === "missed") return !isWeeklyComplete(user);
     return true;
-  });
+  }).sort((a, b) => dateRangeTimestamp(b) - dateRangeTimestamp(a));
 
   // Handle user selection
   const handleSelectUser = (userId: number) => {
