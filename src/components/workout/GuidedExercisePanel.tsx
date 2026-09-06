@@ -10,6 +10,7 @@ import ExerciseMuscleDiagram from "./ExerciseMuscleDiagram";
 
 interface GuidedExercisePanelProps {
   exercise: IExercise;
+  workoutName?: string;
   todaySetLogs: ISetLog[];
   selectedDate: string;
   saving: boolean;
@@ -27,7 +28,7 @@ function formatSessionSets(session: { sets: ISetLog[] }, isBodyweight: boolean):
 }
 
 export default function GuidedExercisePanel({
-  exercise, todaySetLogs, selectedDate, saving, onCommitSet, onDeleteSet, onOpenVideo,
+  exercise, workoutName, todaySetLogs, selectedDate, saving, onCommitSet, onDeleteSet, onOpenVideo,
 }: GuidedExercisePanelProps) {
   const isBodyweight = (exercise.WeightUnit ?? "kg") === "bodyweight";
   const unit = exercise.WeightUnit ?? "kg";
@@ -45,9 +46,22 @@ export default function GuidedExercisePanel({
   });
   const fullHistory: ISetLog[] = Array.isArray(historyRes?.data?.data) ? historyRes.data.data : [];
   const priorHistory = fullHistory.filter(l => l.LogDate !== selectedDate);
-  const sessions = groupSetsBySession(priorHistory, exercise);
+
+  // The same exercise usually lives in more than one workout — e.g. a heavy
+  // Strength day and a lighter Hypertrophy day. Prefilling "last time" from
+  // whichever session was logged most recently, regardless of which workout it
+  // belonged to, shows the client a weight that doesn't match today's session
+  // (hypertrophy numbers on a strength day). Scope history to the SAME workout
+  // name so "last time" always means the last time they did *this* workout.
+  const normName = (n?: string) => (n ?? "").trim().toLowerCase();
+  const historyCarriesWorkoutName = priorHistory.some(l => l.WorkoutName != null);
+  const scopedHistory = historyCarriesWorkoutName
+    ? priorHistory.filter(l => normName(l.WorkoutName) === normName(workoutName))
+    : priorHistory; // pre-join rows / older API — nothing to scope by, keep prior behaviour
+
+  const sessions = groupSetsBySession(scopedHistory, exercise);
   const lastSession = sessions[0];
-  const suggestion = suggestNextLoad(exercise, priorHistory);
+  const suggestion = suggestNextLoad(exercise, scopedHistory);
 
   // exercise.TargetWeight may come back as a string (MySQL DECIMAL via
   // mysql2) — coerce so later +/- steppers stay real arithmetic.

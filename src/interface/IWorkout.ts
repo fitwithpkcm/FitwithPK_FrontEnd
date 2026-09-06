@@ -34,6 +34,7 @@ export interface ISetLog {
   WeightUnit?:   string;
   Notes?:        string;
   LoggedAt?:     string;
+  WorkoutName?:  string;   // read-only, returned by getSetLogsForExercise so history can be scoped to the same workout/template
 }
 
 export interface IExerciseLibraryItem {

@@ -71,6 +71,7 @@ export default function GuidedWorkoutSession({
 
       <GuidedExercisePanel
         exercise={exercise}
+        workoutName={workout.WorkoutName}
         todaySetLogs={exerciseLogs}
         selectedDate={selectedDate}
         saving={saving}
