@@ -19,7 +19,7 @@ interface UserType {
 // Full onboarding profile, collected during registration itself so no
 // separate "complete your profile" step is needed after first login.
 interface OnboardProfile {
-  age: string;
+  dob: string;
   gender: string;
   profession: string;
   location: string;
@@ -52,7 +52,7 @@ interface OnboardProfile {
 }
 
 const emptyProfile: OnboardProfile = {
-  age: "", gender: "", profession: "", location: "",
+  dob: "", gender: "", profession: "", location: "",
   dietType: "", morningMeal: "", breakfast: "", lunch: "", eveningSnack: "", dinner: "",
   skipMeals: "", dietaryRestrictions: "", dislikedFoods: "",
   smokingDrinking: "", sleepHours: "", stressLevel: "", activityLevel: "", currentExercise: "",
@@ -183,7 +183,6 @@ export default function AuthPage() {
         LoginType: "normal",
         OnBoardUserAttributes: {
           ...profile,
-          age: profile.age ? Number(profile.age) : undefined,
         },
       },
       {
@@ -515,8 +514,8 @@ export default function AuthPage() {
                 {signupStep === 1 && (
                   <>
                     <div>
-                      <label className={labelClass}>Age</label>
-                      <input type="number" value={profile.age} onChange={(e) => setField("age", e.target.value)} className={inputClass} placeholder="Enter your age" />
+                      <label className={labelClass}>Date of Birth</label>
+                      <input type="date" max={new Date().toISOString().split("T")[0]} value={profile.dob} onChange={(e) => setField("dob", e.target.value)} className={inputClass} />
                     </div>
                     <div>
                       <label className={labelClass}>Gender</label>

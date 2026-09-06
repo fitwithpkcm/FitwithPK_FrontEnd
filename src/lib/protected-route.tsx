@@ -57,8 +57,10 @@ export function ClientRoute({
     return <Route path={path}><Redirect to="/auth" /></Route>;
   }
 
-  // Profile is complete only when all four key fields are filled
-  const profileComplete = !!(profileData?.age && profileData?.height && profileData?.weight && profileData?.fitnessGoals);
+  // Profile is complete only when all four key fields are filled. Date of birth
+  // replaced the old free-typed age; `age` stays as a fallback for clients who
+  // onboarded before DOB was collected.
+  const profileComplete = !!((profileData?.dob || profileData?.age) && profileData?.height && profileData?.weight && profileData?.fitnessGoals);
   const profileIncomplete = profileData != null && !profileComplete;
   const isOnboardRoute = path === RENDER_URL.STUDENT_ONBOARD;
 

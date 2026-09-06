@@ -29,10 +29,12 @@ import { Label } from "../../components/ui/label";
 import { fetchOnBoardUserAttributes, onBoardFileUpload, onBoardProfileAttributeUpdates } from "../../services/LoginServices";
 import { RENDER_URL } from "../../common/Urls";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../../components/ui/dialog";
+import { ageFromDob } from "../../lib/utils";
 
 // Define the interface for the user profile
 export interface UserProfile {
-  age?: number;
+  dob?: string;   // date of birth ("yyyy-MM-dd") — replaces the old free-typed age
+  age?: number;   // legacy, still returned for clients who onboarded before DOB was collected
   gender?: string;
   profession?: string;
   location?: string;
@@ -81,7 +83,13 @@ const reqNum = (label: string) => z.number({ required_error: `${label} is requir
 // Every field is mandatory except uploadFileNames, which is a hidden,
 // system-populated field (file upload itself stays optional).
 const intakeFormSchema = z.object({
-  age: reqNum("Age").max(120),
+  dob: req("Date of birth").refine(
+    v => {
+      const age = ageFromDob(v);
+      return age != null && age >= 13 && age <= 120;
+    },
+    { message: "Enter a valid date of birth (age 13–120)" },
+  ),
   gender: req("Gender"),
   profession: req("Profession"),
   location: req("Location"),
@@ -146,8 +154,9 @@ export default function IntakeFormPage() {
   });
 
   // Profile is considered complete once the user has filled the key fields
-  // (age from Basic Info, height/weight from Measurements, fitnessGoals from Goals)
-  const isProfileComplete = !!(profileData?.age && profileData?.height && profileData?.weight && profileData?.fitnessGoals);
+  // (date of birth from Basic Info, height/weight from Measurements, fitnessGoals
+  // from Goals). `age` is the legacy fallback for clients who onboarded before DOB.
+  const isProfileComplete = !!((profileData?.dob || profileData?.age) && profileData?.height && profileData?.weight && profileData?.fitnessGoals);
   // Show onboarding/locked UI whenever profile is not yet complete
   const isOnboarding = profileData != null && !isProfileComplete;
 
@@ -155,7 +164,7 @@ export default function IntakeFormPage() {
   const form = useForm<IntakeFormValues>({
     resolver: zodResolver(intakeFormSchema),
     defaultValues: {
-      age: undefined,
+      dob: undefined,
       gender: undefined,
       profession: undefined,
       location: undefined,
@@ -221,7 +230,7 @@ export default function IntakeFormPage() {
 
     if (profileData) {
       // Convert numeric fields and boolean fields
-      const numericFields = ['age', 'height', 'weight', 'waist', 'hip', 'chest', 'neck', 'biceps', 'quadriceps'];
+      const numericFields = ['height', 'weight', 'waist', 'hip', 'chest', 'neck', 'biceps', 'quadriceps'];
       const booleanFields = ['recentBloodTest'];
 
       const formattedData = Object.fromEntries(
@@ -280,7 +289,7 @@ export default function IntakeFormPage() {
 
   // Which tab each field lives on, so a failed submit can jump straight to it
   const fieldTab: Record<string, string> = {
-    age: "basic-info", gender: "basic-info", profession: "basic-info", location: "basic-info",
+    dob: "basic-info", gender: "basic-info", profession: "basic-info", location: "basic-info",
     height: "measurements", weight: "measurements", waist: "measurements", hip: "measurements",
     chest: "measurements", neck: "measurements", biceps: "measurements", quadriceps: "measurements",
     dietType: "diet", morningMeal: "diet", breakfast: "diet", lunch: "diet", eveningSnack: "diet",
@@ -480,19 +489,21 @@ export default function IntakeFormPage() {
                     <CardContent className="space-y-4">
                       <FormField
                         control={form.control}
-                        name="age"
+                        name="dob"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Age</FormLabel>
+                            <FormLabel>Date of Birth</FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
-                                placeholder="Enter your age"
+                                type="date"
+                                max={new Date().toISOString().split("T")[0]}
                                 {...field}
-                                onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
                                 value={field.value || ''}
                               />
                             </FormControl>
+                            {ageFromDob(field.value) != null && (
+                              <FormDescription>Age: {ageFromDob(field.value)}</FormDescription>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}

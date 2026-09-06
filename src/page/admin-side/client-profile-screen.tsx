@@ -8,6 +8,7 @@ import { IUser } from "../../interface/models/User";
 import { IMedicalDocument, MedicalDocumentType } from "../../interface/IMedicalDocument";
 import { setBaseUrl } from "../../services/HttpService";
 import { BASE_URL } from "../../common/Constant";
+import { parseDob, ageFromDob } from "../../lib/utils";
 import moment from "moment";
 import { RENDER_URL } from "@/common/Urls";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -669,8 +670,23 @@ export default function ClientProfileScreen() {
         </h3>
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gray-50 p-3 rounded-lg">
+            <div className="text-sm text-gray-500 mb-1">Date of Birth</div>
+            <div className="font-medium">
+              {(() => {
+                const dob = parseDob(profileData?.OnBoardUserAttributes?.dob ?? profileData?.DateOfBirth);
+                return dob ? moment(dob).format("DD MMM YYYY") : "—";
+              })()}
+            </div>
+          </div>
+          <div className="bg-gray-50 p-3 rounded-lg">
             <div className="text-sm text-gray-500 mb-1">Age</div>
-            <div className="font-medium">{profileData?.OnBoardUserAttributes?.age} years</div>
+            <div className="font-medium">
+              {(() => {
+                const age = ageFromDob(profileData?.OnBoardUserAttributes?.dob ?? profileData?.DateOfBirth)
+                  ?? profileData?.OnBoardUserAttributes?.age;
+                return age != null ? `${age} years` : "—";
+              })()}
+            </div>
           </div>
           <div className="bg-gray-50 p-3 rounded-lg">
             <div className="text-sm text-gray-500 mb-1">Gender</div>

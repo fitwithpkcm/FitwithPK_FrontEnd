@@ -6,7 +6,8 @@ export interface IMainBodyAttributes {
 
 //interface used for storing profile details on user onboarding to fitwithpk 
 export interface IUserOnBoardAttributes {
-  age?: number;
+  dob?: string;          // date of birth ("yyyy-MM-dd"); replaces the old free-typed age
+  age?: number;          // legacy — still read as a fallback for clients who haven't re-saved
   gender?: string;
   profession?: string;
   location?: string;

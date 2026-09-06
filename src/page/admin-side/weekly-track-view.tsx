@@ -26,6 +26,7 @@ import { IBodyMeasurement } from "../../interface/IBodyMeasurement";
 import { getProgressGallery, getWeeklyUpdate } from "../../services/UpdateServices";
 import { getLoggedUserDetails } from "../../services/ProfileService";
 import { IUser } from "../../interface/models/User";
+import { parseDob, ageFromDob } from "../../lib/utils";
 
 // Interface for progress photos
 export interface ProgressPhoto {
@@ -52,26 +53,6 @@ const COPY_FIELDS: { key: keyof IBodyMeasurement; label: string; unit: string }[
   { key: "UpperArm", label: "Upper Arm", unit: "cm" },
   { key: "Quadriceps", label: "Quadriceps", unit: "cm" },
 ];
-
-// DOB is stored as a free-form string (yyyy-MM-dd from the API, dd-MM-yyyy from
-// older intake data, or an ISO timestamp). Parse leniently; null when unusable.
-function parseDob(raw?: string): Date | null {
-  if (!raw || !raw.trim()) return null;
-  for (const fmt of ["yyyy-MM-dd", "dd-MM-yyyy", "dd/MM/yyyy", "MM/dd/yyyy"]) {
-    const d = parse(raw.trim(), fmt, new Date());
-    if (!isNaN(d.getTime())) return d;
-  }
-  const iso = new Date(raw);
-  return isNaN(iso.getTime()) ? null : iso;
-}
-
-function ageFromDob(dob: Date): number {
-  const now = new Date();
-  let age = now.getFullYear() - dob.getFullYear();
-  const m = now.getMonth() - dob.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
-  return age;
-}
 
 // Writes text to the clipboard, falling back to a hidden textarea + execCommand
 // for browsers/contexts where navigator.clipboard isn't available.
@@ -199,10 +180,10 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
       ? format(parse(latestMeasurement.DateRange, "dd-MM-yyyy", new Date()), "d MMM yyyy")
       : "";
 
-    const dob = parseDob(clientProfile?.DateOfBirth);
-    const onboardAge = clientProfile?.OnBoardUserAttributes?.age;
-    const age = dob ? ageFromDob(dob) : (onboardAge ?? null);
-    const height = latestMeasurement.Height ?? clientProfile?.OnBoardUserAttributes?.height ?? null;
+    const onboard = clientProfile?.OnBoardUserAttributes;
+    const dob = parseDob(onboard?.dob ?? clientProfile?.DateOfBirth);
+    const age = ageFromDob(dob) ?? onboard?.age ?? null;
+    const height = latestMeasurement.Height ?? onboard?.height ?? null;
 
     const bio = [
       `DOB: ${dob ? format(dob, "d MMM yyyy") : "Not set"}`,
