@@ -47,6 +47,10 @@ import {
 } from "../../interface/IMealPlan";
 import { IUser } from "../../interface/models/User";
 import { IFoodCatergory, IFoodAlternative } from "../../interface/IFoodAlternative";
+import { getDietPlan } from "../../services/UpdateServices";
+import { IdDietPlan } from "../../interface/IDietPlan";
+import { RENDER_URL } from "../../common/Urls";
+import { NutritionTarget, macroGrams, targetStatus } from "../../lib/nutrition";
 
 // ─────────────────────────────────────────────────────────────────
 // Helpers
@@ -1339,6 +1343,36 @@ export default function AdminMealPlanPage() {
 
   const planMacros = React.useMemo(() => plan ? computeMacros(plan.Meals.flatMap(m => m.FoodItems)) : null, [plan]);
 
+  // ── coach-set calorie / macro target (from the client's diet plan) ──
+  const { data: dietTargetRow } = useQuery<IdDietPlan | null>({
+    queryKey: ["meal-plan-diet-target", selectedUserId],
+    enabled: !!selectedUserId,
+    queryFn: async () => {
+      try {
+        const res = await getDietPlan({ IdUser: selectedUserId! }) as { data: { data: IdDietPlan[] } };
+        const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+        return rows.length > 0 ? rows[0] : null;
+      } catch {
+        return null; // 404 → client has no diet plan yet
+      }
+    },
+  });
+  const nutritionTarget: NutritionTarget | undefined = dietTargetRow?.Targets?.nutrition;
+  const targetGrams = React.useMemo(
+    () => nutritionTarget ? macroGrams(nutritionTarget.calories, nutritionTarget) : null,
+    [nutritionTarget]
+  );
+
+  // Macros the client has actually eaten today — scale each consumed food item
+  // by its logged quantity (falls back to planned qty when the log omits it).
+  const consumedMacros = React.useMemo(() => {
+    if (!plan) return null;
+    const eaten = plan.Meals.flatMap(m => m.FoodItems)
+      .filter(f => f.IdFoodItem != null && logMap.get(f.IdFoodItem)?.IsConsumed === 1)
+      .map(f => ({ ...f, PlannedQty: logMap.get(f.IdFoodItem!)?.ConsumedQty ?? f.PlannedQty }));
+    return eaten.length > 0 ? computeMacros(eaten) : { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+  }, [plan, logMap]);
+
   // ── client queries ────────────────────────────────────────────
   const { data: clientQueries = [], refetch: refetchQueries, isFetching: queriesFetching } = useQuery<IMealQuery[]>({
     queryKey: ["client-meal-queries", selectedUserId, selectedDate],
@@ -1819,8 +1853,54 @@ export default function AdminMealPlanPage() {
               )}
             </div>
 
-            {/* ── macro summary (only when foods exist) ── */}
-            {planMacros && planMacros.kcal > 0 && (
+            {/* ── calorie / macro target vs plan (when the coach has set one) ── */}
+            {nutritionTarget && targetGrams && (() => {
+              const actual = viewMode ? consumedMacros : planMacros;
+              const rows = [
+                { label: viewMode ? "Calories eaten" : "Calories", actual: actual?.kcal ?? 0, target: nutritionTarget.calories, unit: "" },
+                { label: "Protein", actual: actual?.protein ?? 0, target: targetGrams.proteinG, unit: "g" },
+                { label: "Carbs",   actual: actual?.carbs ?? 0,   target: targetGrams.carbsG,   unit: "g" },
+                { label: "Fat",     actual: actual?.fat ?? 0,     target: targetGrams.fatG,     unit: "g" },
+              ];
+              return (
+                <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                      <Flame className="h-3 w-3 text-orange-500" /> {viewMode ? "Eaten vs target" : "Planned vs target"}
+                    </p>
+                    {nutritionTarget.basisDate && (
+                      <p className="text-[10px] text-gray-400">
+                        weekly update {nutritionTarget.basisDate}{nutritionTarget.basisWeight ? ` · ${nutritionTarget.basisWeight} kg` : ""}
+                      </p>
+                    )}
+                  </div>
+                  {rows.map(r => {
+                    const status = targetStatus(r.actual, r.target);
+                    const pct = r.target > 0 ? Math.round((r.actual / r.target) * 100) : 0;
+                    const barColor = status === "on" ? "bg-green-500" : status === "near" ? "bg-amber-500" : "bg-red-500";
+                    const txtColor = status === "on" ? "text-green-600" : status === "near" ? "text-amber-600" : "text-red-600";
+                    return (
+                      <div key={r.label}>
+                        <div className="flex items-center justify-between text-xs mb-0.5">
+                          <span className="text-gray-500">{r.label}</span>
+                          <span className="font-semibold">
+                            <span className={txtColor}>{r.actual}{r.unit}</span>
+                            <span className="text-gray-300"> / </span>
+                            <span className="text-gray-500">{r.target}{r.unit}</span>
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                          <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {/* ── plain macro summary (no target set, foods exist) ── */}
+            {!nutritionTarget && planMacros && planMacros.kcal > 0 && (
               <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div className="text-center">
@@ -1844,6 +1924,16 @@ export default function AdminMealPlanPage() {
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* ── nudge: no calorie target set for this client ── */}
+            {!nutritionTarget && !viewMode && (
+              <button
+                onClick={() => guardedNavigate(() => navigate(RENDER_URL.ADMIN_TARGETS))}
+                className="w-full text-[11px] font-semibold text-orange-500 hover:text-orange-600 py-1.5"
+              >
+                + Set a calorie &amp; macro target for this client
+              </button>
             )}
 
             {/* ── meal cards ── */}

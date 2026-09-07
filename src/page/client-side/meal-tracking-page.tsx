@@ -41,7 +41,9 @@ import {
 } from "../../interface/IMealPlan";
 import { getFoodBasedOnCatergoryApi } from "../../services/FoodService";
 import { IFoodCatergory } from "../../interface/IFoodAlternative";
-import { dailyUpdate } from "../../services/UpdateServices";
+import { dailyUpdate, getDietPlan } from "../../services/UpdateServices";
+import { IdDietPlan } from "../../interface/IDietPlan";
+import { NutritionTarget, macroGrams, targetStatus } from "../../lib/nutrition";
 
 // ── helpers ──────────────────────────────────────────────────────
 
@@ -504,6 +506,36 @@ export default function MealTrackingPage() {
       ? mergePlanWithLogs(rawPlan, Array.from(localLogs.values()))
       : null;
 
+  // ── coach-set daily calorie / macro target ───────────────────
+  const { data: dietTargetRow } = useQuery<IdDietPlan | null>({
+    queryKey: ["my-diet-target"],
+    queryFn: async () => {
+      try {
+        const res = await getDietPlan(null) as { data: { data: IdDietPlan[] } };
+        const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+        return rows.length > 0 ? rows[0] : null;
+      } catch {
+        return null; // 404 → no diet plan yet
+      }
+    },
+  });
+  const nutritionTarget: NutritionTarget | undefined = dietTargetRow?.Targets?.nutrition;
+  const targetGrams = nutritionTarget ? macroGrams(nutritionTarget.calories, nutritionTarget) : null;
+
+  // Macros eaten so far today, from consumed food items (per-100g × qty/100).
+  const eatenMacros = React.useMemo(() => {
+    let kcal = 0, protein = 0, carbs = 0, fat = 0;
+    mergedPlan?.mealsWithLogs.forEach(m => m.foodItemsWithLogs.forEach(f => {
+      if (!f.isConsumed) return;
+      const factor = (f.consumedQty ?? f.PlannedQty ?? 0) / 100;
+      kcal    += (f.CaloriesPer100g ?? 0) * factor;
+      protein += (f.ProteinPer100g  ?? 0) * factor;
+      carbs   += (f.CarbsPer100g    ?? 0) * factor;
+      fat     += (f.FatPer100g      ?? 0) * factor;
+    }));
+    return { kcal: Math.round(kcal), protein: Math.round(protein), carbs: Math.round(carbs), fat: Math.round(fat) };
+  }, [mergedPlan]);
+
   // ── Q&A queries ───────────────────────────────────────────────
 
   const { data: myQueries = [], refetch: refetchQueries, isFetching: queriesFetching } = useQuery<IMealQuery[]>({
@@ -963,6 +995,41 @@ export default function MealTrackingPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* daily calorie / macro target from the coach */}
+            {nutritionTarget && targetGrams && (
+              <Card className="shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900">
+                <CardContent className="p-4 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Daily target</span>
+                    <span className="text-[11px] text-gray-400">eaten so far</span>
+                  </div>
+                  {[
+                    { label: "Calories", actual: eatenMacros.kcal,    target: nutritionTarget.calories, unit: "" },
+                    { label: "Protein",  actual: eatenMacros.protein, target: targetGrams.proteinG,     unit: "g" },
+                    { label: "Carbs",    actual: eatenMacros.carbs,   target: targetGrams.carbsG,       unit: "g" },
+                    { label: "Fat",      actual: eatenMacros.fat,     target: targetGrams.fatG,         unit: "g" },
+                  ].map(r => {
+                    const status = targetStatus(r.actual, r.target);
+                    const pct = r.target > 0 ? Math.round((r.actual / r.target) * 100) : 0;
+                    const barColor = status === "on" ? "bg-green-500" : status === "near" ? "bg-amber-500" : "bg-red-500";
+                    return (
+                      <div key={r.label}>
+                        <div className="flex items-center justify-between text-xs mb-0.5">
+                          <span className="text-gray-500 dark:text-gray-400">{r.label}</span>
+                          <span className="font-semibold text-gray-700 dark:text-gray-200">
+                            {r.actual}{r.unit} <span className="text-gray-300 dark:text-gray-600">/</span> {r.target}{r.unit}
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                          <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
 
             {/* meal sections */}
             {MEAL_TYPES.map(mealType => {
