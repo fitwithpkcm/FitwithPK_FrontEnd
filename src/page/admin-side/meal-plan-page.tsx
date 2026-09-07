@@ -47,10 +47,12 @@ import {
 } from "../../interface/IMealPlan";
 import { IUser } from "../../interface/models/User";
 import { IFoodCatergory, IFoodAlternative } from "../../interface/IFoodAlternative";
-import { getDietPlan } from "../../services/UpdateServices";
+import { getDietPlan, getWeeklyUpdate } from "../../services/UpdateServices";
+import { addDietPlan } from "../../services/AdminServices";
 import { IdDietPlan } from "../../interface/IDietPlan";
-import { RENDER_URL } from "../../common/Urls";
-import { NutritionTarget, macroGrams, targetStatus } from "../../lib/nutrition";
+import { IBodyMeasurement } from "../../interface/IBodyMeasurement";
+import { NutritionTarget, macroGrams, targetStatus, isMacroSplitValid } from "../../lib/nutrition";
+import CalorieMacroTargetCard from "../../components/nutrition/CalorieMacroTargetCard";
 
 // ─────────────────────────────────────────────────────────────────
 // Helpers
@@ -1363,6 +1365,58 @@ export default function AdminMealPlanPage() {
     [nutritionTarget]
   );
 
+  // Latest weekly measurement for the selected client — BMR drives the target.
+  const { data: clientWeeklyMeasurements } = useQuery<IBodyMeasurement[]>({
+    queryKey: ["meal-plan-weekly-measurements", selectedUserId],
+    enabled: !!selectedUserId,
+    queryFn: () => getWeeklyUpdate({ IdUser: selectedUserId! }).then(res => res.data.data),
+  });
+  const latestClientMeasurement = clientWeeklyMeasurements?.[clientWeeklyMeasurements.length - 1];
+
+  // ── calorie/macro target dialog (edit in-place, no page nav) ──
+  const [targetDialogOpen, setTargetDialogOpen] = useState(false);
+  const [targetDraft, setTargetDraft] = useState<NutritionTarget | undefined>(undefined);
+
+  const openTargetDialog = () => {
+    setTargetDraft(nutritionTarget);
+    setTargetDialogOpen(true);
+  };
+
+  const saveTargetMutation = useMutation({
+    mutationFn: async (nextTarget: NutritionTarget | undefined) => {
+      if (!selectedUserId) throw new Error("No client selected");
+      // Preserve the client's existing habit targets; the backend carries the
+      // diet/workout PDF references forward when the request has no new files.
+      const existing = (dietTargetRow?.Targets && typeof dietTargetRow.Targets === "object"
+        ? dietTargetRow.Targets
+        : {}) as Record<string, unknown>;
+      const mergedTargets = {
+        steps: 10000, water: 2.5, sleep: 8.0,
+        ...existing,
+        nutrition: nextTarget
+          ? {
+              ...nextTarget,
+              basisWeight: latestClientMeasurement?.Weight ?? nextTarget.basisWeight,
+              basisDate: latestClientMeasurement?.DateRange ?? nextTarget.basisDate,
+            }
+          : undefined,
+      };
+      const fd = new FormData();
+      fd.append("IdUser", String(selectedUserId));
+      fd.append("Target", JSON.stringify(mergedTargets));
+      return addDietPlan(fd);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meal-plan-diet-target", selectedUserId] });
+      queryClient.invalidateQueries({ queryKey: ["dietPlan", selectedUserId] });
+      setTargetDialogOpen(false);
+      toast.success("Calorie target saved");
+    },
+    onError: (e: Error) => toast.error(`Failed to save target: ${e.message}`),
+  });
+
+  const targetDraftInvalid = !!targetDraft && !isMacroSplitValid(targetDraft);
+
   // Macros the client has actually eaten today — scale each consumed food item
   // by its logged quantity (falls back to planned qty when the log omits it).
   const consumedMacros = React.useMemo(() => {
@@ -1868,12 +1922,18 @@ export default function AdminMealPlanPage() {
                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">
                       <Flame className="h-3 w-3 text-orange-500" /> {viewMode ? "Eaten vs target" : "Planned vs target"}
                     </p>
-                    {nutritionTarget.basisDate && (
-                      <p className="text-[10px] text-gray-400">
-                        weekly update {nutritionTarget.basisDate}{nutritionTarget.basisWeight ? ` · ${nutritionTarget.basisWeight} kg` : ""}
-                      </p>
-                    )}
+                    <button
+                      onClick={openTargetDialog}
+                      className="text-[10px] font-semibold text-orange-500 hover:text-orange-600 flex items-center gap-0.5"
+                    >
+                      <Pencil className="h-2.5 w-2.5" /> Edit
+                    </button>
                   </div>
+                  {nutritionTarget.basisDate && (
+                    <p className="text-[10px] text-gray-400 -mt-1.5">
+                      weekly update {nutritionTarget.basisDate}{nutritionTarget.basisWeight ? ` · ${nutritionTarget.basisWeight} kg` : ""}
+                    </p>
+                  )}
                   {rows.map(r => {
                     const status = targetStatus(r.actual, r.target);
                     const pct = r.target > 0 ? Math.round((r.actual / r.target) * 100) : 0;
@@ -1929,7 +1989,7 @@ export default function AdminMealPlanPage() {
             {/* ── nudge: no calorie target set for this client ── */}
             {!nutritionTarget && !viewMode && (
               <button
-                onClick={() => guardedNavigate(() => navigate(RENDER_URL.ADMIN_TARGETS))}
+                onClick={openTargetDialog}
                 className="w-full text-[11px] font-semibold text-orange-500 hover:text-orange-600 py-1.5"
               >
                 + Set a calorie &amp; macro target for this client
@@ -2255,6 +2315,48 @@ export default function AdminMealPlanPage() {
               className="max-w-full max-h-[85vh] w-full object-contain rounded"
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Calorie & macro target editor ── */}
+      <Dialog open={targetDialogOpen} onOpenChange={setTargetDialogOpen}>
+        <DialogContent className="sm:max-w-lg w-full max-h-[85dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Flame className="h-5 w-5 text-orange-500" />
+              Calorie &amp; Macro Target{selectedClient ? ` — ${selectedClient.FirstName} ${selectedClient.LastName}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <CalorieMacroTargetCard
+            bare
+            bmr={latestClientMeasurement?.BMR ?? null}
+            latestMeasurement={latestClientMeasurement}
+            value={targetDraft}
+            onChange={setTargetDraft}
+          />
+          <DialogFooter className="flex-row justify-between gap-2 pt-2">
+            {nutritionTarget ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-500 hover:text-red-600"
+                disabled={saveTargetMutation.isPending}
+                onClick={() => saveTargetMutation.mutate(undefined)}
+              >
+                Remove target
+              </Button>
+            ) : <span />}
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setTargetDialogOpen(false)}>Cancel</Button>
+              <Button
+                size="sm"
+                disabled={!targetDraft || targetDraftInvalid || saveTargetMutation.isPending}
+                onClick={() => saveTargetMutation.mutate(targetDraft)}
+              >
+                {saveTargetMutation.isPending ? "Saving…" : "Save target"}
+              </Button>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
