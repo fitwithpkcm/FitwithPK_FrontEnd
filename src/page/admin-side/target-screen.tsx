@@ -340,6 +340,17 @@ function CalorieMacroTargetCard({ bmr, latestMeasurement, value, onChange }: Cal
             </button>
           ))}
         </div>
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-xs text-gray-500">Or enter manually</span>
+          <input
+            type="number"
+            min={-50} max={50}
+            value={draft.goalAdjustPct}
+            onChange={e => setGoal(Math.min(50, Math.max(-50, parseInt(e.target.value) || 0)))}
+            className="w-16 text-center p-1 border border-gray-300 rounded text-sm font-semibold focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+          />
+          <span className="text-xs text-gray-400">%</span>
+        </div>
       </div>
 
       {/* Calorie target */}
@@ -349,6 +360,7 @@ function CalorieMacroTargetCard({ bmr, latestMeasurement, value, onChange }: Cal
           <input
             type="number"
             value={draft.calories || ""}
+            onFocus={e => e.target.select()}
             onChange={e => patch({ calories: Math.max(0, parseInt(e.target.value) || 0) })}
             className="w-full p-2 border border-gray-300 rounded-lg text-lg font-bold text-gray-900 focus:ring-2 focus:ring-orange-400 focus:border-transparent"
           />
@@ -384,9 +396,10 @@ function CalorieMacroTargetCard({ bmr, latestMeasurement, value, onChange }: Cal
                 <input
                   type="number"
                   min={0} max={100}
-                  value={draft[m.key] || 0}
+                  value={draft[m.key] ?? 0}
+                  onFocus={e => e.target.select()}
                   onChange={e => patch({ [m.key]: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) })}
-                  className="w-12 text-center p-1 border border-gray-200 rounded text-sm font-bold"
+                  className="w-12 text-center p-1 border border-gray-200 rounded text-sm font-bold focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                 />
                 <span className="text-xs text-gray-400">%</span>
               </div>
