@@ -11,7 +11,10 @@ export interface IWeeklyStats {
   Quadriceps: number,
   FileName?: string,
   DateRange?: string,
-  IdUser: number
+  IdUser: number,
+  // Set once the coach taps "Acknowledge" on this week (see acknowledgeWeeklyUpdate).
+  SeenByCoach?: 0 | 1,
+  SeenAt?: string,
 }
 
 export interface IWeeklyStatsExtended extends IWeeklyStats {

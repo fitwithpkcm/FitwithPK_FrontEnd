@@ -24,4 +24,7 @@ export interface IBodyMeasurement {
     ChestDifference?: number,
     UpperArmDifference?: number,
     QuadricepsDifference?: number,
+    // Set once the coach taps "Acknowledge" on this week (see acknowledgeWeeklyUpdate).
+    SeenByCoach?: 0 | 1,
+    SeenAt?: string,
 }

@@ -91,6 +91,8 @@ export const API_URL = {
     GET_PROFILE_DETAILS: "/student/getStudentProfile",
     GET_SINGLE_DAY: '/student/getSingleDayUpdate',
     GET_DAILY_UPDATES: '/student/getStudentUpdate',
+    ACKNOWLEDGE_DAILY_UPDATE: '/student/acknowledgeDailyUpdate',
+    ACKNOWLEDGE_WEEKLY_UPDATE: '/student/acknowledgeWeeklyUpdate',
     SET_FOOD: '/student/addNutriFood',
     UPDATE_FOOD: '/student/updateNutriFood',
     DELETE_FOOD: '/student/deleteNutriFood',

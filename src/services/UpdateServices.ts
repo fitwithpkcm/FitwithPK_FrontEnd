@@ -58,6 +58,28 @@ export const weeklyUpdate = (params: FormData) => {
     });
 };
 
+// Coach marks a client's daily update as reviewed — client gets a push notification.
+export const acknowledgeDailyUpdate = (params: { IdStats: number; IdUser: number; Day?: string }) => {
+    return httpCall({
+        url: API_URL.ACKNOWLEDGE_DAILY_UPDATE,
+        method: "post",
+        data: params
+    }).then((response: ApiResponse<{ IdStats: number; SeenByCoach: 1; SeenAt: string }>) => {
+        return response;
+    });
+};
+
+// Coach marks a client's weekly update as reviewed — client gets a push notification.
+export const acknowledgeWeeklyUpdate = (params: { IdWeeklyStats: number; IdUser: number; DateRange?: string }) => {
+    return httpCall({
+        url: API_URL.ACKNOWLEDGE_WEEKLY_UPDATE,
+        method: "post",
+        data: params
+    }).then((response: ApiResponse<{ IdWeeklyStats: number; SeenByCoach: 1; SeenAt: string }>) => {
+        return response;
+    });
+};
+
 export const getWeeklyUpdate = (params: unknown) => {
     return httpCall({
         url: API_URL.GET_WEEKLY_UPDATES,

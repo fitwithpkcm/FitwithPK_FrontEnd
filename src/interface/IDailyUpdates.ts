@@ -16,6 +16,9 @@ export interface IDailyStats {
   Steps_Percent?: number;
   Sleep_Percent?: number;
   Water_Percent?: number;
+  // Set once the coach taps "Acknowledge" on this day (see acknowledgeDailyUpdate).
+  SeenByCoach?: 0 | 1;
+  SeenAt?: string;
 }
 
 

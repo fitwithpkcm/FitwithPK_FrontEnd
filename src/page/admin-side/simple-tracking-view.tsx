@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { format, subDays } from "date-fns";
-import { Check, X, AlertTriangle, Calendar, Bell, ArrowLeft, Loader2 } from "lucide-react";
+import { Check, X, AlertTriangle, Calendar, Bell, ArrowLeft, Loader2, Eye, CheckCheck } from "lucide-react";
 import WeeklyTrackingView from "./weekly-track-view";
 import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
 import { getUserListWithUpdates_ForCoach, getUserListWithWeeklyUpdates_ForCoach, sendReminderNotification } from "../../services/AdminServices";
+import { acknowledgeDailyUpdate, acknowledgeWeeklyUpdate } from "../../services/UpdateServices";
 import { IUser } from "../../interface/models/User";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { IDailyStats, IUpdatesForUser } from "../../interface/IDailyUpdates";
@@ -82,7 +83,7 @@ export default function SimpleTrackingView() {
   const yesterday = getReviewDate(currentDate);
 
   // Fetch user list with their update status for yesterday
-  const { data: UserListWithUpdates } = useQuery<IUpdatesForUser[]>({
+  const { data: UserListWithUpdates, refetch: refetchDailyList } = useQuery<IUpdatesForUser[]>({
     queryKey: ["coach-userlist", yesterday],
     queryFn: () => getUserListWithUpdates_ForCoach({ Day: yesterday }).then(res =>
       res.data.data.filter(user => user.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER)
@@ -91,7 +92,7 @@ export default function SimpleTrackingView() {
   });
 
   //fetch weekly
-  const { data: UserListWithWeeklyUpdates } = useQuery<IWeeklyUpdatesForUser[]>({
+  const { data: UserListWithWeeklyUpdates, refetch: refetchWeeklyList } = useQuery<IWeeklyUpdatesForUser[]>({
     queryKey: ["coach-userlist-weekly"],
     queryFn: () => getUserListWithWeeklyUpdates_ForCoach(0).then(res =>
       res.data.data.filter(user => user.ActiveStatus === ACCESS_STATUS.ACTIVE.NUMBER)
@@ -139,6 +140,48 @@ export default function SimpleTrackingView() {
       toast.error(`Failed to send reminder to ${name}. Please try again.`);
     },
   });
+
+  // Coach taps "Acknowledge" on a client who has updated — marks the row seen
+  // and pushes a notification to the client that their coach reviewed it.
+  const [acknowledgingId, setAcknowledgingId] = useState<number | null>(null);
+
+  const { mutate: acknowledgeDaily } = useMutation({
+    mutationFn: (user: IUpdatesForUser) =>
+      acknowledgeDailyUpdate({ IdStats: user.IdStats!, IdUser: user.IdUser!, Day: user.Day }),
+    onMutate: (user) => setAcknowledgingId(user.IdUser!),
+    onSuccess: (_data, user) => {
+      setAcknowledgingId(null);
+      toast.success(`Marked ${user.FirstName}'s update as seen`);
+      refetchDailyList();
+    },
+    onError: (_err, user) => {
+      setAcknowledgingId(null);
+      toast.error(`Failed to acknowledge ${user.FirstName}'s update. Please try again.`);
+    },
+  });
+
+  const { mutate: acknowledgeWeekly } = useMutation({
+    mutationFn: (user: IWeeklyUpdatesForUser) =>
+      acknowledgeWeeklyUpdate({ IdWeeklyStats: user.IdWeeklyStats!, IdUser: user.IdUser!, DateRange: user.DateRange }),
+    onMutate: (user) => setAcknowledgingId(user.IdUser!),
+    onSuccess: (_data, user) => {
+      setAcknowledgingId(null);
+      toast.success(`Marked ${user.FirstName}'s weekly update as seen`);
+      refetchWeeklyList();
+    },
+    onError: (_err, user) => {
+      setAcknowledgingId(null);
+      toast.error(`Failed to acknowledge ${user.FirstName}'s update. Please try again.`);
+    },
+  });
+
+  // "SeenAt" comes back as a MySQL "YYYY-MM-DD HH:mm:ss" string — Safari won't
+  // parse the space-separated form, so normalize to ISO before formatting.
+  const formatSeenAt = (seenAt?: string) => {
+    if (!seenAt) return "Seen";
+    const d = new Date(seenAt.replace(" ", "T"));
+    return isNaN(d.getTime()) ? "Seen" : `Seen ${format(d, "d MMM, h:mm a")}`;
+  };
 
   /**
    * "Updated" = the user submitted a COMPLETE daily update for yesterday.
@@ -346,6 +389,31 @@ export default function SimpleTrackingView() {
                               <X size={20} className="text-red-600" />
                             )}
                           </div>
+                          {hasUpdated && (
+                            user.SeenByCoach ? (
+                              <span
+                                className="flex items-center gap-1 text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full whitespace-nowrap"
+                                title={formatSeenAt(user.SeenAt)}
+                              >
+                                <CheckCheck size={13} /> Seen
+                              </span>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  acknowledgeDaily(user);
+                                }}
+                                disabled={acknowledgingId === user.IdUser}
+                                className="p-2 bg-blue-100 hover:bg-blue-200 rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                title="Acknowledge — notifies the client you've seen it"
+                              >
+                                {acknowledgingId === user.IdUser
+                                  ? <Loader2 size={16} className="text-blue-600 animate-spin" />
+                                  : <Eye size={16} className="text-blue-600" />
+                                }
+                              </button>
+                            )
+                          )}
                           {!hasUpdated && (
                             <button
                               onClick={(e) => {
@@ -458,10 +526,37 @@ export default function SimpleTrackingView() {
                             </p>
                           </div>
                         </div>
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${hasUpdated ? 'bg-green-100' : 'bg-red-100'}`}>
-                          {hasUpdated
-                            ? <Check size={20} className="text-green-600" />
-                            : <X size={20} className="text-red-600" />}
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${hasUpdated ? 'bg-green-100' : 'bg-red-100'}`}>
+                            {hasUpdated
+                              ? <Check size={20} className="text-green-600" />
+                              : <X size={20} className="text-red-600" />}
+                          </div>
+                          {hasUpdated && (
+                            user.SeenByCoach ? (
+                              <span
+                                className="flex items-center gap-1 text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full whitespace-nowrap"
+                                title={formatSeenAt(user.SeenAt)}
+                              >
+                                <CheckCheck size={13} /> Seen
+                              </span>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  acknowledgeWeekly(user);
+                                }}
+                                disabled={acknowledgingId === user.IdUser}
+                                className="p-2 bg-blue-100 hover:bg-blue-200 rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                title="Acknowledge — notifies the client you've seen it"
+                              >
+                                {acknowledgingId === user.IdUser
+                                  ? <Loader2 size={16} className="text-blue-600 animate-spin" />
+                                  : <Eye size={16} className="text-blue-600" />
+                                }
+                              </button>
+                            )
+                          )}
                         </div>
                       </div>
                     );

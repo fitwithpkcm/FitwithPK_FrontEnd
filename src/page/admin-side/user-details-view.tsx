@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { format, subDays } from "date-fns";
-import { ActivityIcon, ArrowLeft, Check, Clock, Droplet, X } from "lucide-react";
+import { ActivityIcon, ArrowLeft, Check, Clock, Droplet, X, Eye, CheckCheck, Loader2 } from "lucide-react";
 import { AdminPageHeader } from "../../components/layout/page-header";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { IDailyStats, IUpdatesForUser } from "../../interface/IDailyUpdates";
 import { getUserListWithUpdates_ForCoach } from "../../services/AdminServices";
 import { BASE_URL } from "../../common/Constant";
 import { setBaseUrl } from "../../services/HttpService"
 import moment from 'moment';
-import { getDailyUpdate } from "../../services/UpdateServices";
+import { getDailyUpdate, acknowledgeDailyUpdate } from "../../services/UpdateServices";
 import DietAdherenceBadge from "../../components/ui/diet-adherence-badge";
 import { Card, CardContent } from "../../components/ui/card";
 import { isEmpty } from "../../lib/utils";
+import toast from "react-hot-toast";
 
 
 // Interface for the component props
@@ -42,10 +43,36 @@ export default function UserDailyDetailView({ userId, onBack }: UserDetailViewPr
     staleTime: 0,
   });
 
-  const { data: dailyUpdates = [] } = useQuery<IDailyStats[]>({
+  const { data: dailyUpdates = [], refetch: refetchDailyUpdates } = useQuery<IDailyStats[]>({
     queryKey: [`daily_updates_for_${userId}`],
     queryFn: () => getDailyUpdate({ IdUser: userId, showEmpty: true }).then((res) => res.data.data)
   });
+
+  // Coach taps "Acknowledge" on a specific day's card — marks it seen and
+  // pushes a notification to the client that their coach reviewed it.
+  const [acknowledgingId, setAcknowledgingId] = useState<number | null>(null);
+  const { mutate: acknowledgeDay } = useMutation({
+    mutationFn: (day: IDailyStats) =>
+      acknowledgeDailyUpdate({ IdStats: day.IdStats!, IdUser: userId, Day: day.Day }),
+    onMutate: (day) => setAcknowledgingId(day.IdStats!),
+    onSuccess: () => {
+      setAcknowledgingId(null);
+      toast.success("Marked as seen");
+      refetchDailyUpdates();
+    },
+    onError: () => {
+      setAcknowledgingId(null);
+      toast.error("Failed to acknowledge update. Please try again.");
+    },
+  });
+
+  // "SeenAt" comes back as a MySQL "YYYY-MM-DD HH:mm:ss" string — Safari won't
+  // parse the space-separated form, so normalize to ISO before formatting.
+  const formatSeenAt = (seenAt?: string) => {
+    if (!seenAt) return "Seen";
+    const d = new Date(seenAt.replace(" ", "T"));
+    return isNaN(d.getTime()) ? "Seen" : `Seen ${moment(d).format("D MMM, h:mm A")}`;
+  };
 
   useEffect(() => {
     const foundUser = UserListWithUpdates?.find(u => u.IdUser === userId);
@@ -102,6 +129,26 @@ export default function UserDailyDetailView({ userId, onBack }: UserDetailViewPr
                         </h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400">Day {dayNumber}</p>
                       </div>
+                      {update.SeenByCoach ? (
+                        <span
+                          className="flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 px-2.5 py-1.5 rounded-full whitespace-nowrap"
+                          title={formatSeenAt(update.SeenAt)}
+                        >
+                          <CheckCheck className="h-3.5 w-3.5" /> Seen
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => acknowledgeDay(update)}
+                          disabled={acknowledgingId === IdStats}
+                          className="flex items-center gap-1 text-xs font-medium text-blue-600 border border-blue-200 dark:border-blue-800 rounded-full px-2.5 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                          title="Acknowledge — notifies the client you've seen it"
+                        >
+                          {acknowledgingId === IdStats
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            : <Eye className="h-3.5 w-3.5" />}
+                          Acknowledge
+                        </button>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-x-6 gap-y-4">

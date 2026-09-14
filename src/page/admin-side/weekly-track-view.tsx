@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
-import { ArrowLeft, ChevronDown, ChevronUp, Plus, X, Calculator, Activity, FileText, Upload, Eye, Download, Utensils, Dumbbell, Copy, Check } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Plus, X, Calculator, Activity, FileText, Upload, Eye, Download, Utensils, Dumbbell, Copy, Check, CheckCheck, Loader2 } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -18,15 +18,16 @@ import { setBaseUrl } from "../../services/HttpService"
 import { IDailyStats } from "../../interface/IDailyUpdates";
 import { IWeeklyStatsExtended, IWeeklyUpdatesForUser } from "../../interface/IWeeklyUpdates";
 import { getUserListWithWeeklyUpdates_ForCoach } from "../../services/AdminServices";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { MobileAdminNav } from "../../components/layout/mobile-admin-nav";
 import { AdminPageHeader } from "../../components/layout/page-header";
 import GraphDataChart from "./AdminProgressWeeklyChart";
 import { IBodyMeasurement } from "../../interface/IBodyMeasurement";
-import { getProgressGallery, getWeeklyUpdate } from "../../services/UpdateServices";
+import { getProgressGallery, getWeeklyUpdate, acknowledgeWeeklyUpdate } from "../../services/UpdateServices";
 import { getLoggedUserDetails } from "../../services/ProfileService";
 import { IUser } from "../../interface/models/User";
 import { parseDob, ageFromDob } from "../../lib/utils";
+import toast from "react-hot-toast";
 
 // Interface for progress photos
 export interface ProgressPhoto {
@@ -121,10 +122,36 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
 
   // Fetch user's body measurements
   //currently fetch all the data
-  const { data: weekly_updates_measurement_history } = useQuery<IBodyMeasurement[]>({
+  const { data: weekly_updates_measurement_history, refetch: refetchWeeklyHistory } = useQuery<IBodyMeasurement[]>({
     queryKey: [`weekly-updates_${userId}`],
     queryFn: () => getWeeklyUpdate({ IdUser: userId }).then(res => res.data.data)
   });
+
+  // Coach taps "Acknowledge" on the client's latest weekly entry — marks it
+  // seen and pushes a notification to the client that their coach reviewed it.
+  const [acknowledgingWeek, setAcknowledgingWeek] = useState(false);
+  const { mutate: acknowledgeWeek } = useMutation({
+    mutationFn: (week: IBodyMeasurement) =>
+      acknowledgeWeeklyUpdate({ IdWeeklyStats: Number(week.IdWeeklyStats), IdUser: userId, DateRange: week.DateRange }),
+    onMutate: () => setAcknowledgingWeek(true),
+    onSuccess: () => {
+      setAcknowledgingWeek(false);
+      toast.success("Marked as seen");
+      refetchWeeklyHistory();
+    },
+    onError: () => {
+      setAcknowledgingWeek(false);
+      toast.error("Failed to acknowledge update. Please try again.");
+    },
+  });
+
+  // "SeenAt" comes back as a MySQL "YYYY-MM-DD HH:mm:ss" string — Safari won't
+  // parse the space-separated form, so normalize to ISO before formatting.
+  const formatSeenAt = (seenAt?: string) => {
+    if (!seenAt) return "Seen";
+    const d = new Date(seenAt.replace(" ", "T"));
+    return isNaN(d.getTime()) ? "Seen" : `Seen ${format(d, "d MMM, h:mm a")}`;
+  };
 
   const { data: galleryProgressDetails } = useQuery<IBodyMeasurement[]>({
     queryKey: [`gallery-updates_${userId}`],
@@ -309,15 +336,38 @@ export default function WeeklyTrackingView({ userId, onBack }: WeeklyTrackingVie
           Latest measurements
           {latestMeasurement?.DateRange ? ` · ${formatDisplayDate(latestMeasurement.DateRange)}` : ""}
         </div>
-        <button
-          type="button"
-          onClick={handleCopyMeasurements}
-          disabled={!latestMeasurement}
-          className="flex items-center gap-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-md px-2.5 py-1.5 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {copiedMeasurements ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-          {copiedMeasurements ? "Copied" : "Copy measurements"}
-        </button>
+        <div className="flex items-center gap-2">
+          {latestMeasurement && (
+            latestMeasurement.SeenByCoach ? (
+              <span
+                className="flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-md whitespace-nowrap"
+                title={formatSeenAt(latestMeasurement.SeenAt)}
+              >
+                <CheckCheck className="w-3.5 h-3.5" /> Seen
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => acknowledgeWeek(latestMeasurement)}
+                disabled={acknowledgingWeek}
+                className="flex items-center gap-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-md px-2.5 py-1.5 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Acknowledge — notifies the client you've seen it"
+              >
+                {acknowledgingWeek ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+                Acknowledge
+              </button>
+            )
+          )}
+          <button
+            type="button"
+            onClick={handleCopyMeasurements}
+            disabled={!latestMeasurement}
+            className="flex items-center gap-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-md px-2.5 py-1.5 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {copiedMeasurements ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            {copiedMeasurements ? "Copied" : "Copy measurements"}
+          </button>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-3 mb-4 px-2">
         <div className="bg-white p-4 rounded-lg border">
