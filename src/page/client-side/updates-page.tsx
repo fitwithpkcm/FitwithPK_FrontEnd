@@ -258,6 +258,7 @@ import { calculatePercentage } from "../../lib/utils";
 import { setBaseUrl } from "../../services/HttpService"
 import { IStudentGallery } from "../../interface/IStudentGallery";
 import { useTheme } from "next-themes";
+import { CHECKIN_SUMMARY_KEY_PREFIX } from "../../hooks/use-checkin-summary";
 
 
 
@@ -558,6 +559,8 @@ export default function UpdatesPage() {
       // The trend chart (GraphDataChart) reads weekly measurements under this
       // key — it must also be invalidated or it keeps showing stale data.
       queryClient.invalidateQueries({ queryKey: ["daily-updates"] });
+      // Dashboard's "Your check-ins" reads weekly-due status independently.
+      queryClient.invalidateQueries({ queryKey: CHECKIN_SUMMARY_KEY_PREFIX });
       setShowMeasurementForm(false);
     },
     onError: (error: Error) => {
@@ -705,6 +708,8 @@ export default function UpdatesPage() {
     },
     onSuccess: (_, submitted) => {
       queryClient.invalidateQueries({ queryKey: ["daily-updates"] });
+      // Dashboard's "Your check-ins" — refresh today's/missing-day status.
+      queryClient.invalidateQueries({ queryKey: CHECKIN_SUMMARY_KEY_PREFIX });
       setLastSaved(submitted);
       form.reset();
       setShowForm(false);
@@ -967,6 +972,30 @@ export default function UpdatesPage() {
   };
 
   const [activeView, setActiveView] = useState<"daily" | "weekly">("daily");
+
+  // Deep-link support for the dashboard's "Your check-ins" summary — e.g.
+  // /student-updates?date=08-09-2026&tab=daily opens straight into that day's
+  // daily form instead of today's list view. Runs once on mount only; the
+  // in-page Calendar/tab controls take over from there.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const dateParam = params.get("date");
+    const tabParam = params.get("tab");
+
+    if (tabParam === "weekly") {
+      setActiveView("weekly");
+      return; // weekly view has no separate "showForm" step to open
+    }
+
+    if (dateParam) {
+      const parsed = moment(dateParam, "DD-MM-YYYY", true);
+      if (parsed.isValid()) {
+        setSelectedDate(parsed.toDate());
+        setActiveView("daily");
+        setShowForm(true);
+      }
+    }
+  }, []);
 
   const addUpdateShowView = () => {
     if (activeView === "daily") {

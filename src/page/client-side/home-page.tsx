@@ -38,6 +38,8 @@ import { getMyMealPlans, getMyMealLogs } from "../../services/MealPlanService";
 import { IMealPlan, IMealLog, mergePlanWithLogs } from "../../interface/IMealPlan";
 import { getMyWorkouts, getSetLogsForDate } from "../../services/WorkoutService";
 import { IWorkout, ISetLog } from "../../interface/IWorkout";
+import CheckinSummaryCard from "@/components/checkins/CheckinSummaryCard";
+import { CHECKIN_SUMMARY_KEY_PREFIX, LOGGED_USER_DETAILS_QUERY_KEY } from "@/hooks/use-checkin-summary";
 
 import toast from 'react-hot-toast';
 
@@ -294,7 +296,7 @@ export default function HomePage() {
 
 
   const { data: loggedUserDetails } = useQuery<Partial<IUser> | null | undefined>({
-    queryKey: ["get_mydetails"],
+    queryKey: LOGGED_USER_DETAILS_QUERY_KEY,
     queryFn: async () => {
       try {
         const res = await getLoggedUserDetails(0) as ApiResponse<Partial<IUser[]>>;
@@ -431,6 +433,7 @@ export default function HomePage() {
       });
       queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
       queryClient.invalidateQueries({ queryKey: ['daily-updates-forweek'] });
+      queryClient.invalidateQueries({ queryKey: CHECKIN_SUMMARY_KEY_PREFIX });
       toast.success('Your water intake has been recorded successfully', {
         id: 'water-log',
         position: 'bottom-center',
@@ -466,6 +469,7 @@ export default function HomePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
       queryClient.invalidateQueries({ queryKey: ['daily-updates-forweek'] })
+      queryClient.invalidateQueries({ queryKey: CHECKIN_SUMMARY_KEY_PREFIX });
       toast.success('Your steps count has been recorded successfully', {
         position: 'bottom-center'
       })
@@ -499,6 +503,7 @@ export default function HomePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
       queryClient.invalidateQueries({ queryKey: ['daily-updates-forweek'] })
+      queryClient.invalidateQueries({ queryKey: CHECKIN_SUMMARY_KEY_PREFIX });
       toast.success('Your sleep hours have been recorded successfully', {
         position: 'bottom-center'
       })
@@ -535,6 +540,7 @@ export default function HomePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["singleday-updates"] });
       queryClient.invalidateQueries({ queryKey: ['daily-updates-forweek'] })
+      queryClient.invalidateQueries({ queryKey: CHECKIN_SUMMARY_KEY_PREFIX });
       toast.success('Your weight has been recorded successfully', {
         position: 'bottom-center'
       })
@@ -714,6 +720,8 @@ export default function HomePage() {
             </button>
           </div>
         )}
+
+        <CheckinSummaryCard />
 
         {/* Notification banner — visible until subscribed or dismissed */}
         {pushStatus !== 'granted' && !bannerDismissed && (
